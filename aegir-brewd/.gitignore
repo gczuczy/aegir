@@ -1,2 +1,3 @@
 bin/aegir-brewd
 obj/.depend
+*.core

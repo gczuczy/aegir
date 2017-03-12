@@ -1,31 +1,29 @@
-INCPATH=
+INCPATH=-I/usr/local/include
 CXXFLAGS=-Werror -pedantic -std=c++11 $(INCPATH)
-LDFLAGS=-lpthread
+LDFLAGS=-pthread -L/usr/local/lib -lboost_program_options -lgpio -lyaml-cpp
 
-OBJS=main.o
+OBJS=main.o GPIO.o Config.o Exception.o
 OUT=../bin/aegir-brewd
 
-.SUFFIXES : .o .c .cc .hh .h
+.SUFFIXES : .o .cc .hh
 .OBJDIR   : obj/
-.PATH.cc  : $(.CURDIR)/src/ $(.CURDIR)/../common-ng/src/
-.PATH.hh  : $(.CURDIR)/src/ $(.CURDIR)/../common-ng/src/
+.PATH.cc  : $(.CURDIR)/src/
+.PATH.hh  : $(.CURDIR)/src/
 
 .sinclude ".depend"
 
-.PHONY = clean aegir-brewd depend .depend
-.DEFAULT = aegir-brewd
-.MAIN = aegir-brewd
+.PHONY = clean brewd depend .depend
 
-aegir-brewd: .depend $(OUT)
+brewd: .depend $(OUT)
 
 depend: .depend
 
 .depend:
-	mkdep $(INCPATH) ../src/*.cc
+	mkdep $(INCPATH) ../src/*.cc ../src/*.hh
 
 clean:
 	rm -f .depend $(OUT) $(OBJS)
-	rm -f ../src/*.cc~
+	rm -f ../src/*~
 
 $(OUT): $(OBJS)
 	$(CXX) -o $@ $(.ALLSRC) $(LDFLAGS)
