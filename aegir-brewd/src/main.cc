@@ -7,6 +7,7 @@
 
 #include "Config.hh"
 #include "Exception.hh"
+#include "GPIO.hh"
 
 namespace po = boost::program_options;
 
@@ -68,6 +69,17 @@ int main(int argc, char *argv[]) {
       return 3;
     }
     return 0;
+  }
+
+  // We have the config, now set GPIO up
+  aegir::GPIO *gpio;
+
+  try {
+    gpio = aegir::GPIO::getInstance();
+  }
+  catch (aegir::Exception &e) {
+    fprintf(stderr, "Error initializing GPIO interface: %s\n", e.what());
+    return 1;
   }
   return 0;
 }

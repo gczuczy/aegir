@@ -7,7 +7,6 @@
 #include "Config.hh"
 
 namespace aegir {
-
   /*
     GPIO::PIN per-pin class
   */
@@ -87,6 +86,7 @@ namespace aegir {
     }
 
     fetchpins();
+    rewire();
   }
 
   GPIO::GPIO(const std::string _device) {
@@ -97,16 +97,14 @@ namespace aegir {
     }
 
     fetchpins();
-  }
-
-  GPIO *GPIO::instantiate(const std::string &_device) {
-    if ( c_instance ) throw Exception("GPIO already initialized");
-    c_instance = new GPIO(_device);
-    return c_instance;
+    rewire();
   }
 
   GPIO *GPIO::getInstance() {
-    if ( !c_instance ) throw Exception("GPIO already initialized");
+    if ( !c_instance ) {
+      Config *cfg = Config::getInstance();
+      c_instance = new GPIO(cfg->getGPIODevice());
+    }
     return c_instance;
   }
 
@@ -129,6 +127,30 @@ namespace aegir {
     }
 
     if ( pinlist ) free(pinlist);
+  }
+
+  // here we already have the device from the ctor
+  // so we're only dealing with the pins
+  void GPIO::rewire() {
+    Config *cfg = Config::getInstance();
+
+    // re-do the name-number association first
+    c_names.clear();
+    cfg->getPinConfig(c_names);
+
+    // now set them up
+    for (auto &it: c_names) {
+      auto cfg = g_pinconfig[it.first];
+      auto pin = c_pins.find(it.second)->second;
+
+      if ( cfg.mode == PinMode::OUT ) {
+	pin.output();
+      } else if ( cfg.mode == PinMode::IN ) {
+	pin.input();
+	if ( cfg.pull == PinPull::DOWN ) pin.pulldown();
+	else if ( cfg.pull == PinPull::UP ) pin.pullup();
+      }
+    }
   }
 
   GPIO::PIN &GPIO::operator[](const std::string &_name) {

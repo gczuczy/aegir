@@ -26,7 +26,6 @@ namespace aegir {
     GPIO(int _unit);
     GPIO(const std::string _device);
   public:
-    static GPIO *instantiate(const std::string &_device);
     static GPIO *getInstance();
     ~GPIO();
 
@@ -50,8 +49,11 @@ namespace aegir {
       PIN &pulldown();
       PIN &opendrain();
       PIN &tristate();
-      PIN &setname(const std::string &);
       int get();
+    private:
+      // In this app we don't need setname to be public,
+      // because names are set up from Config
+      PIN &setname(const std::string &);
     };
     friend GPIO::PIN;
 
@@ -69,6 +71,7 @@ namespace aegir {
     std::map<std::string, int> c_names;
 
     void fetchpins();
+    void rewire();
   };
 
 }

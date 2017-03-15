@@ -7,6 +7,14 @@
 #include "Exception.hh"
 
 namespace aegir {
+
+  // PIN default configuration
+  pinconfig_t g_pinconfig = pinconfig_t{
+    {"swled", PinConfig(PinMode::OUT, PinPull::NONE)},
+    {"swon",  PinConfig(PinMode::IN, PinPull::DOWN)},
+    {"swoff", PinConfig(PinMode::IN, PinPull::DOWN)}
+  };
+
   Config *Config::c_instance=0;
 
   Config::Config(const std::string &_cfgfile, bool _noload): c_cfgfile(_cfgfile) {
@@ -28,16 +36,13 @@ namespace aegir {
   }
 
   void Config::setDefaults() {
-    c_device = "/dev/gpioctl0";
+    c_device = "/dev/gpioc0";
 
     // PIN layout
     c_pinlayout.clear();
     c_pinlayout["swled"] = 4;
     c_pinlayout["swon"]  = 17;
     c_pinlayout["swoff"] = 18;
-    // and save the valid names
-    c_pinnames.clear();
-    for ( auto &it: c_pinlayout ) c_pinnames.insert(it.first);
   }
 
   void Config::load() {
@@ -66,8 +71,8 @@ namespace aegir {
 	if ( gpio["pins"] && gpio["pins"].IsMap() ) {
 	  YAML::Node pins = gpio["pins"];
 	  std::map<std::string, int> pinlayout(c_pinlayout);
-	  for (const auto &it: c_pinnames)
-	    if ( pins[it] ) pinlayout[it] = pins[it].as<int>();
+	  for (const auto &it: g_pinconfig)
+	    if ( pins[it.first] ) pinlayout[it.first] = pins[it.first].as<int>();
 
 	  checkPinConfig(pinlayout);
 	  c_pinlayout = pinlayout;
@@ -112,6 +117,15 @@ namespace aegir {
     outfile << yout.c_str() << std::endl;
     outfile.close();
 
+    return *this;
+  }
+
+  const std::string &Config::getGPIODevice() const {
+    return c_device;
+  }
+
+  Config &Config::getPinConfig(pinlayout_t &_layout) {
+    _layout = c_pinlayout;
     return *this;
   }
 }
