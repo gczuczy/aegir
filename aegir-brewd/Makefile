@@ -2,7 +2,7 @@ INCPATH=-I/usr/local/include
 CXXFLAGS=-Werror -pedantic -std=c++11 $(INCPATH)
 LDFLAGS=-pthread -L/usr/local/lib -lboost_program_options -lgpio -lyaml-cpp
 
-OBJS=main.o GPIO.o Config.o Exception.o
+OBJS=main.o GPIO.o Config.o Exception.o ThreadManager.o
 OUT=../bin/aegir-brewd
 
 .SUFFIXES : .o .cc .hh

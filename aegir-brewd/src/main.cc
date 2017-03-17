@@ -8,6 +8,7 @@
 #include "Config.hh"
 #include "Exception.hh"
 #include "GPIO.hh"
+#include "ThreadManager.hh"
 
 namespace po = boost::program_options;
 
@@ -81,5 +82,11 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Error initializing GPIO interface: %s\n", e.what());
     return 1;
   }
+
+
+  // Start the thread manager, and launch threads, begin operation
+  auto threadmgr = aegir::ThreadManager::getInstance();
+
+  threadmgr->start();
   return 0;
 }
