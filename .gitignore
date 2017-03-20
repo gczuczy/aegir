@@ -30,6 +30,7 @@
 
 # emacs backup files
 *~
+\#*\#
 
 # python compiled files
 *.pyc
