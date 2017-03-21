@@ -9,6 +9,7 @@
 #include "Exception.hh"
 #include "GPIO.hh"
 #include "ThreadManager.hh"
+#include "IOHandler.hh"
 
 namespace po = boost::program_options;
 
@@ -84,8 +85,11 @@ int main(int argc, char *argv[]) {
   }
 
 
-  // Start the thread manager, and launch threads, begin operation
+  // initialize the thread manager
   auto threadmgr = aegir::ThreadManager::getInstance();
+
+  // init the worker thread objects
+  auto ioh = aegir::IOHandler::getInstance();
 
   threadmgr->start();
   return 0;

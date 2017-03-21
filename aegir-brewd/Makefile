@@ -1,14 +1,15 @@
-INCPATH=-I/usr/local/include
+INCPATH=-I/usr/local/include -I ../contrib/
 CXXFLAGS=-Werror -pedantic -std=c++11 $(INCPATH)
 LDFLAGS=-pthread -L/usr/local/lib -lboost_program_options -lgpio -lyaml-cpp
 
-OBJS=main.o GPIO.o Config.o Exception.o ThreadManager.o
+OBJS=main.o GPIO.o Config.o Exception.o ThreadManager.o IOHandler.o
 OUT=../bin/aegir-brewd
 
-.SUFFIXES : .o .cc .hh
+.SUFFIXES : .o .cc .hh .hpp
 .OBJDIR   : obj/
 .PATH.cc  : $(.CURDIR)/src/
 .PATH.hh  : $(.CURDIR)/src/
+.PATH.hpp  : $(.CURDIR)/contrib/
 
 .sinclude ".depend"
 
@@ -19,7 +20,7 @@ brewd: .depend $(OUT)
 depend: .depend
 
 .depend:
-	mkdep $(INCPATH) ../src/*.cc ../src/*.hh
+	mkdep $(INCPATH) ../src/*.cc ../src/*.hh ../contrib/*.hpp
 
 clean:
 	rm -f .depend $(OUT) $(OBJS)

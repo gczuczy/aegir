@@ -8,6 +8,7 @@
 #include <thread>
 #include <string>
 #include <map>
+#include <atomic>
 
 namespace aegir {
 
@@ -15,10 +16,15 @@ namespace aegir {
 
   class ThreadBase {
     friend class ThreadManager;
-  protected:
-    virtual void run() = 0;
   public:
+    ThreadBase();
     virtual ~ThreadBase() = 0;
+
+    std::atomic<bool> c_run;
+
+  protected:
+    void stop() noexcept;
+    virtual void run() = 0;
   };
 
   // A singleton threadmanager
