@@ -169,4 +169,11 @@ namespace aegir {
     return it->second;
   }
 
+  std::vector<std::string> GPIO::getPinNames() const {
+    std::vector<std::string> names;
+
+    for (auto &it: c_names) names.push_back(it.first);
+
+    return names;
+  }
 }

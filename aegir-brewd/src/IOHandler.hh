@@ -6,6 +6,7 @@
 #define AEGIR_IOHANDLER_H
 
 #include "ThreadManager.hh"
+#include "ZMQ.hh"
 
 namespace aegir {
 
@@ -20,6 +21,7 @@ namespace aegir {
 
   private:
     static IOHandler *c_instance;
+    ZMQ::Socket c_mq_pub;
 
   public:
     static IOHandler *getInstance();

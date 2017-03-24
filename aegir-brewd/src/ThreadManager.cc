@@ -52,7 +52,8 @@ namespace aegir {
   }
 
   ThreadManager &ThreadManager::start() {
-    // first mask the signals
+    // signal handling with a dummy handler, stuff will be
+    // taken care of from kevent() later
     struct sigaction sa;
     sigemptyset(&sa.sa_mask);
     sigemptyset(&sa.sa_mask);
@@ -64,7 +65,6 @@ namespace aegir {
     sigaddset(&sa.sa_mask, SIGTERM);
     sigaddset(&sa.sa_mask, SIGUSR1);
     sigaddset(&sa.sa_mask, SIGUSR2);
-    //sigprocmask(SIG_BLOCK, &sa.sa_mask, 0);
     sa.sa_handler = sighandler;
     sa.sa_flags = SA_RESTART;
     sigaction(SIGINT, &sa, 0);
@@ -89,7 +89,8 @@ namespace aegir {
     struct kevent evlist[16];
     memset(evlist, 0, sizeof(evlist));
 
-    // set up signals
+    // set up the event handling
+    // we still need to add EVFILT_USER for manually interrupting the kevent() call
     int n;
     EV_SET(&evlist[0], SIGINT, EVFILT_SIGNAL, EV_ADD|EV_CLEAR|EV_ENABLE, 0, 0, 0);
     EV_SET(&evlist[1], SIGKILL, EVFILT_SIGNAL, EV_ADD|EV_CLEAR|EV_ENABLE, 0, 0, 0);

@@ -10,6 +10,7 @@
 
 #include <string>
 #include <map>
+#include <vector>
 
 #include "Exception.hh"
 
@@ -60,6 +61,7 @@ namespace aegir {
     // public functions
     PIN &operator[](const int _pin);
     PIN &operator[](const std::string &_name);
+    std::vector<std::string> getPinNames() const;
 
   protected:
     gpio_handle_t c_handle;

@@ -91,6 +91,12 @@ int main(int argc, char *argv[]) {
   // init the worker thread objects
   auto ioh = aegir::IOHandler::getInstance();
 
+  /// this is the main loop
   threadmgr->start();
+
+  // deallocating stuff here
+  delete gpio;
+  delete ioh;
+
   return 0;
 }
