@@ -11,10 +11,12 @@ namespace aegir {
 
   Controller *Controller::c_instance(0);
 
-  Controller::Controller(): c_mq_io(ZMQ::SocketType::SUB) {
+  Controller::Controller(): c_mq_io(ZMQ::SocketType::SUB),
+			    c_mq_iocmd(ZMQ::SocketType::PUB) {
     // subscribe to our publisher for IO events
     try {
       c_mq_io.connect("inproc://iopub").subscribe("");
+      c_mq_iocmd.connect("inproc://iocmd");
     }
     catch (std::exception &e) {
       printf("Sub failed: %s\n", e.what());
@@ -97,13 +99,23 @@ namespace aegir {
       // off -> on
       if ( (inpinchanges["swon"] && !inpinchanges["swoff"]) &&
 	   !(inpinstate["swon"] && !inpinstate["swoff"]) ) {
+	outpinqueue["swled"] = true;
 	printf("Sw changed from off -> on\n");
       } else if ( (!inpinchanges["swon"] && inpinchanges["swoff"]) &&
 		  !(!inpinstate["swon"] && inpinstate["swoff"]) ) {
+	outpinqueue["swled"] = false;
 	printf("Sw changed from on -> off\n");
       }
       // save the new state
       inpinstate = inpinchanges;
+
+      // Send back the commands to IOHandler
+      if ( !outpinqueue.empty() ) {
+	for (auto &it: outpinqueue) {
+	  c_mq_iocmd.send(PinStateMessage(it.first, it.second?1:0));
+	}
+	outpinqueue.clear();
+      }
 
       // sleep a bit
       std::this_thread::sleep_for(ival);

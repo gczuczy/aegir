@@ -22,6 +22,7 @@ namespace aegir {
   private:
     static IOHandler *c_instance;
     ZMQ::Socket c_mq_pub;
+    ZMQ::Socket c_mq_iocmd;
 
   public:
     static IOHandler *getInstance();

@@ -14,10 +14,12 @@ namespace aegir {
 
   IOHandler *IOHandler::c_instance = 0;
 
-  IOHandler::IOHandler(): c_mq_pub(ZMQ::SocketType::PUB) {
+  IOHandler::IOHandler(): c_mq_pub(ZMQ::SocketType::PUB),
+			  c_mq_iocmd(ZMQ::SocketType::SUB) {
     auto thrmgr = ThreadManager::getInstance();
 
     c_mq_pub.bind("inproc://iopub");
+    c_mq_iocmd.bind("inproc://iocmd").subscribe("");
 
     thrmgr->addThread("IOHandler", *this);
   }
@@ -49,6 +51,7 @@ namespace aegir {
     }
 
     int newval;
+    std::shared_ptr<Message> msg;
     while ( c_run ) {
       // read the input pins
       for (auto &it: inpins) {
@@ -59,6 +62,24 @@ namespace aegir {
 	  it.second = newval;
 	  auto msg = PinStateMessage(it.first, newval);
 	  c_mq_pub.send(msg);
+	}
+      }
+
+      // check our input queue
+      while ( (msg = c_mq_iocmd.recv()) != nullptr ) {
+	if ( msg->type() == MessageType::PINSTATE ) {
+	  auto psmsg = std::static_pointer_cast<PinStateMessage>(msg);
+	  auto it = outpins.find(psmsg->getName());
+	  if ( it != outpins.end() ) {
+	    printf("IOHandler: setting %s to %i\n", psmsg->getName().c_str(), psmsg->getState());
+	    if ( psmsg->getState() == 1 ) {
+	      gpio[psmsg->getName()].high();
+	    } else {
+	      gpio[psmsg->getName()].low();
+	    }
+	  } else {
+	    printf("IOHandler: can't set %s to %i: no such pin\n", psmsg->getName().c_str(), psmsg->getState());
+	  }
 	}
       }
       std::this_thread::sleep_for(ival);
