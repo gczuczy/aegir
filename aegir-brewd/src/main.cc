@@ -10,6 +10,7 @@
 #include "GPIO.hh"
 #include "ThreadManager.hh"
 #include "IOHandler.hh"
+#include "Controller.hh"
 
 namespace po = boost::program_options;
 
@@ -91,12 +92,16 @@ int main(int argc, char *argv[]) {
   // init the worker thread objects
   auto ioh = aegir::IOHandler::getInstance();
 
+  // init the controller
+  auto ctrl = aegir::Controller::getInstance();
+
   /// this is the main loop
   threadmgr->start();
 
   // deallocating stuff here
   delete gpio;
   delete ioh;
+  delete ctrl;
 
   return 0;
 }

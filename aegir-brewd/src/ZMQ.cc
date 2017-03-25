@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "Exception.hh"
+
 namespace aegir {
   static void zmqfree(void *_data, void*) {
     free(_data);
@@ -24,6 +26,17 @@ namespace aegir {
     return *this;
   }
 
+  ZMQ::Socket &ZMQ::Socket::connect(const std::string &_addr) {
+    c_sock.connect(_addr.c_str());
+    return *this;
+  }
+
+  ZMQ::Socket &ZMQ::Socket::subscribe(const std::string &_filter) {
+    printf("Subscribing to '%s' %lu\n", _filter.c_str(), _filter.size());
+    c_sock.setsockopt(ZMQ_SUBSCRIBE, _filter.c_str(), _filter.size());
+    return *this;
+  }
+
   ZMQ::Socket &ZMQ::Socket::send(const Message &_msg) {
     auto msg = _msg.serialize();
 
@@ -34,9 +47,31 @@ namespace aegir {
 
     printf("Sending: %s\n", _msg.hexdebug().c_str());
 
-    c_sock.send(zmsg, 0);
+    if ( !c_sock.send(zmsg, 0) ) {
+      printf("Send failed\n");
+    }
 
     return *this;
+  }
+
+  std::shared_ptr<Message> ZMQ::Socket::recv() {
+    zmq::message_t zmsg;
+
+    if ( !c_sock.recv(&zmsg, ZMQ_NOBLOCK) ) {
+      return nullptr;
+    }
+
+    msgstring msg((uint8_t*)zmsg.data(), zmsg.size());
+#ifdef AEGIR_DEBUG
+    printf("ZMQ::Socket::recv(): %s\n", hexdump(msg).c_str());
+#endif
+    try {
+      return MessageFactory::getInstance().create(msg);
+    }
+    catch (Exception &e) {
+      printf("MessageFactory unknown message type: %s", e.what());
+      return nullptr;
+    }
   }
 
   /*

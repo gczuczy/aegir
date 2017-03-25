@@ -34,7 +34,10 @@ namespace aegir {
       Socket(SocketType _type);
       ~Socket();
       Socket &bind(const std::string &_addr);
+      Socket &connect(const std::string &_addr);
+      Socket &subscribe(const std::string &_filter);
       Socket &send(const Message &_msg);
+      std::shared_ptr<Message> recv();
 
     private:
       SocketType c_type;

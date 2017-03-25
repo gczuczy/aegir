@@ -3,8 +3,12 @@ CXXFLAGS=-Werror -pedantic -std=c++11 $(INCPATH)
 LDFLAGS=-pthread -L/usr/local/lib -lboost_program_options -lgpio -lyaml-cpp -lzmq
 
 OBJS=main.o GPIO.o Config.o Exception.o ThreadManager.o IOHandler.o ZMQ.o \
-	Message.o
+	Message.o Controller.o
 OUT=../bin/aegir-brewd
+
+.if defined(DEBUG)
+CXXFLAGS+= -g
+.endif
 
 .SUFFIXES : .o .cc .hh .hpp
 .OBJDIR   : obj/

@@ -19,6 +19,9 @@ namespace aegir {
     PINSTATE=1,
   };
 
+  const std::string hexdump(const msgstring &_msg);
+  const std::string hexdump(const uint8_t *_msg, int _size);
+
   class Message {
   public:
     std::string hexdebug() const;
@@ -27,7 +30,7 @@ namespace aegir {
     virtual ~Message() = 0;
   };
 
-  typedef std::function<std::shared_ptr<Message>(const uint8_t*)> ffunc_t;
+  typedef std::function<std::shared_ptr<Message>(const msgstring&)> ffunc_t;
 
   class MessageFactoryReg {
   public:
@@ -57,19 +60,21 @@ namespace aegir {
   public:
     ~MessageFactory();
     static MessageFactory &getInstance();
-    std::shared_ptr<Message> create(const uint8_t *_msg);
+    std::shared_ptr<Message> create(const msgstring &_msg);
   };
 
   class PinStateMessage: public Message {
   public:
     PinStateMessage() = delete;
-    PinStateMessage(const uint8_t *_msg);
+    PinStateMessage(const msgstring &_msg);
     PinStateMessage(const std::string &_name, int _state);
     virtual msgstring serialize() const override;
     virtual MessageType type() const override;
+    inline const std::string &getName() const {return c_name;};
+    inline int getState() const {return c_state;};
     virtual ~PinStateMessage();
 
-    static std::shared_ptr<Message> create(const uint8_t*);
+    static std::shared_ptr<Message> create(const msgstring &_msg);
 
   public:
     std::string c_name;
