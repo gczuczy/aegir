@@ -11,11 +11,16 @@
 #include <map>
 #include <set>
 
+#include "MAX31856.hh"
+
 namespace aegir {
 
   using pinlayout_t = std::map<std::string, int>;
   enum class PinMode { IN, OUT };
   enum class PinPull { NONE, DOWN, UP};
+  enum class ChipSelectors {DirectSelect};
+  enum class NoiseFilters {HZ50, HZ60};
+  // we will have to add default states for out pins
   struct PinConfig {
     PinConfig() {};
     PinConfig(PinMode _pm, PinPull _pp): mode(_pm), pull(_pp) {};
@@ -48,6 +53,18 @@ namespace aegir {
     std::string c_device;
     // The PIN layout map
     pinlayout_t c_pinlayout;
+    // SPI config
+    std::string c_spidev;
+    ChipSelectors c_spi_chipselector;
+    // SPI / MAX31856
+    MAX31856::TCType c_spi_max31856_tctype;
+    NoiseFilters c_spi_max31856_noisefilter;
+    // SPI / DirectSelect pin layout
+    std::map<int, std::string> c_spi_dschips;
+    // thermocouple layout
+    std::map<std::string, int> c_thermocouples;
+    // thermocouple reading interval in seconds
+    uint32_t c_thermoival;
 
   public:
     ~Config();
@@ -58,6 +75,13 @@ namespace aegir {
     // retrieve config elements
     const std::string &getGPIODevice() const;
     Config &getPinConfig(pinlayout_t &_layout);
+    inline const std::string &getSPIDevice() const {return c_spidev;};
+    inline const ChipSelectors getSPIChipSelector() const {return c_spi_chipselector;};
+    inline const MAX31856::TCType getMAX31856TCType() const {return c_spi_max31856_tctype;};
+    inline const NoiseFilters getMAX31856NoiseFilter() const { return c_spi_max31856_noisefilter;};
+    inline const void getSPIDSChips(std::map<int, std::string> &_chips) const {_chips = c_spi_dschips;};
+    inline const void getThermocouples(std::map<std::string, int> &_tcs) const {_tcs = c_thermocouples;};
+    inline const uint32_t getTCival() const { return c_thermoival;};
   };
 }
 

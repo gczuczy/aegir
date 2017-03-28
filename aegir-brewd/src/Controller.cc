@@ -58,7 +58,7 @@ namespace aegir {
 
     // The main event loop
     std::shared_ptr<Message> msg;
-    std::chrono::microseconds ival(10000);
+    std::chrono::microseconds ival(20000);
     while ( c_run ) {
       inpinchanges = inpinstate;
       int nchanges = 0;
@@ -77,6 +77,12 @@ namespace aegir {
 	    it->second = psmsg->getState()==1;
 	    //inpinchanges[psmsg->getName()] = psmsg->getState()==1;
 	    ++nchanges;
+	  } else if ( msg->type() == MessageType::THERMOREADING ) {
+	    auto trmsg = std::static_pointer_cast<ThermoReadingMessage>(msg);
+	    printf("Controller: got temp reading: %s/%f/%u\n",
+		   trmsg->getName().c_str(),
+		   trmsg->getTemp(),
+		   trmsg->getTimestamp());
 	  } else {
 	    printf("Got unhandled message type: %i\n", (int)msg->type());
 	    continue;
@@ -120,5 +126,7 @@ namespace aegir {
       // sleep a bit
       std::this_thread::sleep_for(ival);
     }
+
+    printf("Controller stopped\n");
   }
 }

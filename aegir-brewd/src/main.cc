@@ -11,6 +11,8 @@
 #include "ThreadManager.hh"
 #include "IOHandler.hh"
 #include "Controller.hh"
+#include "SPI.hh"
+#include "DirectSelect.hh"
 
 namespace po = boost::program_options;
 
@@ -85,23 +87,30 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-
   // initialize the thread manager
   auto threadmgr = aegir::ThreadManager::getInstance();
 
-  // init the worker thread objects
-  auto ioh = aegir::IOHandler::getInstance();
+  {
+    // Initialize the SPI bus
+    std::map<int, std::string> dsmap{{0,"cs0",},{1,"cs1"},{2,"cs2"}};
+    aegir::DirectSelect ds(*gpio, dsmap);
+    aegir::SPI spi(ds, *gpio, cfg->getSPIDevice());
 
-  // init the controller
-  auto ctrl = aegir::Controller::getInstance();
+    // init the worker thread objects
+    auto ioh = new aegir::IOHandler(*gpio, spi);
 
-  /// this is the main loop
-  threadmgr->start();
+    // init the controller
+    auto ctrl = aegir::Controller::getInstance();
+
+    /// this is the main loop
+    threadmgr->start();
+    delete ioh;
+    delete ctrl;
+  }
 
   // deallocating stuff here
   delete gpio;
-  delete ioh;
-  delete ctrl;
+  delete cfg;
 
   return 0;
 }

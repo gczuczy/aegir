@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <map>
 
 #include "Config.hh"
 #include "Exception.hh"
@@ -12,9 +13,51 @@ namespace aegir {
   pinconfig_t g_pinconfig = pinconfig_t{
     {"swled", PinConfig(PinMode::OUT, PinPull::NONE)},
     {"swon",  PinConfig(PinMode::IN, PinPull::DOWN)},
-    {"swoff", PinConfig(PinMode::IN, PinPull::DOWN)}
+    {"swoff", PinConfig(PinMode::IN, PinPull::DOWN)},
+    {"cs0", PinConfig(PinMode::OUT, PinPull::NONE)},
+    {"cs1", PinConfig(PinMode::OUT, PinPull::NONE)},
+    {"cs2", PinConfig(PinMode::OUT, PinPull::NONE)}
   };
 
+  static std::set<std::string> g_tcnames{"RIMS", "MashTun", "HLT"};
+
+  // SPI ChipSelector string translations
+  static std::map<ChipSelectors, std::string> g_spi_cs_to_string{
+    {ChipSelectors::DirectSelect, "DirectSelect"}};
+  static std::map<std::string, ChipSelectors> g_spi_string_to_cs{
+    {"DirectSelect",ChipSelectors::DirectSelect}};
+  // ThermoCouple type lookups
+  std::map<std::string, MAX31856::TCType> g_string_to_tctype{
+    {"B", MAX31856::TCType::B},
+      {"E", MAX31856::TCType::E},
+	{"J", MAX31856::TCType::J},
+	  {"K", MAX31856::TCType::K},
+	    {"N", MAX31856::TCType::N},
+	      {"R", MAX31856::TCType::R},
+		{"S", MAX31856::TCType::S},
+		  {"T", MAX31856::TCType::T}
+  };
+  std::map<MAX31856::TCType, std::string> g_tctype_to_string{
+    {MAX31856::TCType::B, "B"},
+      {MAX31856::TCType::E, "E"},
+	{MAX31856::TCType::J, "J"},
+	  {MAX31856::TCType::K, "K"},
+	    {MAX31856::TCType::N, "N"},
+	      {MAX31856::TCType::R, "R"},
+		{MAX31856::TCType::S, "S"},
+		  {MAX31856::TCType::T, "T"}
+  };
+  // Noisefilter lookups
+  std::map<std::string, NoiseFilters> g_string_to_noisefilter{
+    {"50Hz", NoiseFilters::HZ50},
+    {"60Hz", NoiseFilters::HZ60}
+  };
+  std::map<NoiseFilters, std::string> g_noisefilter_to_string{
+    {NoiseFilters::HZ50, "50Hz"},
+      {NoiseFilters::HZ60, "60Hz"}
+  };
+
+  // The singleton instance holder
   Config *Config::c_instance=0;
 
   Config::Config(const std::string &_cfgfile, bool _noload): c_cfgfile(_cfgfile) {
@@ -23,6 +66,7 @@ namespace aegir {
   }
 
   Config::~Config() {
+    save();
   }
 
   Config *Config::instantiate(const std::string &_cfgfile, bool _noload) {
@@ -43,6 +87,24 @@ namespace aegir {
     c_pinlayout["swled"] = 4;
     c_pinlayout["swon"]  = 17;
     c_pinlayout["swoff"] = 18;
+
+    // SPI config
+    c_spidev = "/dev/spigen0";
+    c_spi_chipselector = ChipSelectors::DirectSelect;
+    c_pinlayout["cs0"] = 8;
+    c_pinlayout["cs1"] = 7;
+    c_pinlayout["cs2"] = 5;
+    // SPI / MAX31856
+    c_spi_max31856_tctype = MAX31856::TCType::T;
+    c_spi_max31856_noisefilter = NoiseFilters::HZ50;
+    // SPI / chips
+    c_spi_dschips = {{0, "cs0"}, {1, "cs1"}, {2, "cs2"}};
+
+    // thermocouples
+    c_thermocouples = {{"MashTun", 0}, {"RIMS", 1}, {"HLT", 2}};
+
+    // thermocouple reading interval
+    c_thermoival = 1;
   }
 
   void Config::load() {
@@ -62,6 +124,7 @@ namespace aegir {
 
     // The config file is loaded into config, now put it into local variables
     try {
+      // GPIO
       if ( config["gpio"] && config["gpio"].IsMap() ) {
 	YAML::Node gpio = config["gpio"];
 	// load the device
@@ -78,6 +141,99 @@ namespace aegir {
 	  c_pinlayout = pinlayout;
 	} // PIN config
       } // GPIO section
+
+      // SPI
+      if ( config["spi"] && config["spi"].IsMap() ) {
+	YAML::Node spi = config["spi"];
+
+	// load the device
+	if ( spi["device"] ) c_spidev = spi["device"].as<std::string>();
+	// load the selector
+	if ( spi["selector"] ) {
+	  std::string csname(spi["selector"].as<std::string>());
+	  auto it = g_spi_string_to_cs.find(csname);
+	  if ( it == g_spi_string_to_cs.end() ) {
+	    throw Exception("Unknown SPI chip selector: %s\n", csname.c_str());
+	  }
+	  c_spi_chipselector = it->second;
+	}
+	// MAX31856 config
+	if ( spi["MAX31856"] && spi["MAX31856"].IsMap() ) {
+	  auto max31856 = spi["MAX31856"];
+	  // TC type
+	  if ( max31856["tctype"] ) {
+	    std::string tctype = max31856["tctype"].as<std::string>();
+	    auto it = g_string_to_tctype.find(tctype);
+	    if ( it == g_string_to_tctype.end() ) {
+	      throw Exception("Unknown TC type: %s\n", tctype.c_str());
+	    }
+	    c_spi_max31856_tctype = it->second;
+	  }// TC type
+	  // Noise Filter, AKA 50/60Hz
+	  if ( max31856["noisefilter"] ) {
+	    std::string nf = max31856["noisefilter"].as<std::string>();
+	    auto it = g_string_to_noisefilter.find(nf);
+	    if ( it == g_string_to_noisefilter.end() ) {
+	      throw Exception("Unknown Noise Filter mode: %s\n", nf.c_str());
+	    }
+	    c_spi_max31856_noisefilter = it->second;
+	  }// Noise Filter
+	} // MAX31856 config
+	// DirectSelect Chip Selector
+	// the PIN configuration
+	if ( spi["DirectSelect"] && spi["DirectSelect"].IsMap() ) {
+	  YAML::Node ds = spi["DirectSelect"];
+
+	  // we have 3 hardcoded sensors at this level, for now
+	  for (int i=0; i<3; ++i) {
+	    if ( !ds[i] ) continue;
+	    std::string pin = ds[i].as<std::string>();
+	    auto it = g_pinconfig.find(pin);
+	    if ( it == g_pinconfig.end() )
+	      throw Exception("Unknown pin: %s", pin.c_str());
+	    c_spi_dschips[i] = pin;
+	  }
+
+	  // Now we have to check for dups
+	  std::set<std::string> tmp;
+	  for ( auto &it: c_spi_dschips ) {
+	    auto it2 = tmp.find(it.second);
+	    if ( it2 != tmp.end() )
+	      throw Exception("Duplicate pin for DirectSelect: %s", it.second.c_str());
+	    tmp.insert(it.second);
+	  }
+	} // PIN config
+
+	// Thermocouples
+	if ( spi["thermocouples"] && spi["thermocouples"].IsMap() ) {
+	  YAML::Node tc = spi["thermocouples"];
+
+	  // We are going through only the valid ones, the rest are ignored
+	  // also, not emptying the list, because that's how unset values default
+	  for (auto &it: g_tcnames) {
+	    if ( tc[it] ) {
+	      int id = tc[it].as<int>();
+	      if ( id < 0 || id > 3 )
+		throw Exception("Thermocouple id out of range: %i", id);
+	      c_thermocouples[it] = id;
+	    }
+	  }
+	  // now verify whether any of them is on the same id
+	  std::set<int> tmp;
+	  for (auto &it: c_thermocouples) {
+	    if ( tmp.find(it.second) != tmp.end() )
+	      throw Exception("Duplicate thermocouple id: %i", it.second);
+	    tmp.insert(it.second);
+	  }
+	} // thermocouples
+      } // SPI section
+
+      if ( config["thermointerval"] && config["thermointerval"].IsMap() ) {
+	YAML::Node ti = config["thermointerval"];
+	c_thermoival = ti.as<uint32_t>();
+	if ( c_thermoival > 60 )
+	  throw Exception("Thermocouple reading interval is too high: %lu", c_thermoival);
+      }
     }
     catch (std::exception &e) {
       throw Exception("Error during parsing config: %s", e.what());
@@ -104,11 +260,40 @@ namespace aegir {
     YAML::Emitter yout;
 
     yout << YAML::BeginMap;
+    // GPIO config
     yout << YAML::Key << "gpio";
     yout << YAML::Value << YAML::BeginMap;
     yout << YAML::Key << "device" << YAML::Value << c_device;
     yout << YAML::Key << "pins" << YAML::Value << c_pinlayout;
     yout << YAML::EndMap;
+
+    // SPI config
+    yout << YAML::Key << "spi";
+    yout << YAML::Value << YAML::BeginMap;
+    yout << YAML::Key << "device" << YAML::Value << c_spidev;
+    yout << YAML::Key << "selector" << YAML::Value << g_spi_cs_to_string[c_spi_chipselector];
+
+    // SPI / MAX31856 config
+    yout << YAML::Key << "MAX31856";
+    yout << YAML::Value <<
+      std::map<std::string, std::string>{
+      {"tctype", g_tctype_to_string[c_spi_max31856_tctype]},
+	{"noisefilter", g_noisefilter_to_string[c_spi_max31856_noisefilter]}};
+    // end SPI / MAX31856
+
+    // SPI / DirectSelect
+    yout << YAML::Key << "DirectSelect";
+    yout << YAML::Value << c_spi_dschips;
+
+    // Thermocouple layout
+    yout << YAML::Key << "thermocouples";
+    yout << YAML::Value << c_thermocouples;
+
+    // thermocouple reading interval
+    yout << YAML::Key << "thermointerval";
+    yout << YAML::Value << c_thermoival;
+
+    // End the config
     yout << YAML::EndMap;
 
     std::ofstream outfile;

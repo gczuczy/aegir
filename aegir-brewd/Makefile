@@ -1,9 +1,9 @@
 INCPATH=-I/usr/local/include -I ../contrib/
-CXXFLAGS=-Werror -pedantic -std=c++11 $(INCPATH)
+CXXFLAGS=-Werror -pedantic -std=c++14 $(INCPATH)
 LDFLAGS=-pthread -L/usr/local/lib -lboost_program_options -lgpio -lyaml-cpp -lzmq
 
 OBJS=main.o GPIO.o Config.o Exception.o ThreadManager.o IOHandler.o ZMQ.o \
-	Message.o Controller.o
+	Message.o Controller.o SPI.o DirectSelect.o MAX31856.o
 OUT=../bin/aegir-brewd
 
 .if defined(DEBUG)
@@ -15,8 +15,6 @@ CXXFLAGS+= -g
 .PATH.cc  : $(.CURDIR)/src/
 .PATH.hh  : $(.CURDIR)/src/
 .PATH.hpp  : $(.CURDIR)/contrib/
-
-.sinclude ".depend"
 
 .PHONY = clean brewd depend .depend
 
@@ -36,3 +34,5 @@ $(OUT): $(OBJS)
 
 .cc.o:
 	$(CXX) -c -pipe -o $@ $< $(CXXFLAGS)
+
+.sinclude ".depend"

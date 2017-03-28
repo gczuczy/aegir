@@ -28,6 +28,7 @@ namespace aegir {
 
 
   MessageFactoryReg PinStateReg(MessageType::PINSTATE, PinStateMessage::create);
+  MessageFactoryReg ThermoReadingReg(MessageType::THERMOREADING, ThermoReadingMessage::create);
 
   /*
    * MessageFactoryReg
@@ -117,4 +118,69 @@ namespace aegir {
   std::shared_ptr<Message> PinStateMessage::create(const msgstring &_msg) {
     return std::make_shared<PinStateMessage>(_msg);
   }
+
+  /*
+   * ThermoReadingMessage
+   * Format is:
+   * MessageType: 1 byte
+   * Name: 1) stringsize: 1 byte + 2) stringsize-bytes
+   * Temp: sizeof(double)
+   * Timestamp: 4 byte, uint32_t
+   */
+  ThermoReadingMessage::ThermoReadingMessage(const msgstring &_msg) {
+#ifdef AEGIR_DEBUG
+    printf("PinStateMessage(L:%lu '%s') called\n", _msg.length(), hexdump(_msg).c_str());
+#endif
+    // _msg[0] is the type, but we're already here
+    int msglen = _msg.length();
+    uint8_t *data = (uint8_t*)_msg.data();
+
+    uint8_t namelen = _msg[1];
+    c_name = std::string((char*)data+2, namelen);
+
+    int offset = 3+namelen;
+    c_temp = *(double*)(data+offset);
+    offset += sizeof(double);
+
+    c_timestamp = *(uint32_t*)(data+offset);
+  }
+
+  ThermoReadingMessage::ThermoReadingMessage(const std::string &_name, double _temp, uint32_t _timestamp):
+    c_name(_name), c_temp(_temp), c_timestamp(_timestamp) {
+  }
+
+  ThermoReadingMessage::~ThermoReadingMessage() = default;
+
+  msgstring ThermoReadingMessage::serialize() const {
+    uint32_t len(3);
+    uint32_t strsize(std::min((uint32_t)c_name.length(), (uint32_t)255));
+    len += strsize;
+    len += sizeof(double) + sizeof(uint32_t);
+
+    msgstring buffer(len, 0);
+    uint8_t *data = (uint8_t*)buffer.data();
+    data[0] = (uint8_t)type();
+    data[1] = (uint8_t)strsize;
+    memcpy((void*)(data+2), (void*)c_name.data(), strsize);
+
+    int offset = strsize + 3;
+
+    // c_temp is double
+    *(double*)(data+offset) = c_temp;
+    offset += sizeof(double);
+
+    // c_timestamp is uint32_t
+    *(uint32_t*)(data+offset) = c_timestamp;
+
+    return buffer;
+  }
+
+  MessageType ThermoReadingMessage::type() const {
+    return MessageType::THERMOREADING;
+  }
+
+  std::shared_ptr<Message> ThermoReadingMessage::create(const msgstring &_msg) {
+    return std::make_shared<ThermoReadingMessage>(_msg);
+  }
+
 }

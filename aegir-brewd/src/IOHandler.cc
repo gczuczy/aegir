@@ -1,6 +1,10 @@
 #include "IOHandler.hh"
 
 #include <stdio.h>
+#include <sys/event.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/time.h>
 
 #include <chrono>
 #include <map>
@@ -12,10 +16,31 @@
 
 namespace aegir {
 
-  IOHandler *IOHandler::c_instance = 0;
+  IOHandler::IOHandler(GPIO &_gpio, SPI &_spi): c_gpio(_gpio), c_spi(_spi),
+    c_mq_pub(ZMQ::SocketType::PUB),
+    c_mq_iocmd(ZMQ::SocketType::SUB) {
+    auto cfg = Config::getInstance();
 
-  IOHandler::IOHandler(): c_mq_pub(ZMQ::SocketType::PUB),
-			  c_mq_iocmd(ZMQ::SocketType::SUB) {
+    // first initialize the sensors
+    for (int i=0; i<3; ++i) {
+      c_tcs.push_back(std::make_unique<MAX31856>(c_spi, i));
+    }
+    // now set them up
+    {
+      auto nf = cfg->getMAX31856NoiseFilter();
+      auto tctype = cfg->getMAX31856TCType();
+      for (auto &it: c_tcs) {
+	it->setAvgMode(MAX31856::AvgMode::S8); // averages of 4 samples
+	it->set50Hz(nf == NoiseFilters::HZ50);
+	it->setTCType(tctype);
+	it->setConversionMode(true);
+      }
+    }
+    // fetch the senso mapping from the config
+    cfg->getThermocouples(c_tcmap);
+    // and the reading interval
+    c_thermoival = cfg->getTCival();
+
     auto thrmgr = ThreadManager::getInstance();
 
     c_mq_pub.bind("inproc://iopub");
@@ -27,18 +52,23 @@ namespace aegir {
   IOHandler::~IOHandler() {
   }
 
-  IOHandler *IOHandler::getInstance() {
-    if ( !c_instance) c_instance = new IOHandler();
-    return c_instance;
+  void IOHandler::readTCs() {
+    struct timeval tv;
+    gettimeofday(&tv, 0);
+    for (auto &it: c_tcmap) {
+      double temp = c_tcs[it.second]->readCJTemp();
+#ifdef AEGIR_DEBUG
+      printf("Sensor %s/%i temp: %f C Time: %li\n", it.first.c_str(), it.second, temp, tv.tv_sec);
+#endif
+      c_mq_pub.send(ThermoReadingMessage(it.first, temp, tv.tv_sec));
+    }
   }
 
   void IOHandler::run() {
     printf("IOHandler started\n");
 
-    std::chrono::microseconds ival(10000);
     std::map<std::string,int> inpins;
     std::set<std::string> outpins;
-    GPIO &gpio(*GPIO::getInstance());
 
     // later we might need to handle unused pins for multiple configs here
     for ( auto &it: g_pinconfig ) {
@@ -50,12 +80,36 @@ namespace aegir {
       }
     }
 
+    // set our kqueue up
+    int kq;
+    kq = kqueue();
+    struct kevent ke[8];
+    struct timespec ival;
+    int nchanges = 8;
+    int err;
+    // EV_SET(kev, ident, filter, flags, fflags, data, udata);
+    EV_SET(&ke[0], 0, EVFILT_TIMER, EV_ADD|EV_ENABLE, NOTE_SECONDS, c_thermoival, 0);
+    if ( kevent(kq, ke, 1, 0, 0, 0) < 0 ) {
+      printf("kevent failed: %i/%s\n", errno, strerror(errno));
+    }
+
     int newval;
     std::shared_ptr<Message> msg;
     while ( c_run ) {
+      // start with kevent
+      ival.tv_sec = 0;
+      ival.tv_nsec = 10000000;
+      if ( (nchanges = kevent(kq, 0, 0, ke, 9, &ival)) > 0 ) {
+	for (int i=0; i<nchanges; ++i) {
+	  // EVFILT_TIMER with ident=0 is our sensor timer
+	  if ( ke[i].filter == EVFILT_TIMER && ke[i].ident == 0 )
+	    readTCs();
+	}
+      }
+
       // read the input pins
       for (auto &it: inpins) {
-	newval = gpio[it.first].get();
+	newval = c_gpio[it.first].get();
 	if ( newval != it.second ) {
 	  printf("IOHandle: Pin %s %i -> %i\n ", it.first.c_str(),
 		 it.second, newval);
@@ -73,16 +127,15 @@ namespace aegir {
 	  if ( it != outpins.end() ) {
 	    printf("IOHandler: setting %s to %i\n", psmsg->getName().c_str(), psmsg->getState());
 	    if ( psmsg->getState() == 1 ) {
-	      gpio[psmsg->getName()].high();
+	      c_gpio[psmsg->getName()].high();
 	    } else {
-	      gpio[psmsg->getName()].low();
+	      c_gpio[psmsg->getName()].low();
 	    }
 	  } else {
 	    printf("IOHandler: can't set %s to %i: no such pin\n", psmsg->getName().c_str(), psmsg->getState());
 	  }
 	}
       }
-      std::this_thread::sleep_for(ival);
     }
 
     printf("IOHandler stopped\n");

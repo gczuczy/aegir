@@ -16,7 +16,8 @@ namespace aegir {
 
   enum class MessageType:uint8_t {
     UNKNOWN=0,
-    PINSTATE=1,
+      PINSTATE=1,
+      THERMOREADING=2
   };
 
   const std::string hexdump(const msgstring &_msg);
@@ -63,6 +64,7 @@ namespace aegir {
     std::shared_ptr<Message> create(const msgstring &_msg);
   };
 
+  // This communicates a GPIO pin's state
   class PinStateMessage: public Message {
   public:
     PinStateMessage() = delete;
@@ -79,6 +81,27 @@ namespace aegir {
   public:
     std::string c_name;
     int c_state;
+  };
+
+  // Thermocouple reading results
+  class ThermoReadingMessage: public Message {
+  public:
+    ThermoReadingMessage() = delete;
+    ThermoReadingMessage(const msgstring &_msg);
+    ThermoReadingMessage(const std::string &_name, double _temp, uint32_t _timestamp);
+    virtual msgstring serialize() const override;
+    virtual MessageType type() const override;
+    inline const std::string &getName() const {return c_name;};
+    inline double getTemp() const {return c_temp;};
+    inline uint32_t getTimestamp() const {return c_timestamp;};
+    virtual ~ThermoReadingMessage();
+
+    static std::shared_ptr<Message> create(const msgstring &_msg);
+
+  public:
+    std::string c_name;
+    double c_temp;
+    uint32_t c_timestamp;
   };
 
 }
