@@ -1,4 +1,4 @@
-INCPATH=-I/usr/local/include -I ../contrib/
+INCPATH=-I/usr/local/include
 CXXFLAGS=-Werror -pedantic -std=c++14 $(INCPATH)
 LDFLAGS=-pthread -L/usr/local/lib -lboost_program_options -lgpio -lyaml-cpp -lzmq
 
@@ -10,11 +10,10 @@ OUT=../bin/aegir-brewd
 CXXFLAGS+= -g
 .endif
 
-.SUFFIXES : .o .cc .hh .hpp
+.SUFFIXES : .o .cc .hh
 .OBJDIR   : obj/
 .PATH.cc  : $(.CURDIR)/src/
 .PATH.hh  : $(.CURDIR)/src/
-.PATH.hpp  : $(.CURDIR)/contrib/
 
 .PHONY = clean brewd depend .depend
 
