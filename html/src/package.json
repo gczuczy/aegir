@@ -1,0 +1,16 @@
+{
+  "name": "aegir",
+  "version": "1.0.0",
+  "description": "Aegir HTML5 UI",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Gergely Czuczy",
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "angular": "^1.6.4",
+    "angular-ui-bootstrap": "^2.5.0",
+    "angular-ui-layout": "^1.4.3"
+  }
+}
