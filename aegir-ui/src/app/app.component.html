@@ -1,3 +1,16 @@
-<h1>
-  {{title}}
-</h1>
+<nav class="navbar navbar-toggleable-sm navbar-dark navbar-inverse bg-inverse navbar-fixed-top">
+  <span class="navbar-brand">AEGIR</span>
+  <div class="navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item" routerLinkActive="active">
+	<a class="nav-link" routerLink="/brew" routerLinkActive="active">Brew</a></li>
+      <li class="nav-item" routerLinkActive="active">
+	<a class="nav-link" routerLink="/program" routerLinkActive="active">Program</a></li>
+    </ul>
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item" routerLinkActive="active">
+	<a class="nav-link" routerLink="/settings" routerLinkActive="active">Settings</a></li>
+    </ul>
+  </div>
+</nav>
+<router-outlet></router-outlet>
