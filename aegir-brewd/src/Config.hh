@@ -65,6 +65,8 @@ namespace aegir {
     std::map<std::string, int> c_thermocouples;
     // thermocouple reading interval in seconds
     uint32_t c_thermoival;
+    // PR ZMQ address
+    uint16_t c_zmq_pr_port;
 
   public:
     ~Config();
@@ -82,6 +84,7 @@ namespace aegir {
     inline const void getSPIDSChips(std::map<int, std::string> &_chips) const {_chips = c_spi_dschips;};
     inline const void getThermocouples(std::map<std::string, int> &_tcs) const {_tcs = c_thermocouples;};
     inline const uint32_t getTCival() const { return c_thermoival;};
+    inline const uint16_t getPRPort() const { return c_zmq_pr_port; };
   };
 }
 

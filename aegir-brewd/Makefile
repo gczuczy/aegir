@@ -3,7 +3,7 @@ CXXFLAGS=-Werror -pedantic -std=c++14 $(INCPATH)
 LDFLAGS=-pthread -L/usr/local/lib -lboost_program_options -lgpio -lyaml-cpp -lzmq
 
 OBJS=main.o GPIO.o Config.o Exception.o ThreadManager.o IOHandler.o ZMQ.o \
-	Message.o Controller.o SPI.o DirectSelect.o MAX31856.o
+	Message.o Controller.o SPI.o DirectSelect.o MAX31856.o PRThread.o
 OUT=../bin/aegir-brewd
 
 .if defined(DEBUG)
@@ -22,7 +22,7 @@ brewd: .depend $(OUT)
 depend: .depend
 
 .depend: ../Makefile
-	mkdep $(INCPATH) ../src/*.cc ../src/*.hh ../contrib/*.hpp
+	mkdep $(INCPATH) ../src/*.cc ../src/*.hh
 
 clean:
 	rm -f .depend $(OUT) $(OBJS)

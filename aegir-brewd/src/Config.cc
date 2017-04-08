@@ -105,6 +105,9 @@ namespace aegir {
 
     // thermocouple reading interval
     c_thermoival = 1;
+
+    // the PR ZMQ socket
+    c_zmq_pr_port = 42069;
   }
 
   void Config::load() {
@@ -226,14 +229,22 @@ namespace aegir {
 	    tmp.insert(it.second);
 	  }
 	} // thermocouples
-      } // SPI section
-
-      if ( config["thermointerval"] && config["thermointerval"].IsMap() ) {
-	YAML::Node ti = config["thermointerval"];
-	c_thermoival = ti.as<uint32_t>();
+	if ( spi["thermointerval"] && spi["thermointerval"].IsScalar() ) {
+	  YAML::Node ti = spi["thermointerval"];
+	  c_thermoival = ti.as<uint32_t>();
+	  printf("Read thermoival: %u\n", c_thermoival);
 	if ( c_thermoival > 60 )
 	  throw Exception("Thermocouple reading interval is too high: %lu", c_thermoival);
+	}
+      } // SPI section
+
+      // ZMQ PR socket
+      if ( config["prport"] && config["prport"].IsScalar() ) {
+	YAML::Node prsock = config["prport"];
+	c_zmq_pr_port = prsock.as<uint16_t>();
+	printf("Read prsocket: %u\n", c_zmq_pr_port);
       }
+
     }
     catch (std::exception &e) {
       throw Exception("Error during parsing config: %s", e.what());
@@ -292,6 +303,10 @@ namespace aegir {
     // thermocouple reading interval
     yout << YAML::Key << "thermointerval";
     yout << YAML::Value << c_thermoival;
+
+    yout << YAML::EndMap; // end of SPI
+
+    yout << YAML::Key << "prport" << YAML::Value << c_zmq_pr_port;
 
     // End the config
     yout << YAML::EndMap;
