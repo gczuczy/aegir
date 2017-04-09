@@ -7,6 +7,7 @@ from pprint import pprint
 import aegir.config
 import aegir.api
 import aegir.zmq
+import aegir.db
 
 _app = None
 _api = None
@@ -20,6 +21,7 @@ def init(cfgfile):
     _api = Api(_app)
 
     aegir.zmq.init(_app)
+    aegir.db.init(_app)
     aegir.api.init(_app, _api)
     pass
 

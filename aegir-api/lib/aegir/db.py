@@ -22,3 +22,14 @@ def after_request(resp):
     if _conn:
         _conn.commit()
     return resp
+
+def getprograms():
+    global _conn
+
+    ret = []
+
+    for prog in _conn.execute('SELECT id,name FROM programs ORDER BY name'):
+        ret.append(dict(prog))
+        pass
+
+    return ret
