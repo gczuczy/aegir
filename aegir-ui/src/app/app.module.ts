@@ -5,7 +5,7 @@ import { RouterModule } from '@angular/router';
 import { APP_BASE_HREF } from '@angular/common';
 
 import { BrewModule } from './brew/brew.module';
-import { ProgramModule } from './program/program.module';
+import { ProgramsModule } from './programs/programs.module';
 import { SettingsModule } from './settings/settings.module';
 
 import { AppComponent } from './app.component';
@@ -21,7 +21,7 @@ import { APP_ROUTES } from './app.routes';
       HttpModule,
       BrewModule,
       SettingsModule,
-      ProgramModule,
+      ProgramsModule,
       RouterModule.forRoot(APP_ROUTES)
   ],
   providers: [],
