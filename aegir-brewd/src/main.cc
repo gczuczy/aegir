@@ -13,6 +13,7 @@
 #include "Controller.hh"
 #include "SPI.hh"
 #include "DirectSelect.hh"
+#include "PRThread.hh"
 
 namespace po = boost::program_options;
 
@@ -101,6 +102,9 @@ int main(int argc, char *argv[]) {
 
     // init the controller
     auto ctrl = aegir::Controller::getInstance();
+
+    // Init the PR thread
+    aegir::PRThread prt;
 
     /// this is the main loop
     threadmgr->start();
