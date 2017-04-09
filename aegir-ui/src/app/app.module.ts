@@ -10,11 +10,13 @@ import { SettingsModule } from './settings/settings.module';
 
 import { AppComponent } from './app.component';
 
+import { ApiService } from './api.service';
+
 import { APP_ROUTES } from './app.routes';
 
 @NgModule({
   declarations: [
-    AppComponent
+      AppComponent,
   ],
   imports: [
       BrowserModule,
@@ -24,7 +26,7 @@ import { APP_ROUTES } from './app.routes';
       ProgramsModule,
       RouterModule.forRoot(APP_ROUTES)
   ],
-  providers: [],
+  providers: [ApiService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

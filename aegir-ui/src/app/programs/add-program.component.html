@@ -1,0 +1,10 @@
+<div class="container">
+  <h1>Create a new program: {{program?.name}}</h1>
+  <form>
+    <div class="form-group">
+      <label for="name">Name</label>
+      <input class="form-control" id="name" placeholder="Name of the program" required
+	     [ngModel]="program?.name" (ngModelChange)="program.name = $event" name="name">
+    </div>
+  </form>
+</div>
