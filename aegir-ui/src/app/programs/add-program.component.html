@@ -1,10 +1,153 @@
 <div class="container">
-  <h1>Create a new program: {{program?.name}}</h1>
-  <form>
-    <div class="form-group">
-      <label for="name">Name</label>
-      <input class="form-control" id="name" placeholder="Name of the program" required
-	     [ngModel]="program?.name" (ngModelChange)="program.name = $event" name="name">
+  <h1>Create a new program:</h1>
+  <form [formGroup]="addProgramForm" novalidate (ngSubmit)="save(addProgramForm)">
+    <div class="container">
+
+      <!-- program name -->
+      <div class="row">
+	<div class="col form-group">
+	  <label>Name</label>
+	  <small [hidden]="addProgramForm.controls.name.valid" class="text-danger">
+	    Name is required
+	  </small>
+	  <input class="form-control" formControlName="name">
+	</div>
+      </div>
+
+      <!-- mash end temperature and boil time -->
+      <div class="row">
+	<div class="col form-group">
+	  <label>Mashing End Temparture</label>
+	  <input class="form-control" formControlName="endtemp" type="number">
+	  <small [hidden]="addProgramForm.controls.endtemp.valid" class="text-danger">
+	    Boiltime is required
+	  </small>
+	</div>
+	<div class="col form-group">
+	  <label>Boil time</label>
+	  <input class="form-control" formControlName="boiltime" type="number">
+	</div>
+      </div>
+
+      <!-- Mash temperature steps -->
+      <div class="row">
+	<div class="col-9"><h2>Mash temperature steps</h2></div>
+	<div class="col-3">
+	  <button type="button" class="btn btn-primary" (click)="addMashStep()">Add step</button>
+	</div>
+      </div>
+      <div formArrayName="mashsteps" class="container">
+	<div *ngFor="let mashtemp of addProgramForm.controls.mashsteps.controls; let i=index"
+	     class="row" [formGroupName]="i">
+	  <div class="col-1">
+	    <span><strong>Temp {{i+1}}</strong></span>
+	  </div>
+	  <div class="col-1">
+	    <button *ngIf="addProgramForm.controls.mashsteps.controls.length > 1" (click)="removeMashStep(i)"
+		    type="button" class="btn btn-danger btn-sm">remove</button>
+	  </div>
+	  <!-- temp -->
+	  <div class="col-5 form-group">
+	    <div class="row">
+	      <div class="col"><label>Temperature [C]</label></div>
+	      <div class="col">
+		<small [hidden]="addProgramForm.controls.mashsteps.controls[i].controls.temp.valid">
+		  Temperature is required
+		</small>
+	      </div>
+	    </div>
+	    <div class="row">
+	      <div class="col">
+		<input type="number" formControlName="temp">
+	      </div>
+	    </div>
+	  </div>
+	  <!-- holdtime -->
+	  <div class="col-5 form-group">
+	    <div class="row">
+	      <div class="col"><label>Hold time [min]</label></div>
+	      <div class="col">
+	      <small [hidden]="addProgramForm.controls.mashsteps.controls[i].controls.holdtime.valid">
+		Holdtime is required
+	      </small></div>
+	    </div>
+	    <div class="row">
+	      <div class="col">
+		<input type="number" formControlName="holdtime">
+	      </div>
+	    </div>
+	  </div>
+	</div>
+      </div>
+
+      <!-- Hop schedule -->
+      <div class="row">
+	<div class="col-9"><h2>Hop schedule</h2></div>
+	<div class="col-3">
+	  <button type="button" class="btn btn-primary" (click)="addHop()">Add hop</button>
+	</div>
+      </div>
+      <div formArrayName="hops" class="container">
+	<div *ngFor="let hop of addProgramForm.controls.hops.controls; let i=index"
+	     class="row" [formGroupName]="i">
+	  <!-- Hop name -->
+	  <div class="col-4 form-group">
+	    <div class="row">
+	      <div class="col"><label>Name</label></div>
+	      <div class="col">
+		<small [hidden]="addProgramForm.controls.hops.controls[i].controls.name.valid">
+		  Name is required
+		</small>
+	      </div>
+	    </div>
+	    <div class="row">
+	      <div class="col">
+		<input type="text" formControlName="name">
+	      </div>
+	    </div>
+	  </div>
+	  <!-- Quantity -->
+	  <div class="col-4 form-group">
+	    <div class="row">
+	      <div class="col"><label>Quantity</label></div>
+	      <div class="col">
+		<small [hidden]="addProgramForm.controls.hops.controls[i].controls.quantity.valid">
+		  Quantity is required
+		</small>
+	      </div>
+	    </div>
+	    <div class="row">
+	      <div class="col">
+		<input type="number" formControlName="quantity">
+	      </div>
+	    </div>
+	  </div>
+	  <!-- attime -->
+	  <div class="col-4 form-group">
+	    <div class="row">
+	      <div class="col"><label>Time [T-n, min]</label></div>
+	      <div class="col">
+	      <small [hidden]="addProgramForm.controls.hops.controls[i].controls.attime.valid">
+		Time is required
+	      </small></div>
+	    </div>
+	    <div class="row">
+	      <div class="col">
+		<input type="number" formControlName="attime">
+	      </div>
+	      <div class="col-1">
+		<button (click)="removeHop(i)"
+			type="button" class="btn btn-danger btn-sm">remove</button>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+      </div>
+
+      <!-- submit -->
+      <div class="row">
+	<button type="submit" [disabled]="!addProgramForm.valid">Save</button>
+      </div>
     </div>
   </form>
 </div>
