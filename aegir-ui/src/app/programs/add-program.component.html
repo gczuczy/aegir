@@ -2,30 +2,48 @@
   <h1>Create a new program:</h1>
   <form [formGroup]="addProgramForm" novalidate (ngSubmit)="save(addProgramForm)">
     <div class="container">
+      <!-- Form errors -->
+      <div class="container" [hidden]="!addProgramForm.errors">
+	<div class="alert alert-danger" role="alert">Foobar</div>
+      </div>
 
-      <!-- program name -->
+      <!-- program name  and boil time-->
       <div class="row">
+	<!-- program name -->
 	<div class="col form-group">
 	  <label>Name</label>
 	  <small [hidden]="addProgramForm.controls.name.valid" class="text-danger">
-	    Name is required
+	    Name is required and must be at least 3 characters long
 	  </small>
 	  <input class="form-control" formControlName="name">
 	</div>
+	<!-- boil time -->
+	<div class="col form-group">
+	  <label>Boil time [min]</label>
+	  <small [hidden]="addProgramForm.controls.boiltime.valid" class="text-danger">
+	    Boiltime is required and must be between 30 minutes and 5 hours
+	  </small>
+	  <input class="form-control" formControlName="boiltime" type="number">
+	</div>
       </div>
 
-      <!-- mash end temperature and boil time -->
+      <!-- mash start and end temperatures -->
       <div class="row">
+	<!-- start temp -->
 	<div class="col form-group">
-	  <label>Mashing End Temparture</label>
-	  <input class="form-control" formControlName="endtemp" type="number">
-	  <small [hidden]="addProgramForm.controls.endtemp.valid" class="text-danger">
-	    Boiltime is required
+	  <label>Mashing Start Temparture [C]</label>
+	  <small [hidden]="addProgramForm.controls.starttemp.valid" class="text-danger">
+	    Required, and must be between 25C and End Temp
 	  </small>
+	  <input class="form-control" formControlName="starttemp" type="number">
 	</div>
+	<!-- end temp -->
 	<div class="col form-group">
-	  <label>Boil time</label>
-	  <input class="form-control" formControlName="boiltime" type="number">
+	  <label>Mashing End Temparture [C]</label>
+	  <small [hidden]="addProgramForm.controls.endtemp.valid" class="text-danger">
+	    Required, and must be between Start Temp and 90 C
+	  </small>
+	  <input class="form-control" formControlName="endtemp" type="number">
 	</div>
       </div>
 
@@ -52,7 +70,7 @@
 	      <div class="col"><label>Temperature [C]</label></div>
 	      <div class="col">
 		<small [hidden]="addProgramForm.controls.mashsteps.controls[i].controls.temp.valid">
-		  Temperature is required
+		  Temperature is required and must be between the previous and next/finishing temperatures.
 		</small>
 	      </div>
 	    </div>
@@ -96,7 +114,7 @@
 	      <div class="col"><label>Name</label></div>
 	      <div class="col">
 		<small [hidden]="addProgramForm.controls.hops.controls[i].controls.name.valid">
-		  Name is required
+		  Name is required, and at least 3 characters long
 		</small>
 	      </div>
 	    </div>
@@ -112,7 +130,7 @@
 	      <div class="col"><label>Quantity</label></div>
 	      <div class="col">
 		<small [hidden]="addProgramForm.controls.hops.controls[i].controls.quantity.valid">
-		  Quantity is required
+		  Quantity is required, and must be at least 1
 		</small>
 	      </div>
 	    </div>
@@ -128,7 +146,7 @@
 	      <div class="col"><label>Time [T-n, min]</label></div>
 	      <div class="col">
 	      <small [hidden]="addProgramForm.controls.hops.controls[i].controls.attime.valid">
-		Time is required
+		Time is required, and must be between 0 and boiltime
 	      </small></div>
 	    </div>
 	    <div class="row">

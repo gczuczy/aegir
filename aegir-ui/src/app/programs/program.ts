@@ -2,6 +2,7 @@ export class Program {
     constructor(
 	public id: number,
 	public name: string,
+	public starttemp: number,
 	public endtemp: number,
 	public boiltime: number,
 	public mashsteps: ProgramMashTemp[],
