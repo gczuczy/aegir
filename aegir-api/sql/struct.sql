@@ -2,6 +2,7 @@
 DROP TABLE IF EXISTS programs;
 CREATE TABLE programs (
        id integer primary key autoincrement,
+       starttemp integer not null default 37,
        endtemp integer not null default 80,
        boiltime integer not null default 60,
        name varchar not null unique,
@@ -13,11 +14,13 @@ DROP TABLE IF EXISTS programs_tempsteps;
 CREATE TABLE programs_tempsteps (
      id	   integer primary key autoincrement,
      progid integer not null,
+     orderno integer not null,
      temperature integer not null,
      holdtime integer not null,
      FOREIGN KEY (progid) REFERENCES programs(id),
      CHECK (temperature > 20 and temperature <= 95),
-     CHECK (holdtime > 1 and holdtime <= 180)
+     CHECK (holdtime > 1 and holdtime <= 180),
+     CHECK (orderno > 0)
 );
 
 DROP TABLE IF EXISTS programs_hops;
