@@ -15,18 +15,20 @@ import { ApiService } from './api.service';
 import { APP_ROUTES } from './app.routes';
 
 @NgModule({
-  declarations: [
-      AppComponent,
-  ],
-  imports: [
-      BrowserModule,
-      HttpModule,
-      BrewModule,
-      SettingsModule,
-      ProgramsModule,
-      RouterModule.forRoot(APP_ROUTES)
-  ],
-  providers: [ApiService],
-  bootstrap: [AppComponent]
+    declarations: [
+	AppComponent,
+    ],
+    imports: [
+	BrowserModule,
+	HttpModule,
+	BrewModule,
+	SettingsModule,
+	ProgramsModule,
+	RouterModule.forRoot(APP_ROUTES)
+    ],
+    providers: [
+	ApiService
+    ],
+    bootstrap: [AppComponent]
 })
 export class AppModule { }
