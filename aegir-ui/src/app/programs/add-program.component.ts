@@ -5,6 +5,7 @@ import { Validators, FormGroup, FormArray, FormBuilder,
 import { Program, ProgramMashTemp } from './program';
 
 import { IntValidator } from '../int-validator';
+import { ApiService } from '../api.service';
 
 @Component({
   templateUrl: './add-program.component.html',
@@ -16,7 +17,10 @@ export class AddProgramComponent implements OnInit {
     private minmashtemp = 37;
     private maxmashtemp = 80;
 
-    constructor(private _fb: FormBuilder) {
+    public errors: string[];
+
+    constructor(private _fb: FormBuilder,
+		private api: ApiService) {
     }
 
     ngOnInit() {
@@ -30,6 +34,9 @@ export class AddProgramComponent implements OnInit {
 	}, {
 	    validator: this.formValidator.bind(this)
 	});
+
+	// reset the error array
+	this.errors = null;
 
 	// Add the starttemp validator, which updates the mashtemp validators
 	this.addProgramForm.controls['starttemp'].valueChanges.subscribe({
@@ -172,7 +179,20 @@ export class AddProgramComponent implements OnInit {
     }
 
     save(model: FormGroup) {
+	/*
 	console.log('save ', model);
 	console.log('save ', model.value);
+	*/
+	this.api.addProgram(model.value).subscribe(
+	    resp => {
+		this.errors = null;
+		//console.log('Response from API: ', resp);
+	    },
+	    err => {
+		let errobj = err.json();
+		//console.log('Error obj: ', errobj);
+		this.errors = errobj['errors'];
+	    }
+	)
     }
 }
