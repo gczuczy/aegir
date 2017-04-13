@@ -56,7 +56,7 @@ namespace aegir {
     struct timeval tv;
     gettimeofday(&tv, 0);
     for (auto &it: c_tcmap) {
-      double temp = c_tcs[it.second]->readCJTemp();
+      double temp = c_tcs[it.second]->readTCTemp();
 #ifdef AEGIR_DEBUG
       printf("Sensor %s/%i temp: %f C Time: %li\n", it.first.c_str(), it.second, temp, tv.tv_sec);
 #endif
