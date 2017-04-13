@@ -14,9 +14,17 @@ def init(app):
     app.after_request(after_request)
     pass
 
+def dict_factory(cursor, row):
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+        pass
+    return d
+
 def instance_init():
     global _conn
     _conn = sqlite3.connect(aegir.config.config['sqlitedb'])
+    _conn.row_factory = dict_factory
     pass
 
 def after_request(resp):
@@ -30,7 +38,7 @@ def getprograms():
     ret = []
 
     for prog in _conn.execute('SELECT id,name FROM programs ORDER BY name'):
-        ret.append(dict(prog))
+        ret.append(prog)
         pass
 
     return ret
@@ -40,7 +48,7 @@ def checkprogramname(name):
 
     curs = _conn.cursor()
     res = curs.execute('SELECT count(*) AS c FROM programs WHERE name = ?', (name, ))
-    if res.fetchone()[0] != 0:
+    if res.fetchone()['c'] != 0:
         return False
     return True
 
