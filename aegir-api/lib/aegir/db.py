@@ -3,6 +3,7 @@ Data handling, this is currently sqlite
 '''
 
 import sqlite3
+from pprint import pprint
 
 import aegir.config
 
@@ -33,3 +34,35 @@ def getprograms():
         pass
 
     return ret
+
+def checkprogramname(name):
+    global _conn
+
+    curs = _conn.cursor()
+    res = curs.execute('SELECT count(*) AS c FROM programs WHERE name = ?', (name, ))
+    if res.fetchone()[0] != 0:
+        return False
+    return True
+
+def addprogram(prog):
+    global _conn
+
+    curs = _conn.cursor()
+    curs.execute('INSERT INTO programs (name, starttemp, endtemp, boiltime) VALUES (?,?,?,?)',
+                 (prog['name'], prog['starttemp'], prog['endtemp'], prog['boiltime']))
+    progid = curs.lastrowid
+
+    # now add the mashsteps
+    for step in prog['mashsteps']:
+        curs.execute('''
+        INSERT INTO programs_mashsteps (progid, orderno, temperature, holdtime)
+        VALUES (?, ?, ?, ?)
+        ''', (progid, step['order'], step['temp'], step['holdtime']))
+        pass
+
+    # and the hops
+    for hop in prog['hops']:
+        curs.execute('INSERT INTO programs_hops (progid, attime, hopname, hopqty) VALUES (?,?,?,?)',
+                 (progid, hop['attime'], hop['name'], hop['quantity']))
+        pass
+    pass
