@@ -2,6 +2,14 @@
   <h1>Create a new program:</h1>
   <form [formGroup]="addProgramForm" novalidate (ngSubmit)="save(addProgramForm)">
     <div class="container">
+      <!-- API errors -->
+      <div class="container" [hidden]="!errors">
+	<div *ngFor="let error of errors"
+	     class="alert alert-danger" role="alert">
+	  <strong>API Error:</strong>&nbsp;{{error}}
+	</div>
+      </div>
+
       <!-- Form errors -->
       <div class="container" [hidden]="!addProgramForm.errors">
 	<div class="alert alert-danger" role="alert">Foobar</div>
