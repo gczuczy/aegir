@@ -10,6 +10,7 @@ import aegir.db
 
 def init(app, api):
     api.add_resource(Programs, '/api/programs')
+    api.add_resource(Program, '/api/programs/<int:progid>')
     pass
 
 # {'boiltime': 60,
@@ -103,3 +104,19 @@ class Programs(flask_restful.Resource):
 
         return {'status': 'success',
                 'errors': None}
+    pass
+
+class Program(flask_restful.Resource):
+    '''
+    Deals with a single program
+    '''
+    def get(self, progid):
+        res = None
+        try:
+            res = aegir.db.getprogram(progid)
+        except Exception as e:
+            return {'status': 'error',
+                    'errors': [str(e)]}, 400
+
+        return {'status': 'success',
+                'data': res}

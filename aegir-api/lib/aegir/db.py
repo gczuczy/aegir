@@ -43,6 +43,38 @@ def getprograms():
 
     return ret
 
+def getprogram(progid):
+    global _conn
+
+    curs = _conn.cursor()
+    pres = curs.execute('SELECT id,name,starttemp,endtemp,boiltime FROM programs WHERE id=?', (progid,))
+    prog = pres.fetchone()
+    if prog == None:
+        raise Exception('No program with ID {id}'.format(id = progid))
+
+    msres = curs.execute('''
+    SELECT orderno,temperature,holdtime
+    FROM programs_mashsteps
+    WHERE progid=?
+    ORDER BY orderno''', (progid,))
+    prog['mashsteps'] = []
+    for step in msres:
+        prog['mashsteps'].append(step)
+        pass
+
+    hopres = curs.execute('''
+    SELECT attime, hopname, hopqty
+    FROM programs_hops
+    WHERE progid=?
+    ORDER BY attime DESC
+    ''', (progid,))
+    prog['hops'] = []
+    for hop in hopres:
+        prog['hops'].append(hop)
+        pass
+
+    return prog
+
 def checkprogramname(name):
     global _conn
 
