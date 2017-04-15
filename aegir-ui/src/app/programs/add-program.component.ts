@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Validators, FormGroup, FormArray, FormBuilder,
 	 ValidatorFn, AbstractControl } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import { Program, ProgramMashTemp } from './program';
 
@@ -20,7 +21,8 @@ export class AddProgramComponent implements OnInit {
     public errors: string[];
 
     constructor(private _fb: FormBuilder,
-		private api: ApiService) {
+		private api: ApiService,
+		private router: Router) {
     }
 
     ngOnInit() {
@@ -185,14 +187,17 @@ export class AddProgramComponent implements OnInit {
 	*/
 	this.api.addProgram(model.value).subscribe(
 	    resp => {
+		let progid = resp['data']['progid'];
 		this.errors = null;
-		//console.log('Response from API: ', resp);
+		this.api.announceUpdate();
+		//console.log('Program Added with response: ', resp);
+		this.router.navigate(['programs', progid, 'view']);
 	    },
 	    err => {
 		let errobj = err.json();
 		//console.log('Error obj: ', errobj);
 		this.errors = errobj['errors'];
 	    }
-	)
+	);
     }
 }

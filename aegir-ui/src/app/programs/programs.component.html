@@ -4,7 +4,14 @@
       &nbsp;
     </div>
     <div class="col-3">
-      List TBD
+      <!-- Program lists-->
+      <span>Available programs:</span>
+      <ul>
+	<li *ngFor="let program of programs"
+	    class="nav-item" (click)="loadProgram(program)" style="cursor: pointer;">
+	  {{program.name}}
+	  </li>
+      </ul>
     </div>
     <div class="col-7 justify-content-md-center">
       <router-outlet></router-outlet>

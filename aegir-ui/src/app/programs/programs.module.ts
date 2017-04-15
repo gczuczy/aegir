@@ -5,6 +5,7 @@ import { FormsModule, FormGroup, ReactiveFormsModule } from '@angular/forms';
 
 import { ProgramsComponent } from './programs.component';
 import { AddProgramComponent } from './add-program.component';
+import { ProgramComponent } from './program.component';
 
 import { PROGRAMS_ROUTES } from './programs.routes';
 
@@ -18,8 +19,11 @@ import { PROGRAMS_ROUTES } from './programs.routes';
     exports: [
     ],
     providers: [
-//	FormGroup
     ],
-    declarations: [ProgramsComponent, AddProgramComponent]
+    declarations: [
+	ProgramsComponent,
+	AddProgramComponent,
+	ProgramComponent
+    ]
 })
 export class ProgramsModule { }

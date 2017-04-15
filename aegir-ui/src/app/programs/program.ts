@@ -6,7 +6,7 @@ export class Program {
 	public endtemp: number,
 	public boiltime: number,
 	public mashsteps: ProgramMashTemp[],
-	public hops: ProgramHops[]
+	public hops: ProgramHop[]
     ) {}
 }
 
@@ -18,7 +18,7 @@ export class ProgramMashTemp {
     ){}
 }
 
-export class ProgramHops {
+export class ProgramHop {
     constructor (
 	public attime: number,
 	public name: string,

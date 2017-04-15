@@ -4,6 +4,7 @@ import { Headers, Http, Response, RequestOptions } from '@angular/http';
 import { Program } from './programs/program';
 
 import { Observable } from 'rxjs/Observable';
+import { Subject } from 'rxjs/Subject';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
 
@@ -18,7 +19,17 @@ export class ApiResponse {
 @Injectable()
 export class ApiService {
 
+    // Observable resources
+    private updateSource = new Subject<boolean>();
+    // observable streams
+    updateAnnounce$ = this.updateSource.asObservable();
+
     constructor(private http: Http) { }
+
+    announceUpdate() {
+	//console.log('API announcing update');
+	this.updateSource.next(true);
+    }
 
     getPrograms(): Observable<Program[]> {
 	return this.http.get('/api/programs')
@@ -36,6 +47,21 @@ export class ApiService {
 		//console.log('Catching result, ', res.status);
 		return res.json();
 	    });
+	    //.catch((error:any) => Observable.throw(error.json().error || 'Servererror'));
+    }
+
+    delProgram(progid: number): Observable<ApiResponse> {
+	return this.http.delete(`/api/programs/${progid}`)
+	    .map((res:Response) => {
+		//console.log('Delete result, ', res.status);
+		return res.json();
+	    });
+	    //.catch((error:any) => Observable.throw(error.json().error || 'Servererror'));
+    }
+
+    getProgram(progid: number): Observable<Program> {
+	return this.http.get(`/api/programs/${progid}`)
+	    .map((res:Response) => res.json());
 	    //.catch((error:any) => Observable.throw(error.json().error || 'Servererror'));
     }
 
