@@ -13,7 +13,7 @@ import { ApiService } from '../api.service';
   styleUrls: ['./edit-program.component.css']
 })
 export class EditProgramComponent implements OnInit {
-    public addProgramForm: FormGroup;
+    public editProgramForm: FormGroup;
 
     private minmashtemp = 37;
     private maxmashtemp = 80;
@@ -29,14 +29,14 @@ export class EditProgramComponent implements OnInit {
     }
 
     ngOnInit() {
+	//debugger;
 	this.route.params
 	    .switchMap((params: Params) => this.api.getProgram(params['id']))
 	    .subscribe(prog => {
 		this.program = prog['data'];
-		console.log('Loaded prog: ', this.program);
-		this.addProgramForm = this._fb.group({
+		this.editProgramForm = this._fb.group({
 		    id: [this.program['id']],
-		    name: [this.program['name'], [Validators.required, Validators.minLength(3)], Validators.maxLength(32)],
+		    name: [this.program['name'], [Validators.required, Validators.minLength(3), Validators.maxLength(32)]],
 		    starttemp: [this.program['starttemp'], [Validators.required, IntValidator.minValue(25), IntValidator.maxValue(80)]],
 		    endtemp: [this.program['endtemp'], [Validators.required, IntValidator.minValue(37), IntValidator.maxValue(90)]],
 		    boiltime: [this.program['boiltime'], [Validators.required, IntValidator.minValue(30), IntValidator.maxValue(300)]],
@@ -55,9 +55,9 @@ export class EditProgramComponent implements OnInit {
 
     defineValidators() {
 	// Add the starttemp validator, which updates the mashtemp validators
-	this.addProgramForm.controls['starttemp'].valueChanges.subscribe({
+	this.editProgramForm.controls['starttemp'].valueChanges.subscribe({
 	    next: (value) => {
-		const endctrl = <FormArray>this.addProgramForm.controls['endtemp'];
+		const endctrl = <FormArray>this.editProgramForm.controls['endtemp'];
 		let endval = endctrl.value
 
 		// set the mintemp's max
@@ -70,9 +70,9 @@ export class EditProgramComponent implements OnInit {
 	});
 
 	// Add the endtemp validator, which updates the mashtemp validators
-	this.addProgramForm.controls['endtemp'].valueChanges.subscribe({
+	this.editProgramForm.controls['endtemp'].valueChanges.subscribe({
 	    next: (value) => {
-		const startctrl = <FormArray>this.addProgramForm.controls['starttemp'];
+		const startctrl = <FormArray>this.editProgramForm.controls['starttemp'];
 		let startval = startctrl.value
 
 		// set the mintemp's max
@@ -85,9 +85,9 @@ export class EditProgramComponent implements OnInit {
 	});
 
 	// Add the boiltime validator, which updates the hop timing validators
-	this.addProgramForm.controls['boiltime'].valueChanges.subscribe({
+	this.editProgramForm.controls['boiltime'].valueChanges.subscribe({
 	    next: (value) => {
-		const hopctrl = <FormArray>this.addProgramForm.controls['hops'];
+		const hopctrl = <FormArray>this.editProgramForm.controls['hops'];
 
 		for ( let hop of hopctrl.controls ) {
 		    hop.get('attime').setValidators([Validators.required, IntValidator.minValue(0), IntValidator.maxValue(value)]);
@@ -98,13 +98,12 @@ export class EditProgramComponent implements OnInit {
     }
 
     formValidator(form: FormGroup): {[key: string]: any} {
-	//console.log('formValidator called', form);
-	if ( !this.addProgramForm ) return null;
+	if ( !this.editProgramForm ) return null;
 
-	let startval = <FormArray>this.addProgramForm.controls['starttemp'].value;
-	let endval = <FormArray>this.addProgramForm.controls['endtemp'].value;
+	let startval = <FormArray>this.editProgramForm.controls['starttemp'].value;
+	let endval = <FormArray>this.editProgramForm.controls['endtemp'].value;
 
-	const msctrl = <FormArray>this.addProgramForm.controls['mashsteps'];
+	const msctrl = <FormArray>this.editProgramForm.controls['mashsteps'];
 	let tempsteps: Array<number> = [];
 	// collect the values
 	let nosteps = 0;
@@ -145,8 +144,8 @@ export class EditProgramComponent implements OnInit {
 
     initMashStep(n: number) {
 	let endtemp = 80;
-	if ( this.addProgramForm ) {
-	    endtemp = this.addProgramForm.controls['endtemp'].value
+	if ( this.editProgramForm ) {
+	    endtemp = this.editProgramForm.controls['endtemp'].value
 	}
 	return this._fb.group({
 	    order: [n],
@@ -156,16 +155,15 @@ export class EditProgramComponent implements OnInit {
     }
 
     initMashSteps(steps: any[]) {
-	console.log('initMashSteps', steps);
 	let endtemp = 80;
-	if ( this.addProgramForm ) {
-	    endtemp = this.addProgramForm.controls['endtemp'].value
+	if ( this.editProgramForm ) {
+	    endtemp = this.editProgramForm.controls['endtemp'].value
 	}
 	let fbsteps = [];
 	for ( let step of steps ) {
 	    fbsteps.push(this._fb.group({
 		order: [step['orderno']],
-		temp: [step['temperatur'], [Validators.required, IntValidator.minValue(20), IntValidator.maxValue(endtemp)]],
+		temp: [step['temperature'], [Validators.required, IntValidator.minValue(20), IntValidator.maxValue(endtemp)]],
 		holdtime: [step['holdtime'], [Validators.required]]
 	    }));
 	}
@@ -173,17 +171,17 @@ export class EditProgramComponent implements OnInit {
     }
 
     addMashStep() {
-	const control = <FormArray>this.addProgramForm.controls['mashsteps'];
+	const control = <FormArray>this.editProgramForm.controls['mashsteps'];
 	let ms = this.initMashStep(control.length);
 	control.push(ms);
     }
 
     removeMashStep(n: number) {
-	const control = <FormArray>this.addProgramForm.controls['mashsteps'];
+	const control = <FormArray>this.editProgramForm.controls['mashsteps'];
 	control.removeAt(n)
 
 	// and fix the order fields
-	const msctrl = <FormArray>this.addProgramForm.controls['mashsteps'];
+	const msctrl = <FormArray>this.editProgramForm.controls['mashsteps'];
 
 	let i = 0;
 	for ( let step of msctrl.controls ) {
@@ -193,7 +191,7 @@ export class EditProgramComponent implements OnInit {
     }
 
     initHop() {
-	const boiltime = this.addProgramForm.controls['boiltime'];
+	const boiltime = this.editProgramForm.controls['boiltime'];
 	return this._fb.group({
 	    attime: [0, [Validators.required, IntValidator.minValue(0), IntValidator.maxValue(boiltime.value)]],
 	    name: ['', [Validators.required, Validators.minLength(3)]],
@@ -203,8 +201,8 @@ export class EditProgramComponent implements OnInit {
 
     initHops(hops: any) {
 	let boiltime = 60;
-	if ( this.addProgramForm ) {
-	    boiltime = this.addProgramForm.controls['boiltime'].value;
+	if ( this.editProgramForm ) {
+	    boiltime = this.editProgramForm.controls['boiltime'].value;
 	}
 	let fbhops = [];
 	for ( let hop of hops ) {
@@ -214,16 +212,16 @@ export class EditProgramComponent implements OnInit {
 		quantity: [hop['hopqty'], [Validators.required, IntValidator.minValue(1)]]
 	    }));
 	}
-	return fbhops;;
+	return fbhops;
     }
 
     addHop() {
-	const control = <FormArray>this.addProgramForm.controls['hops'];
+	const control = <FormArray>this.editProgramForm.controls['hops'];
 	control.push(this.initHop());
     }
 
     removeHop(i: number) {
-	const control = <FormArray>this.addProgramForm.controls['hops'];
+	const control = <FormArray>this.editProgramForm.controls['hops'];
 	control.removeAt(i)
     }
 
@@ -232,7 +230,7 @@ export class EditProgramComponent implements OnInit {
 	console.log('save ', model);
 	console.log('save ', model.value);
 	*/
-	this.api.addProgram(model.value).subscribe(
+	this.api.saveProgram(model.value).subscribe(
 	    resp => {
 		let progid = resp['data']['progid'];
 		this.errors = null;
