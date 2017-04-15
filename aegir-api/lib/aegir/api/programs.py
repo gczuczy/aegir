@@ -31,7 +31,10 @@ def validateProgram(prog):
         pass
 
     # check whether it exists already
-    if not aegir.db.checkprogramname(prog['name']):
+    progid = None
+    if 'id' in prog:
+        progid = prog['id']
+    if not aegir.db.checkprogramname(prog['name'], progid):
         errors.append('A program with the same name already exists')
         pass
 
@@ -129,4 +132,24 @@ class Program(flask_restful.Resource):
             return {'status': 'error',
                     'errors': [str(e)]}, 400
         return {'status': 'success'}
-    pass
+
+    def post(self, progid):
+        data = flask.request.get_json();
+        errors = validateProgram(data)
+        if errors:
+            return {'status': 'error', 'errors': errors}, 422
+
+        # now add it
+        progid = None
+        try:
+            progid = aegir.db.saveprogram(data)
+        except KeyError as e:
+            return {'status': 'error',
+                    'errors': ['KeyError: {name}'.format(name=str(e))]}, 400
+        except Exception as e:
+            return {'status': 'error',
+                    'errors': [str(e)]}, 400
+
+        return {'status': 'success',
+                'data': {'progid': progid}}
+pass

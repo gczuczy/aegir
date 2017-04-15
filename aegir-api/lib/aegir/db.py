@@ -75,11 +75,15 @@ def getprogram(progid):
 
     return prog
 
-def checkprogramname(name):
+def checkprogramname(name, progid):
     global _conn
 
     curs = _conn.cursor()
-    res = curs.execute('SELECT count(*) AS c FROM programs WHERE name = ?', (name, ))
+    res = None
+    if not progid == None:
+        res = curs.execute('SELECT count(*) AS c FROM programs WHERE name = ?', (name, ))
+    else:
+        res = curs.execute('SELECT count(*) AS c FROM programs WHERE name = ? AND NOT id = ?', (name, progid))
     if res.fetchone()['c'] != 0:
         return False
     return True
@@ -92,6 +96,36 @@ def addprogram(prog):
                  (prog['name'], prog['starttemp'], prog['endtemp'], prog['boiltime']))
     progid = curs.lastrowid
 
+    # now add the mashsteps
+    for step in prog['mashsteps']:
+        curs.execute('''
+        INSERT INTO programs_mashsteps (progid, orderno, temperature, holdtime)
+        VALUES (?, ?, ?, ?)
+        ''', (progid, step['order'], step['temp'], step['holdtime']))
+        pass
+
+    # and the hops
+    for hop in prog['hops']:
+        curs.execute('INSERT INTO programs_hops (progid, attime, hopname, hopqty) VALUES (?,?,?,?)',
+                 (progid, hop['attime'], hop['name'], hop['quantity']))
+        pass
+
+    return progid
+
+def saveprogram(prog):
+    global _conn
+
+    if not 'id' in prog:
+        raise Exception('Program id not defined')
+
+    progid = prog['id']
+    curs = _conn.cursor()
+    curs.execute('UPDATE programs SET name=?, starttemp=?, endtemp=?, boiltime=? WHERE id = ?',
+                 (prog['name'], prog['starttemp'], prog['endtemp'], prog['boiltime'], progid))
+
+    # delete the associated mash steps and hops
+    curs.execute('DELETE FROM programs_mashsteps WHERE progid = ?', (progid,))
+    curs.execute('DELETE FROM programs_hops WHERE progid = ?', (progid,))
     # now add the mashsteps
     for step in prog['mashsteps']:
         curs.execute('''
