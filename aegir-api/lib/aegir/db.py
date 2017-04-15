@@ -105,4 +105,11 @@ def addprogram(prog):
         curs.execute('INSERT INTO programs_hops (progid, attime, hopname, hopqty) VALUES (?,?,?,?)',
                  (progid, hop['attime'], hop['name'], hop['quantity']))
         pass
+
+    return progid
+
+def delprogram(progid):
+    global _conn
+
+    _conn.execute('DELETE FROM programs WHERE id = ?', (progid,));
     pass

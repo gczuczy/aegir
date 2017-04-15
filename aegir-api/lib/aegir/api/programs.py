@@ -93,8 +93,9 @@ class Programs(flask_restful.Resource):
             return {'status': 'error', 'errors': errors}, 422
 
         # now add it
+        progid = None
         try:
-            aegir.db.addprogram(data)
+            progid = aegir.db.addprogram(data)
         except KeyError as e:
             return {'status': 'error',
                     'errors': ['KeyError: {name}'.format(name=str(e))]}, 400
@@ -103,7 +104,7 @@ class Programs(flask_restful.Resource):
                     'errors': [str(e)]}, 400
 
         return {'status': 'success',
-                'errors': None}
+                'data': {'progid': progid}}
     pass
 
 class Program(flask_restful.Resource):
@@ -120,3 +121,12 @@ class Program(flask_restful.Resource):
 
         return {'status': 'success',
                 'data': res}
+
+    def delete(self, progid):
+        try:
+            aegir.db.delprogram(progid)
+        except Exception as e:
+            return {'status': 'error',
+                    'errors': [str(e)]}, 400
+        return {'status': 'success'}
+    pass
