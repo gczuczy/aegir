@@ -80,7 +80,7 @@ def checkprogramname(name, progid):
 
     curs = _conn.cursor()
     res = None
-    if not progid == None:
+    if progid == None:
         res = curs.execute('SELECT count(*) AS c FROM programs WHERE name = ?', (name, ))
     else:
         res = curs.execute('SELECT count(*) AS c FROM programs WHERE name = ? AND NOT id = ?', (name, progid))
