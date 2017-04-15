@@ -27,6 +27,10 @@ export class ProgramComponent implements OnInit {
 	    });
     }
 
+    onEdit() {
+	this.router.navigate(['programs', this.program.id, 'edit']);
+    }
+
     onDelete() {
 	if ( confirm("Are you sure to delete this program?") ) {
 	    this.api.delProgram(this.program.id).subscribe(

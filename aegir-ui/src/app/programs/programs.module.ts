@@ -8,6 +8,7 @@ import { AddProgramComponent } from './add-program.component';
 import { ProgramComponent } from './program.component';
 
 import { PROGRAMS_ROUTES } from './programs.routes';
+import { EditProgramComponent } from './edit-program.component';
 
 @NgModule({
     imports: [
@@ -23,7 +24,8 @@ import { PROGRAMS_ROUTES } from './programs.routes';
     declarations: [
 	ProgramsComponent,
 	AddProgramComponent,
-	ProgramComponent
+	ProgramComponent,
+	EditProgramComponent
     ]
 })
 export class ProgramsModule { }
