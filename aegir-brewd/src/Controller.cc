@@ -68,7 +68,9 @@ namespace aegir {
 	while ( (msg = c_mq_io.recv()) != nullptr ) {
 	  if ( msg->type() == MessageType::PINSTATE ) {
 	    auto psmsg = std::static_pointer_cast<PinStateMessage>(msg);
+#ifdef AEGIR_DEBUG
 	    printf("Controller: received %s:%i\n", psmsg->getName().c_str(), psmsg->getState());
+#endif
 	    auto it = inpinchanges.find(psmsg->getName());
 	    if ( it == inpinchanges.end() ) {
 	      printf("No such pin: '%s' %lu\n", psmsg->getName().c_str(), psmsg->getName().length());
@@ -79,10 +81,12 @@ namespace aegir {
 	    ++nchanges;
 	  } else if ( msg->type() == MessageType::THERMOREADING ) {
 	    auto trmsg = std::static_pointer_cast<ThermoReadingMessage>(msg);
+#ifdef AEGIR_DEBUG
 	    printf("Controller: got temp reading: %s/%f/%u\n",
 		   trmsg->getName().c_str(),
 		   trmsg->getTemp(),
 		   trmsg->getTimestamp());
+#endif
 	  } else {
 	    printf("Got unhandled message type: %i\n", (int)msg->type());
 	    continue;

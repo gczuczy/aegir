@@ -1,9 +1,10 @@
 INCPATH=-I/usr/local/include
 CXXFLAGS=-Werror -pedantic -std=c++14 $(INCPATH)
-LDFLAGS=-pthread -L/usr/local/lib -lboost_program_options -lgpio -lyaml-cpp -lzmq
+LDFLAGS=-pthread -L/usr/local/lib -lboost_program_options -lgpio -lyaml-cpp -lzmq -ljsoncpp
 
 OBJS=main.o GPIO.o Config.o Exception.o ThreadManager.o IOHandler.o ZMQ.o \
-	Message.o Controller.o SPI.o DirectSelect.o MAX31856.o PRThread.o
+	Message.o Controller.o SPI.o DirectSelect.o MAX31856.o PRThread.o \
+	Program.o JSONMessage.o
 OUT=../bin/aegir-brewd
 
 .if defined(DEBUG)

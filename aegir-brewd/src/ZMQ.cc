@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "Exception.hh"
+#include "JSONMessage.hh"
 
 namespace aegir {
   static void zmqfree(void *_data, void*) {
@@ -55,7 +56,7 @@ namespace aegir {
     return *this;
   }
 
-  std::shared_ptr<Message> ZMQ::Socket::recv() {
+  std::shared_ptr<Message> ZMQ::Socket::recv(MessageFormat _mf) {
     zmq::message_t zmsg;
 
     if ( !c_sock.recv(&zmsg, ZMQ_NOBLOCK) ) {
@@ -66,13 +67,18 @@ namespace aegir {
 #ifdef AEGIR_DEBUG
     printf("ZMQ::Socket::recv(): %s\n", hexdump(msg).c_str());
 #endif
-    try {
-      return MessageFactory::getInstance().create(msg);
+    if ( _mf == MessageFormat::INTERNAL ) {
+      try {
+	return MessageFactory::getInstance().create(msg);
+      }
+      catch (Exception &e) {
+	printf("MessageFactory unknown message type: %s", e.what());
+	return nullptr;
+      }
+    } else if ( _mf == MessageFormat::JSON ) {
+      return std::make_shared<JSONMessage>(msg);
     }
-    catch (Exception &e) {
-      printf("MessageFactory unknown message type: %s", e.what());
-      return nullptr;
-    }
+    return nullptr;
   }
 
   /*

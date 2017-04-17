@@ -25,7 +25,11 @@ namespace aegir {
 	PUSH = ZMQ_PUSH,
 	PULL = ZMQ_PULL,
 	PAIR = ZMQ_PAIR
-    };
+	};
+    enum class MessageFormat {
+      INTERNAL,
+	JSON
+	};
     class Socket {
       friend class ZMQ;
       Socket() = delete;
@@ -37,7 +41,7 @@ namespace aegir {
       Socket &connect(const std::string &_addr);
       Socket &subscribe(const std::string &_filter);
       Socket &send(const Message &_msg);
-      std::shared_ptr<Message> recv();
+      std::shared_ptr<Message> recv(MessageFormat _mf = MessageFormat::INTERNAL);
 
     private:
       SocketType c_type;

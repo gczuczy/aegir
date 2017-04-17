@@ -17,7 +17,8 @@ namespace aegir {
   enum class MessageType:uint8_t {
     UNKNOWN=0,
       PINSTATE=1,
-      THERMOREADING=2
+      THERMOREADING=2,
+      JSON=3
   };
 
   const std::string hexdump(const msgstring &_msg);
@@ -103,7 +104,6 @@ namespace aegir {
     double c_temp;
     uint32_t c_timestamp;
   };
-
 }
 
 #endif
