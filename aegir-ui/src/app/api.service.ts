@@ -78,6 +78,19 @@ export class ApiService {
 	    //.catch((error:any) => Observable.throw(error.json().error || 'Servererror'));
     }
 
+    loadProgram(data: Object): Observable<ApiResponse> {
+	let body = JSON.stringify(data);
+	let headers = new Headers({'Content-Type': 'application/json'});
+	let options = new RequestOptions({headers: headers});
+
+	return this.http.post('/api/brewd/loadProgram', body, options)
+	    .map((res:Response) => {
+		//console.log('Catching result, ', res.status);
+		return res.json();
+	    });
+	    //.catch((error:any) => Observable.throw(error.json().error || 'Servererror'));
+    }
+
     private extractData(res: Response) {
 	let body = res.json()
 	return body.data || {};

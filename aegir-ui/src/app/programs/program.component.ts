@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Params } from '@angular/router';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Params, Router } from '@angular/router';
 import 'rxjs/add/operator/switchMap';
 
 import { Program } from './program';
@@ -29,6 +28,10 @@ export class ProgramComponent implements OnInit {
 
     onEdit() {
 	this.router.navigate(['programs', this.program.id, 'edit']);
+    }
+
+    onLoad() {
+	this.router.navigate(['programs', this.program.id, 'load']);
     }
 
     onDelete() {
