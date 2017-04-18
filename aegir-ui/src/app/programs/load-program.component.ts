@@ -38,7 +38,6 @@ export class LoadProgramComponent implements OnInit {
 		console.log('Program to load: ', this.program);
 		this.loadProgramForm = this._fb.group({
 		    id: [this.program['id']],
-		    name: [this.program['name'], [Validators.required, Validators.minLength(3), Validators.maxLength(32)]],
 		    startmode: ["now"],
 		    startat: [(new Date()).toISOString().slice(0,16), [Validators.required]],
 		    volume: [35, [Validators.required, IntValidator.minValue(5), IntValidator.maxValue(45)]],
