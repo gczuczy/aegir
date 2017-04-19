@@ -22,17 +22,20 @@
 	<div class="form-check">
 	  <label class="form-check-label">
 	    <input class="form-check-input" formControlName="startmode" type="radio" value="timed"/>
-	    <input class="form-control" formControlName="startat" type="datetime-local" min="{{mindate}}" max="{{maxdate}}"/>
+	    <input class="form-control form-control-sm" formControlName="startat" type="datetime-local" min="{{mindate}}" max="{{maxdate}}"/>
 	  </label>
 	</div>
       </fieldset>
       <!-- Volume -->
       <fieldset class="form-group">
 	<legend>Brew parameters</legend>
-	<div class="form-check">
-	  <label class="form-check-label">
-	    <input class="form-control" formControlName="volume" type="number"/>
+	<div class="form-group row">
+	  <label class="col form-col-label">
+	    Volume
 	  </label>
+	  <div class="col">
+	    <input class="form-control form-control-sm" formControlName="volume" type="number"/>
+	  </div>
 	</div>
       </fieldset>
       <!-- submit -->
