@@ -13,15 +13,6 @@ def init(app, api):
     api.add_resource(Program, '/api/programs/<int:progid>')
     pass
 
-# {'boiltime': 60,
-#    'endtemp': 80,
-#    'hops': [{'attime': 60, 'name': '345345', 'quantity': 1},
-#                        {'attime': 0, 'name': 'ffgdsfgfg', 'quantity': 123}],
-#    'mashsteps': [{'holdtime': 15, 'order': 0, 'temp': 42},
-#                                  {'holdtime': 15, 'order': 1, 'temp': 63},
-#                                  {'holdtime': 15, 'order': 2, 'temp': 69}],
-#    'name': 'asdfadsf',
-#    'starttemp': 37}]
 def validateProgram(prog):
     errors = []
 
