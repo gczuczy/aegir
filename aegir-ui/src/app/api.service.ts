@@ -83,7 +83,7 @@ export class ApiService {
 	let headers = new Headers({'Content-Type': 'application/json'});
 	let options = new RequestOptions({headers: headers});
 
-	return this.http.post('/api/brewd/loadProgram', body, options)
+	return this.http.post('/api/brewd/program', body, options)
 	    .map((res:Response) => {
 		//console.log('Catching result, ', res.status);
 		return res.json();
