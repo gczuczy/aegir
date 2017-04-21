@@ -12,11 +12,11 @@ import aegir.db
 import aegir.zmq
 
 def init(app, api):
-    api.add_resource(LoadProgram, '/api/brewd/loadProgram')
+    api.add_resource(BrewProgram, '/api/brewd/program')
     pass
 
 
-class LoadProgram(flask_restful.Resource):
+class BrewProgram(flask_restful.Resource):
     def post(this):
         data = flask.request.get_json();
 
@@ -66,14 +66,17 @@ class LoadProgram(flask_restful.Resource):
             return {"status": "error",
                     "errors": "Unknown start mode: {sm}".format(sm = zreq['startmode'])}, 422
 
-        #pprint(['loading', zreq])
+        pprint(['loading', zreq])
         zresp = None
         try:
             zresp = aegir.zmq.prmessage("loadProgram", zreq)
         except Exception as e:
             return {"status": "error",
                     "errors": [str(e)]}, 422
-        #pprint(['zresp', zresp])
+        pprint(['zresp', zresp])
 
-        return {"status": "success"}
+        if zresp['status'] != 'success':
+            return zresp, 422
+
+        return zresp
     pass

@@ -53,7 +53,7 @@ def getprogram(progid):
         raise Exception('No program with ID {id}'.format(id = progid))
 
     msres = curs.execute('''
-    SELECT orderno,temperature,holdtime
+    SELECT id,orderno,temperature,holdtime
     FROM programs_mashsteps
     WHERE progid=?
     ORDER BY orderno''', (progid,))
@@ -63,7 +63,7 @@ def getprogram(progid):
         pass
 
     hopres = curs.execute('''
-    SELECT attime, hopname, hopqty
+    SELECT id,attime, hopname, hopqty
     FROM programs_hops
     WHERE progid=?
     ORDER BY attime DESC
