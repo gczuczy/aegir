@@ -31,16 +31,19 @@ namespace aegir {
     Program(Program&&) = delete;
     Program &operator=(Program&&) = delete;
 
-    Program(float _starttemp, float _endtemp, uint16_t boiltime, int startat, const MashSteps &_ms, const Hops _hops);
+    Program(uint32_t _progid, float _starttemp, float _endtemp, uint16_t boiltime, const MashSteps &_ms, const Hops _hops);
     Program(const Program &) = default;
-    ~Program();
     Program &operator=(const Program &) = default;
+    ~Program();
+
+    // getters
+    inline uint32_t getId() const {return c_progid;};
 
   private:
+    uint32_t c_progid;
     float c_starttemp;
     float c_endtemp;
     uint16_t c_boiltime;
-    int c_startat;
     MashSteps c_mashsteps;
     Hops c_hops;
   };

@@ -36,6 +36,7 @@ namespace aegir {
   private:
     std::shared_ptr<Json::Value> handleJSONMessage(const Json::Value &_msg);
     std::shared_ptr<Json::Value> handleLoadProgram(const Json::Value &_data);
+    std::shared_ptr<Json::Value> handleGetLoadedProgram(const Json::Value &_data);
   };
 }
 

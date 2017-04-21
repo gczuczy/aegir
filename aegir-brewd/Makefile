@@ -4,7 +4,7 @@ LDFLAGS=-pthread -L/usr/local/lib -lboost_program_options -lgpio -lyaml-cpp -lzm
 
 OBJS=main.o GPIO.o Config.o Exception.o ThreadManager.o IOHandler.o ZMQ.o \
 	Message.o Controller.o SPI.o DirectSelect.o MAX31856.o PRThread.o \
-	Program.o JSONMessage.o
+	Program.o JSONMessage.o ProcessState.o
 OUT=../bin/aegir-brewd
 
 .if defined(DEBUG)
