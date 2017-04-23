@@ -10,7 +10,7 @@
 #include <string>
 
 namespace aegir {
-  class Exception {
+  class Exception: public std::exception {
   public:
     Exception(const char *_fmt, ...);
     virtual ~Exception();

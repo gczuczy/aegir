@@ -58,6 +58,7 @@ namespace aegir {
     // Load the JSON Message handlers
     c_handlers["loadProgram"] = std::bind(&PRThread::handleLoadProgram, this, std::placeholders::_1);
     c_handlers["getProgram"] = std::bind(&PRThread::handleGetLoadedProgram, this, std::placeholders::_1);
+    c_handlers["getState"] = std::bind(&PRThread::handleGetState, this, std::placeholders::_1);
 
     auto thrmgr = ThreadManager::getInstance();
     thrmgr->addThread("PR", *this);
@@ -359,12 +360,19 @@ namespace aegir {
   std::shared_ptr<Json::Value> PRThread::handleGetLoadedProgram(const Json::Value &_data) {
     try {
       std::shared_ptr<Program> prog = ProcessState::getInstance().getProgram();
-      if ( prog == nullptr )
+      if ( prog == nullptr ) {
 	throw Exception("No program loaded");
+      }
       Json::Value resp;
       resp["status"] = "success";
       resp["data"] = Json::Value();
       resp["data"]["progid"] = prog->getId();
+      return std::make_shared<Json::Value>(resp);
+    }
+    catch (Exception &e) {
+      Json::Value resp;
+      resp["status"] = "error";
+      resp["message"] = e.what();
       return std::make_shared<Json::Value>(resp);
     }
     catch (std::exception &e) {
@@ -380,5 +388,54 @@ namespace aegir {
       return std::make_shared<Json::Value>(resp);
     }
     // shouldn't be reached
+  }
+
+  std::shared_ptr<Json::Value> PRThread::handleGetState(const Json::Value &_data) {
+    Json::Value retval;
+    ProcessState &pr(ProcessState::getInstance());
+
+    retval["status"] = "success";
+    retval["data"] = Json::Value();
+
+    Json::Value data, jsval;
+    std::set<std::string> tcs;
+    std::map<uint32_t, double> tcvals;
+    try {
+      // first get the current state
+      data["state"] = pr.getStringState();
+      Json::Value jstcr;
+
+      // Thermo readings
+      pr.getThermoCouples(tcs);
+      for ( auto &it: tcs ) {
+	pr.getTCReadings(it, tcvals);
+	jstcr[it] = Json::Value();
+	for ( auto &it2: tcvals ) {
+	  jstcr[it][it2.first] = it2.second;
+	}
+      }
+      data["tcreadings"] = jstcr;
+    }
+    catch (Exception &e) {
+      Json::Value resp;
+      resp["status"] = "error";
+      resp["message"] = e.what();
+      return std::make_shared<Json::Value>(resp);
+    }
+    catch (std::exception &e) {
+      Json::Value resp;
+      resp["status"] = "error";
+      resp["message"] = e.what();
+      return std::make_shared<Json::Value>(resp);
+    }
+    catch (...) {
+      Json::Value resp;
+      resp["status"] = "error";
+      resp["message"] = "Unknown error";
+      return std::make_shared<Json::Value>(resp);
+    }
+    retval["data"] = data;
+
+    return std::make_shared<Json::Value>(retval);
   }
 }

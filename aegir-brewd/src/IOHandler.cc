@@ -13,6 +13,7 @@
 #include "ZMQ.hh"
 #include "GPIO.hh"
 #include "Config.hh"
+#include "ProcessState.hh"
 
 namespace aegir {
 
@@ -70,10 +71,14 @@ namespace aegir {
     std::map<std::string,int> inpins;
     std::set<std::string> outpins;
 
+    ProcessState &ps(ProcessState::getInstance());
+
     // later we might need to handle unused pins for multiple configs here
     for ( auto &it: g_pinconfig ) {
       if ( it.second.mode == PinMode::IN ) {
+#if AEGIR_DEBUG
 	printf("IOHandle: Loading PIN %s\n", it.first.c_str());
+#endif
 	inpins[it.first] = -1;
       } else if ( it.second.mode == PinMode::OUT ) {
 	outpins.insert(it.first);
@@ -102,7 +107,8 @@ namespace aegir {
       if ( (nchanges = kevent(kq, 0, 0, ke, 9, &ival)) > 0 ) {
 	for (int i=0; i<nchanges; ++i) {
 	  // EVFILT_TIMER with ident=0 is our sensor timer
-	  if ( ke[i].filter == EVFILT_TIMER && ke[i].ident == 0 )
+	  // we only ready the sensors, when a brew process is active
+	  if ( ke[i].filter == EVFILT_TIMER && ke[i].ident == 0 && ps.isActive())
 	    readTCs();
 	}
       }

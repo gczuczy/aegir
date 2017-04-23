@@ -6,6 +6,7 @@
 
 #include "Exception.hh"
 #include "Config.hh"
+#include "ProcessState.hh"
 
 namespace aegir {
 
@@ -41,6 +42,9 @@ namespace aegir {
   void Controller::run() {
     printf("Controller started\n");
 
+    // the process states
+    ProcessState &ps(ProcessState::getInstance());
+
     // Hold our states
     std::map<std::string, bool> inpinstate, inpinchanges, outpinqueue;
     std::set<std::string> outpins;
@@ -51,10 +55,12 @@ namespace aegir {
 	outpins.insert(it.first);
       }
     }
+#if 0
     // check the initial list
     for ( auto &it: inpinstate ) {
       printf("%s: %i\n", it.first.c_str(), it.second?1:0);
     }
+#endif
 
     // The main event loop
     std::shared_ptr<Message> msg;
@@ -77,7 +83,6 @@ namespace aegir {
 	      continue;
 	    }
 	    it->second = psmsg->getState()==1;
-	    //inpinchanges[psmsg->getName()] = psmsg->getState()==1;
 	    ++nchanges;
 	  } else if ( msg->type() == MessageType::THERMOREADING ) {
 	    auto trmsg = std::static_pointer_cast<ThermoReadingMessage>(msg);
@@ -87,6 +92,8 @@ namespace aegir {
 		   trmsg->getTemp(),
 		   trmsg->getTimestamp());
 #endif
+	    // add it to the process state
+	    ps.addThermoReading(trmsg->getName(), trmsg->getTimestamp(), trmsg->getTimestamp());
 	  } else {
 	    printf("Got unhandled message type: %i\n", (int)msg->type());
 	    continue;
