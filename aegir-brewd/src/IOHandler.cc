@@ -117,8 +117,10 @@ namespace aegir {
       for (auto &it: inpins) {
 	newval = c_gpio[it.first].get();
 	if ( newval != it.second ) {
+#ifdef AEGIR_DEBUG
 	  printf("IOHandle: Pin %s %i -> %i\n ", it.first.c_str(),
 		 it.second, newval);
+#endif
 	  it.second = newval;
 	  auto msg = PinStateMessage(it.first, newval);
 	  c_mq_pub.send(msg);
@@ -131,7 +133,9 @@ namespace aegir {
 	  auto psmsg = std::static_pointer_cast<PinStateMessage>(msg);
 	  auto it = outpins.find(psmsg->getName());
 	  if ( it != outpins.end() ) {
+#ifdef AEGIR_DEBUG
 	    printf("IOHandler: setting %s to %i\n", psmsg->getName().c_str(), psmsg->getState());
+#endif
 	    if ( psmsg->getState() == 1 ) {
 	      c_gpio[psmsg->getName()].high();
 	    } else {
