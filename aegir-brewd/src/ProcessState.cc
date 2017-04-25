@@ -34,7 +34,7 @@ namespace aegir {
 	{ProcessState::States::Finished, "Finished"}
   };
 
-  ProcessState::ProcessState() {
+  ProcessState::ProcessState(): c_state(States::Empty) {
     // Initialize the internals
     reconfigure();
   }
