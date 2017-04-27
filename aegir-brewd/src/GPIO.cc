@@ -1,6 +1,9 @@
 
 #include "GPIO.hh"
 
+#ifdef GPIO_DEBUG
+#include <stdio.h>
+#endif
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -17,46 +20,73 @@ namespace aegir {
   }
 
   GPIO::PIN &GPIO::PIN::input() {
+#ifdef GPIO_DEBUG
+    printf("GPIO::PIN::%s(%i)\n", __FUNCTION__, c_pin);
+#endif
     gpio_pin_input(c_gpio.c_handle, c_pin);
     return *this;
   }
 
   GPIO::PIN &GPIO::PIN::output() {
+#ifdef GPIO_DEBUG
+    printf("GPIO::PIN::%s(%i)\n", __FUNCTION__, c_pin);
+#endif
     gpio_pin_output(c_gpio.c_handle, c_pin);
     return *this;
   }
 
   GPIO::PIN &GPIO::PIN::high() {
+#ifdef GPIO_DEBUG
+    printf("GPIO::PIN::%s(%i)\n", __FUNCTION__, c_pin);
+#endif
     gpio_pin_high(c_gpio.c_handle, c_pin);
     return *this;
   }
 
   GPIO::PIN &GPIO::PIN::low() {
+#ifdef GPIO_DEBUG
+    printf("GPIO::PIN::%s(%i)\n", __FUNCTION__, c_pin);
+#endif
     gpio_pin_low(c_gpio.c_handle, c_pin);
     return *this;
   }
 
   GPIO::PIN &GPIO::PIN::toggle() {
+#ifdef GPIO_DEBUG
+    printf("GPIO::PIN::%s(%i)\n", __FUNCTION__, c_pin);
+#endif
     gpio_pin_toggle(c_gpio.c_handle, c_pin);
     return *this;
   }
 
   GPIO::PIN &GPIO::PIN::pullup() {
+#ifdef GPIO_DEBUG
+    printf("GPIO::PIN::%s(%i)\n", __FUNCTION__, c_pin);
+#endif
     gpio_pin_pullup(c_gpio.c_handle, c_pin);
     return *this;
   }
 
   GPIO::PIN &GPIO::PIN::pulldown() {
+#ifdef GPIO_DEBUG
+    printf("GPIO::PIN::%s(%i)\n", __FUNCTION__, c_pin);
+#endif
     gpio_pin_pulldown(c_gpio.c_handle, c_pin);
     return *this;
   }
 
   GPIO::PIN &GPIO::PIN::opendrain() {
+#ifdef GPIO_DEBUG
+    printf("GPIO::PIN::%s(%i)\n", __FUNCTION__, c_pin);
+#endif
     gpio_pin_opendrain(c_gpio.c_handle, c_pin);
     return *this;
   }
 
   GPIO::PIN &GPIO::PIN::tristate() {
+#ifdef GPIO_DEBUG
+    printf("GPIO::PIN::%s(%i)\n", __FUNCTION__, c_pin);
+#endif
     gpio_pin_tristate(c_gpio.c_handle, c_pin);
     return *this;
   }

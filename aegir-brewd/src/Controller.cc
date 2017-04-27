@@ -81,7 +81,7 @@ namespace aegir {
 		   trmsg->getTimestamp());
 #endif
 	    // add it to the process state
-	    ps.addThermoReading(trmsg->getName(), trmsg->getTimestamp(), trmsg->getTimestamp());
+	    ps.addThermoReading(trmsg->getName(), trmsg->getTimestamp(), trmsg->getTemp());
 	  } else {
 	    printf("Got unhandled message type: %i\n", (int)msg->type());
 	    continue;
@@ -112,6 +112,17 @@ namespace aegir {
 
   void Controller::controlProcess(PINTracker &_pt) {
     ProcessState &ps(ProcessState::getInstance());
+    ProcessState::Guard guard_ps(ps);
+    ProcessState::States state = ps.getState();
+    auto prog = ps.getProgram();
+
+    if ( !ps.isActive() ) {
+      // we're looking for the !active&loaded state
+      // otherwise we're active and should do something
+      if ( state != ProcessState::States::Loaded ) return;
+
+      // Loaded, so we should verify the timestamps
+    }
 
     // The pump&heat control button
     if ( _pt.hasChanges() ) {

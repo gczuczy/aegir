@@ -13,7 +13,6 @@
 #include "ZMQ.hh"
 #include "GPIO.hh"
 #include "Config.hh"
-#include "ProcessState.hh"
 
 namespace aegir {
 
@@ -57,7 +56,7 @@ namespace aegir {
     struct timeval tv;
     gettimeofday(&tv, 0);
     for (auto &it: c_tcmap) {
-      double temp = c_tcs[it.second]->readTCTemp();
+      float temp = c_tcs[it.second]->readTCTemp();
 #ifdef AEGIR_DEBUG
       printf("Sensor %s/%i temp: %f C Time: %li\n", it.first.c_str(), it.second, temp, tv.tv_sec);
 #endif
@@ -70,8 +69,6 @@ namespace aegir {
 
     std::map<std::string,int> inpins;
     std::set<std::string> outpins;
-
-    ProcessState &ps(ProcessState::getInstance());
 
     // later we might need to handle unused pins for multiple configs here
     for ( auto &it: g_pinconfig ) {
@@ -108,7 +105,7 @@ namespace aegir {
 	for (int i=0; i<nchanges; ++i) {
 	  // EVFILT_TIMER with ident=0 is our sensor timer
 	  // we only ready the sensors, when a brew process is active
-	  if ( ke[i].filter == EVFILT_TIMER && ke[i].ident == 0 && ps.isActive())
+	  if ( ke[i].filter == EVFILT_TIMER && ke[i].ident == 0 )
 	    readTCs();
 	}
       }

@@ -7,25 +7,12 @@
 
 namespace aegir {
 
-  /*
-    enum class States: uint8_t {
-      Empty=0, // initialized, no program loadad
-	Loaded, // program loaded, but not started
-	PreWait, // timed mode, waiting for pre-heat start
-	PreHeat, // pre-heating to starttemp
-	Mashing, // Doing the mash steps
-	Sparging, // keeps on endtemp temperature, and circulates
-	PreBoil, // Heats the BK up to boiling, till the start of the boil timer
-	Hopping, // BK being boild, hopping timers started
-	Cooling, // The wort is being cooled down, later whirlpool and such
-	Finished // Brewind process finished
-    };
-   */
   static std::map<ProcessState::States, std::string> g_strstates{
     {ProcessState::States::Empty, "Empty"},
       {ProcessState::States::Loaded, "Loaded"},
       {ProcessState::States::PreWait, "PreWait"},
       {ProcessState::States::PreHeat, "PreHeat"},
+      {ProcessState::States::NeedMalt, "NeedMalt"},
       {ProcessState::States::Mashing, "Mashing"},
       {ProcessState::States::Sparging, "Sparging"},
       {ProcessState::States::PreBoil, "PreBoil"},
@@ -33,6 +20,14 @@ namespace aegir {
       {ProcessState::States::Cooling, "Cooling"},
 	{ProcessState::States::Finished, "Finished"}
   };
+
+  ProcessState::Guard::Guard(ProcessState &_ps): c_ps(_ps) {
+    c_ps.c_mtx_state.lock();
+  }
+
+  ProcessState::Guard::~Guard() {
+    c_ps.c_mtx_state.unlock();
+  }
 
   ProcessState::ProcessState(): c_state(States::Empty) {
     // Initialize the internals
@@ -53,7 +48,7 @@ namespace aegir {
     std::map<std::string, int> tcs;
     cfg->getThermocouples(tcs);
     for ( auto &it: tcs ) {
-      c_thermoreadings[it.first] = std::map<uint32_t, double>();
+      c_thermoreadings[it.first] = ThermoData();
     }
     return *this;
   }
@@ -76,7 +71,11 @@ namespace aegir {
     c_startat = _startat;
     c_volume = _volume;
     // clear the thermo readings
-    for ( auto &it: c_thermoreadings ) it.second.clear();
+    for ( auto &it: c_thermoreadings ) {
+    it.second.readings.clear();
+    it.second.moving5s.clear();
+    it.second.derivate1st.clear();
+    }
 
     c_state = States::Loaded;
     return *this;
@@ -91,7 +90,8 @@ namespace aegir {
     return g_strstates[c_state];
   }
 
-  ProcessState &ProcessState::addThermoReading(const std::string &_sensor, const uint32_t _time, const double _temp) {
+  ProcessState &ProcessState::addThermoReading(const std::string &_sensor, const uint32_t _time, const float _temp) {
+    //    if ( !isActive() ) return *this;
     std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
     auto it = c_thermoreadings.find(_sensor);
 
@@ -100,7 +100,7 @@ namespace aegir {
       throw Exception("ProcessState::adThermoReading(): No such TC: %s", _sensor.c_str());
 
     // add the reading
-    it->second[_time] = _temp;
+    it->second.readings[_time] = _temp;
     printf("ProcessState::addThemoReading(): added %s/%u/%.2f\n", _sensor.c_str(), _time, _temp);
     return *this;
   }
@@ -113,14 +113,14 @@ namespace aegir {
     return *this;
   }
 
-  ProcessState &ProcessState::getTCReadings(const std::string &_sensor, std::map<uint32_t, double> &_tcvals){
+  ProcessState &ProcessState::getTCReadings(const std::string &_sensor, ThermoDataPoints &_tcvals){
     std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
 
     auto it = c_thermoreadings.find(_sensor);
     if ( it == c_thermoreadings.end() )
       throw Exception("ProcessState::getTCReadings(): No such TC: %s", _sensor.c_str());
 
-    _tcvals = it->second;
+    _tcvals = it->second.readings;
 
     return *this;
   }

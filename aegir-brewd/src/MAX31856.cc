@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <thread>
+#include <list>
 
 namespace aegir {
 
@@ -29,13 +30,13 @@ namespace aegir {
 
     xfer(cmd, data);
 #ifdef MAX31856_DEBUG
-    printf("setConvMode: Pre-state: %s\n", data.hexdump().c_str());
+    printf("setConvMode(%i): Pre-state: %s\n", c_chipid, data.hexdump().c_str());
 #endif
     uint8_t modebit = _cmode ? 0b10000000 : 0;
     data[0] &= 0x7f;
     data[0] |= modebit;
 #ifdef MAX31856_DEBUG
-    printf("setConvMode: Setting to %s MB:%02x\n", data.hexdump().c_str(), modebit);
+    printf("setConvMode(%i): Setting to %s MB:%02x\n", c_chipid, data.hexdump().c_str(), modebit);
 #endif
     cmd[0] = 0x80|(uint8_t)Register::CR0;
 
@@ -49,13 +50,13 @@ namespace aegir {
 
     xfer(cmd, data);
 #ifdef MAX31856_DEBUG
-    printf("set50Hz: Pre-state: %s\n", data.hexdump().c_str());
+    printf("set50Hz(%i): Pre-state: %s\n", c_chipid, data.hexdump().c_str());
 #endif
     uint8_t modebit = _50hz ? 0b00000001 : 0;
     data[0] &= 0xfd;
     data[0] |= modebit;
 #ifdef MAX31856_DEBUG
-    printf("set50Hz: Setting to %s MB:%02x\n", data.hexdump().c_str(), modebit);
+    printf("set50Hz(%i): Setting to %s MB:%02x\n", c_chipid, data.hexdump().c_str(), modebit);
 #endif
     cmd[0] = 0x80|(uint8_t)Register::CR0;
 
@@ -69,11 +70,11 @@ namespace aegir {
 
     xfer(cmd, data);
 #ifdef MAX31856_DEBUG
-    printf("clearOCFault: Pre-state: %s\n", data.bindump().c_str());
+    printf("clearOCFault(%i): Pre-state: %s\n", c_chipid, data.bindump().c_str());
 #endif
     data[0] &= 0b11001111;
 #ifdef MAX31856_DEBUG
-    printf("clearOCFault: Setting to %s\n", data.bindump().c_str());
+    printf("clearOCFault(%i): Setting to %s\n", c_chipid, data.bindump().c_str());
 #endif
     cmd[0] = 0x80|(uint8_t)Register::CR0;
 
@@ -93,13 +94,13 @@ namespace aegir {
 
     xfer(cmd, data);
 #ifdef MAX31856_DEBUG
-    printf("setAvgMode: Pre-state: %s/%s\n", data.hexdump().c_str(),
+    printf("setAvgMode(%i): Pre-state: %s/%s\n", c_chipid, data.hexdump().c_str(),
 	   data.bindump().c_str());
 #endif
     data[0] &= mask;
     data[0] |= modebit<<4;
 #ifdef MAX31856_DEBUG
-    printf("setAvgMode: Setting to %s/%s\n", data.hexdump().c_str(),
+    printf("setAvgMode(%i): Setting to %s/%s\n", c_chipid, data.hexdump().c_str(),
 	   data.bindump().c_str());
 #endif
     cmd[0] = 0x80|(uint8_t)Register::CR1;
@@ -117,13 +118,13 @@ namespace aegir {
 
     xfer(cmd, data);
 #ifdef MAX31856_DEBUG
-    printf("setTCType: Pre-state: %s/%s\n", data.hexdump().c_str(),
+    printf("setTCType(%i): Pre-state: %s/%s\n", c_chipid, data.hexdump().c_str(),
 	   data.bindump().c_str());
 #endif
     data[0] &= mask;
     data[0] |= modebit;
 #ifdef MAX31856_DEBUG
-    printf("setTCType: Setting to %s/%s\n", data.hexdump().c_str(),
+    printf("setTCType(%i): Setting to %s/%s, c_chipidn", c_chipid, data.hexdump().c_str(),
 	   data.bindump().c_str());
 #endif
     cmd[0] = 0x80|(uint8_t)Register::CR1;
@@ -133,12 +134,31 @@ namespace aegir {
     return *this;
   }
 
+  MAX31856 &MAX31856::dumpState() {
+
+    printf("Dumping MAX31856 id:%i\n", c_chipid);
+    for (auto &it: std::list<Register>({
+	  Register::CR0,
+	    Register::CR1,
+	    Register::MASK,
+	    //    Register::,
+	    Register::SR
+	    })) {
+      SPI::Data cmd{(uint8_t)it}, data(1);
+      xfer(cmd, data);
+      printf(" - %02x: %s / %s\n ", (uint8_t)it,
+	     data.hexdump().c_str(), data.bindump().c_str());
+    }
+
+    return *this;
+  }
+
   void MAX31856::xfer(SPI::Data &_cmd, SPI::Data &_data) {
     c_spi.transfer(c_chipid, _cmd, _data);
   }
 
-  double MAX31856::readCJTemp() {
-    double temp;
+  float MAX31856::readCJTemp() {
+    float temp;
     uint16_t reading(0);
     SPI::Data cmd{(uint8_t)Register::CJTH}, data(1);
 
@@ -154,9 +174,13 @@ namespace aegir {
     return temp;
   }
 
-  double MAX31856::readTCTemp() {
-    double temp=0;
+  float MAX31856::readTCTemp() {
+    float temp=0;
     uint32_t reading(0);
+
+#ifdef MAX31856_DEBUG
+    dumpState();
+#endif
 
     // if autoconv mode is disabled, we have to do a 1shot
     if ( !c_convmode ) {
@@ -173,9 +197,19 @@ namespace aegir {
       reading <<= 8;
       reading += data[0];
     }
+#ifdef MAX31856_DEBUG
+    printf("MAX31856::readTCTemp(%i) native: %02x\n", c_chipid, reading);
+#endif
 
     reading >>= 5;
+#ifdef MAX31856_DEBUG
+    printf("MAX31856::readTCTemp(%i) shr5: %02x\n", c_chipid, reading);
+#endif
     temp = (1.0*reading)/128.0;
+#ifdef MAX31856_DEBUG
+    printf("MAX31856::readTCTemp(%i) /128: %.2f\n", c_chipid, temp);
+    dumpState();
+#endif
     return temp;
   }
 
@@ -187,11 +221,11 @@ namespace aegir {
 
     xfer(cmd, data);
 #ifdef MAX31856_DEBUG
-    printf("setOneShot: Pre-state: %s\n", data.bindump().c_str());
+    printf("setOneShot(%i): Pre-state: %s\n", c_chipid, data.bindump().c_str());
 #endif
     data[0] |= modebit;
 #ifdef MAX31856_DEBUG
-    printf("setOneShot: Setting to %s\n", data.bindump().c_str());
+    printf("setOneShot(%i): Setting to %s\n", c_chipid, data.bindump().c_str());
 #endif
     cmd[0] = 0x80|(uint8_t)Register::CR0;
 

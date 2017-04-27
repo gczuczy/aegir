@@ -89,11 +89,11 @@ namespace aegir {
   public:
     ThermoReadingMessage() = delete;
     ThermoReadingMessage(const msgstring &_msg);
-    ThermoReadingMessage(const std::string &_name, double _temp, uint32_t _timestamp);
+    ThermoReadingMessage(const std::string &_name, float _temp, uint32_t _timestamp);
     virtual msgstring serialize() const override;
     virtual MessageType type() const override;
     inline const std::string &getName() const {return c_name;};
-    inline double getTemp() const {return c_temp;};
+    inline float getTemp() const {return c_temp;};
     inline uint32_t getTimestamp() const {return c_timestamp;};
     virtual ~ThermoReadingMessage();
 
@@ -101,7 +101,7 @@ namespace aegir {
 
   public:
     std::string c_name;
-    double c_temp;
+    float c_temp;
     uint32_t c_timestamp;
   };
 }

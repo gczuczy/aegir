@@ -399,7 +399,7 @@ namespace aegir {
 
     Json::Value data, jsval;
     std::set<std::string> tcs;
-    std::map<uint32_t, double> tcvals;
+    ProcessState::ThermoDataPoints tcvals;
     try {
       // first get the current state
       data["state"] = pr.getStringState();

@@ -22,17 +22,38 @@ namespace aegir {
 
   class ProcessState {
   public:
+    class Guard {
+    public:
+      Guard() = delete;
+      Guard(Guard&&) = delete;
+      Guard(const Guard &) = delete;
+      Guard &operator=(Guard &&) = delete;
+      Guard &operator=(const Guard &) = delete;
+      Guard(ProcessState &_ps);
+      ~Guard();
+    private:
+      ProcessState &c_ps;
+    };
+    friend Guard;
     enum class States: uint8_t {
       Empty=0, // initialized, no program loadad
 	Loaded, // program loaded, but not started
 	PreWait, // timed mode, waiting for pre-heat start
 	PreHeat, // pre-heating to starttemp
+	NeedMalt, // Waiting for the malts to be added, manual proceed required
 	Mashing, // Doing the mash steps
 	Sparging, // keeps on endtemp temperature, and circulates
 	PreBoil, // Heats the BK up to boiling, till the start of the boil timer
 	Hopping, // BK being boild, hopping timers started
 	Cooling, // The wort is being cooled down, later whirlpool and such
 	Finished // Brewind process finished
+    };
+    typedef std::map<uint32_t, float> ThermoDataPoints;
+  private:
+    struct ThermoData {
+      ThermoDataPoints readings;
+      ThermoDataPoints moving5s;
+      ThermoDataPoints derivate1st;
     };
   private:
     ProcessState();
@@ -50,10 +71,12 @@ namespace aegir {
     std::shared_ptr<Program> getProgram();
     inline States getState() const { return c_state; };
     std::string getStringState() const;
-    ProcessState &addThermoReading(const std::string &_sensor, const uint32_t _time, const double _temp);
+    ProcessState &addThermoReading(const std::string &_sensor, const uint32_t _time, const float _temp);
     ProcessState &getThermoCouples(std::set<std::string> &_tcs);
-    ProcessState &getTCReadings(const std::string &_sensor, std::map<uint32_t, double> &_tcvals);
+    ProcessState &getTCReadings(const std::string &_sensor, ThermoDataPoints &_tcvals);
 
+  protected:
+    std::recursive_mutex c_mtx_state;
   private:
     // inputs
     std::shared_ptr<Program> c_program;
@@ -61,8 +84,7 @@ namespace aegir {
     uint32_t c_volume; //liters
     // states
     std::atomic<States> c_state;
-    std::recursive_mutex c_mtx_state;
-    std::map<std::string, std::map<uint32_t, double> > c_thermoreadings;
+    std::map<std::string, ThermoData> c_thermoreadings;
   };
 }
 

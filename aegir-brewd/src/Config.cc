@@ -232,7 +232,6 @@ namespace aegir {
 	if ( spi["thermointerval"] && spi["thermointerval"].IsScalar() ) {
 	  YAML::Node ti = spi["thermointerval"];
 	  c_thermoival = ti.as<uint32_t>();
-	  printf("Read thermoival: %u\n", c_thermoival);
 	if ( c_thermoival > 60 )
 	  throw Exception("Thermocouple reading interval is too high: %lu", c_thermoival);
 	}
@@ -242,7 +241,6 @@ namespace aegir {
       if ( config["prport"] && config["prport"].IsScalar() ) {
 	YAML::Node prsock = config["prport"];
 	c_zmq_pr_port = prsock.as<uint16_t>();
-	printf("Read prsocket: %u\n", c_zmq_pr_port);
       }
 
     }

@@ -124,7 +124,7 @@ namespace aegir {
    * Format is:
    * MessageType: 1 byte
    * Name: 1) stringsize: 1 byte + 2) stringsize-bytes
-   * Temp: sizeof(double)
+   * Temp: sizeof(float)
    * Timestamp: 4 byte, uint32_t
    */
   ThermoReadingMessage::ThermoReadingMessage(const msgstring &_msg) {
@@ -139,13 +139,18 @@ namespace aegir {
     c_name = std::string((char*)data+2, namelen);
 
     int offset = 3+namelen;
-    c_temp = *(double*)(data+offset);
-    offset += sizeof(double);
+    c_temp = *(float*)(data+offset);
+    offset += sizeof(float);
 
     c_timestamp = *(uint32_t*)(data+offset);
+
+#ifdef AEGIR_DEBUG
+    printf("ThermoReadingMessage(L:%lu '%s') decoded: Name:'%s' Temp:%.2f Time:%u\n", _msg.length(), hexdump(_msg).c_str(),
+	   c_name.c_str(), c_temp, c_timestamp);
+#endif
   }
 
-  ThermoReadingMessage::ThermoReadingMessage(const std::string &_name, double _temp, uint32_t _timestamp):
+  ThermoReadingMessage::ThermoReadingMessage(const std::string &_name, float _temp, uint32_t _timestamp):
     c_name(_name), c_temp(_temp), c_timestamp(_timestamp) {
   }
 
@@ -155,7 +160,7 @@ namespace aegir {
     uint32_t len(3);
     uint32_t strsize(std::min((uint32_t)c_name.length(), (uint32_t)255));
     len += strsize;
-    len += sizeof(double) + sizeof(uint32_t);
+    len += sizeof(float) + sizeof(uint32_t);
 
     msgstring buffer(len, 0);
     uint8_t *data = (uint8_t*)buffer.data();
@@ -165,9 +170,9 @@ namespace aegir {
 
     int offset = strsize + 3;
 
-    // c_temp is double
-    *(double*)(data+offset) = c_temp;
-    offset += sizeof(double);
+    // c_temp is float
+    *(float*)(data+offset) = c_temp;
+    offset += sizeof(float);
 
     // c_timestamp is uint32_t
     *(uint32_t*)(data+offset) = c_timestamp;
