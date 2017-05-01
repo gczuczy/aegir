@@ -23,9 +23,10 @@ namespace aegir {
   // we will have to add default states for out pins
   struct PinConfig {
     PinConfig() {};
-    PinConfig(PinMode _pm, PinPull _pp): mode(_pm), pull(_pp) {};
+    PinConfig(PinMode _pm, PinPull _pp, bool _defval=false): mode(_pm), pull(_pp), defval(_defval) {};
     PinMode mode;
     PinPull pull;
+    bool defval;
   };
 
   using pinconfig_t = std::map<std::string, PinConfig>;
@@ -67,6 +68,8 @@ namespace aegir {
     uint32_t c_thermoival;
     // PR ZMQ address
     uint16_t c_zmq_pr_port;
+    // The heating element's power
+    uint32_t c_hepower;
 
   public:
     ~Config();
@@ -85,6 +88,7 @@ namespace aegir {
     inline const void getThermocouples(std::map<std::string, int> &_tcs) const {_tcs = c_thermocouples;};
     inline const uint32_t getTCival() const { return c_thermoival;};
     inline const uint16_t getPRPort() const { return c_zmq_pr_port; };
+    inline const uint32_t getHEPower() const { return c_hepower; };
   };
 }
 

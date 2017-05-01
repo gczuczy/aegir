@@ -22,7 +22,7 @@ namespace aegir {
     auto cfg = Config::getInstance();
 
     // first initialize the sensors
-    for (int i=0; i<3; ++i) {
+    for (int i=0; i<4; ++i) {
       c_tcs.push_back(std::make_unique<MAX31856>(c_spi, i));
     }
     // now set them up
@@ -36,7 +36,7 @@ namespace aegir {
 	it->setConversionMode(true);
       }
     }
-    // fetch the senso mapping from the config
+    // fetch the sensor mapping from the config
     cfg->getThermocouples(c_tcmap);
     // and the reading interval
     c_thermoival = cfg->getTCival();
@@ -57,9 +57,12 @@ namespace aegir {
     gettimeofday(&tv, 0);
     for (auto &it: c_tcmap) {
       float temp = c_tcs[it.second]->readTCTemp();
+      float cjtemp = c_tcs[it.second]->readCJTemp();
+#define AEGIR_DEBUG
 #ifdef AEGIR_DEBUG
-      printf("Sensor %s/%i temp: %f C Time: %li\n", it.first.c_str(), it.second, temp, tv.tv_sec);
+      printf("Sensor %s/%i temp: %f C Time: %li CJ:%.2f\n", it.first.c_str(), it.second, temp, tv.tv_sec, cjtemp);
 #endif
+#undef AEGIR_DEBUG
       c_mq_pub.send(ThermoReadingMessage(it.first, temp, tv.tv_sec));
     }
   }

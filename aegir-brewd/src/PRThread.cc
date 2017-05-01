@@ -45,6 +45,18 @@ namespace aegir {
     return typestr;
   }
 
+  static std::string epoch2iso(uint32_t _time) {
+    std::string ret(24, 0);
+
+    time_t clk = _time;
+    struct tm tm;
+    gmtime_r(&clk, &tm);
+    size_t x = strftime((char*)ret.data(), ret.size()-1, "%G-%m-%dT%TZ", &tm);
+    ret.resize(x);
+
+    return ret;
+  }
+
   PRThread::PRThread(): c_mq_pr(ZMQ::SocketType::REP) {
     auto cfg = Config::getInstance();
 
@@ -391,30 +403,40 @@ namespace aegir {
   }
 
   std::shared_ptr<Json::Value> PRThread::handleGetState(const Json::Value &_data) {
+    // do these initializations ahead of the mutex lock to avoid wasting mutex time
     Json::Value retval;
-    ProcessState &pr(ProcessState::getInstance());
-
     retval["status"] = "success";
     retval["data"] = Json::Value();
 
     Json::Value data, jsval;
     std::set<std::string> tcs;
     ProcessState::ThermoDataPoints tcvals;
+
+    ProcessState &ps(ProcessState::getInstance());
+    ProcessState::Guard guard_ps(ps);
+
     try {
       // first get the current state
-      data["state"] = pr.getStringState();
+      data["state"] = ps.getStringState();
       Json::Value jstcr;
 
       // Thermo readings
-      pr.getThermoCouples(tcs);
+      ps.getThermoCouples(tcs);
       for ( auto &it: tcs ) {
-	pr.getTCReadings(it, tcvals);
-	jstcr[it] = Json::Value();
+
+	// Add the current sensor temps
+	data["curretmp"][it] = ps.getSensorTemp(it);
+
+	// Add the TC History
+	ps.getTCReadings(it, tcvals);
+	jstcr[it] = Json::Value(Json::ValueType::objectValue);
 	for ( auto &it2: tcvals ) {
-	  jstcr[it][it2.first] = it2.second;
+	  printf("Adding thermodata %s/%u(%s) = %.2f\n", it.c_str(), it2.first,
+		 epoch2iso(it2.first).c_str(), it2.second);
+	  jstcr[it][epoch2iso(it2.first)] = it2.second;
 	}
       }
-      data["tcreadings"] = jstcr;
+      data["temphistory"] = jstcr;
     }
     catch (Exception &e) {
       Json::Value resp;

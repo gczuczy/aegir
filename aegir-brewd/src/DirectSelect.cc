@@ -1,3 +1,4 @@
+#include <stdio.h>
 
 #include "DirectSelect.hh"
 #include "Exception.hh"
@@ -20,8 +21,10 @@ namespace aegir {
 
   void DirectSelect::low(int _id) {
     auto it = c_chips.find(_id);
-    if ( it == c_chips.end() )
+    if ( it == c_chips.end() ) {
+      printf("DirectSelect: id not found: %i\n", _id);
       throw Exception("DirectSelect: id not found: %i", _id);
+    }
 
     c_gpio[it->second].low();
   }

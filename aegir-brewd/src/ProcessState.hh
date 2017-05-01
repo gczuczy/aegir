@@ -71,9 +71,13 @@ namespace aegir {
     std::shared_ptr<Program> getProgram();
     inline States getState() const { return c_state; };
     std::string getStringState() const;
+    ProcessState &setState(States _st);
+    inline uint32_t getStartat() const { return c_startat; };
+    inline uint32_t getVolume() const { return c_volume; };
     ProcessState &addThermoReading(const std::string &_sensor, const uint32_t _time, const float _temp);
     ProcessState &getThermoCouples(std::set<std::string> &_tcs);
     ProcessState &getTCReadings(const std::string &_sensor, ThermoDataPoints &_tcvals);
+    inline float getSensorTemp(const std::string &_sensor) const {return c_lasttemps.find(_sensor)->second;};
 
   protected:
     std::recursive_mutex c_mtx_state;
@@ -82,6 +86,9 @@ namespace aegir {
     std::shared_ptr<Program> c_program;
     uint32_t c_startat;
     uint32_t c_volume; //liters
+    uint32_t c_startedat; //when we went from !isactive->isactive
+    // cache the last readings
+    std::map<std::string, float> c_lasttemps;
     // states
     std::atomic<States> c_state;
     std::map<std::string, ThermoData> c_thermoreadings;

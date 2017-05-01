@@ -38,6 +38,11 @@ namespace aegir {
 
     // getters
     inline uint32_t getId() const {return c_progid;};
+    inline float getStartTemp() const { return c_starttemp; };
+    inline float getEndTemp() const { return c_endtemp; };
+    inline uint16_t getBoilTime() const { return c_boiltime; };
+    inline const MashSteps &getMashSteps() const {return c_mashsteps; };
+    inline const Hops &getHos() const { return c_hops; };
 
   private:
     uint32_t c_progid;

@@ -28,6 +28,7 @@ namespace aegir {
     void reconfigure();
     void controlProcess(PINTracker &_pt);
     virtual void handleOutPIN(PINTracker::PIN &_pin) override;
+    uint32_t calcHeatTime(uint32_t _vol, uint32_t _tempdiff, float _pkw) const;
 
   private:
     static Controller *c_instance;

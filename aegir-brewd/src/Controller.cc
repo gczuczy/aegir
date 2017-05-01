@@ -1,11 +1,14 @@
 #include "Controller.hh"
 
+#include <time.h>
+
 #include <map>
 #include <set>
 #include <string>
 
 #include "Exception.hh"
 #include "ProcessState.hh"
+#include "Config.hh"
 
 namespace aegir {
   /*
@@ -116,14 +119,6 @@ namespace aegir {
     ProcessState::States state = ps.getState();
     auto prog = ps.getProgram();
 
-    if ( !ps.isActive() ) {
-      // we're looking for the !active&loaded state
-      // otherwise we're active and should do something
-      if ( state != ProcessState::States::Loaded ) return;
-
-      // Loaded, so we should verify the timestamps
-    }
-
     // The pump&heat control button
     if ( _pt.hasChanges() ) {
       std::shared_ptr<PINTracker::PIN> swon(_pt.getPIN("swon"));
@@ -137,9 +132,49 @@ namespace aegir {
 	}
       }
     } // pump&heat switch
+
+    if ( state == ProcessState::States::Loaded ) {
+      // Loaded, so we should verify the timestamps
+      uint32_t startat = ps.getStartat();
+      // if we start immediately then jump to PreHeat
+      if ( startat == 0 ) {
+	ps.setState(ProcessState::States::PreHeat);
+      } else {
+	ps.setState(ProcessState::States::PreWait);
+      }
+      return;
+    } // Loaded
+
+    if ( state == ProcessState::States::PreWait ) {
+      float mttemp = ps.getSensorTemp("MashTun");
+      if ( mttemp == 0 ) return;
+      // let's see how much time do we have till we have to start pre-heating
+      uint32_t now = time(0);
+      // calculate how much time
+      Config *cfg = Config::getInstance();
+      float tempdiff = prog->getStartTemp() - mttemp;
+      uint32_t phtime = 0;
+      if ( tempdiff > 0 )
+	phtime = calcHeatTime(ps.getVolume(), tempdiff, 0.001*cfg->getHEPower());
+
+      printf("Controller::controllProcess() td:%.2f PreHeatTime:%u\n", tempdiff, phtime);
+      uint32_t startat = ps.getStartat();
+      if ( (now + phtime*1.15) > startat )
+	ps.setState(ProcessState::States::PreHeat);
+      else
+	return;
+    } // PreWait
+
+    if ( state == ProcessState::States::PreHeat ) {
+    }
+
   }
 
   void Controller::handleOutPIN(PINTracker::PIN &_pin) {
     c_mq_iocmd.send(PinStateMessage(_pin.getName(), _pin.getNewValue()?1:0));
+  }
+
+  uint32_t Controller::calcHeatTime(uint32_t _vol, uint32_t _tempdiff, float _pkw) const {
+    return (4.2 * _vol * _tempdiff)/_pkw;
   }
 }

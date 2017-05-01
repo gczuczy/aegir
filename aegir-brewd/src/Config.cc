@@ -16,10 +16,13 @@ namespace aegir {
     {"swoff", PinConfig(PinMode::IN, PinPull::DOWN)},
     {"cs0", PinConfig(PinMode::OUT, PinPull::NONE)},
     {"cs1", PinConfig(PinMode::OUT, PinPull::NONE)},
-    {"cs2", PinConfig(PinMode::OUT, PinPull::NONE)}
+    {"cs2", PinConfig(PinMode::OUT, PinPull::NONE)},
+    {"cs3", PinConfig(PinMode::OUT, PinPull::NONE)},
+    {"rimsheat", PinConfig(PinMode::OUT, PinPull::NONE)},
+    {"rimspump", PinConfig(PinMode::OUT, PinPull::NONE)}
   };
 
-  static std::set<std::string> g_tcnames{"RIMS", "MashTun", "HLT"};
+  static std::set<std::string> g_tcnames{"RIMS", "MashTun", "HLT", "BK"};
 
   // SPI ChipSelector string translations
   static std::map<ChipSelectors, std::string> g_spi_cs_to_string{
@@ -84,9 +87,11 @@ namespace aegir {
 
     // PIN layout
     c_pinlayout.clear();
-    c_pinlayout["swled"] = 4;
-    c_pinlayout["swon"]  = 17;
-    c_pinlayout["swoff"] = 18;
+    c_pinlayout["swled"] = 16;
+    c_pinlayout["swon"]  = 20;
+    c_pinlayout["swoff"] = 21;
+    c_pinlayout["rimsheat"] = 23;
+    c_pinlayout["rimspump"] = 24;
 
     // SPI config
     c_spidev = "/dev/spigen0";
@@ -94,20 +99,24 @@ namespace aegir {
     c_pinlayout["cs0"] = 8;
     c_pinlayout["cs1"] = 7;
     c_pinlayout["cs2"] = 5;
+    c_pinlayout["cs3"] = 6;
     // SPI / MAX31856
     c_spi_max31856_tctype = MAX31856::TCType::T;
     c_spi_max31856_noisefilter = NoiseFilters::HZ50;
     // SPI / chips
-    c_spi_dschips = {{0, "cs0"}, {1, "cs1"}, {2, "cs2"}};
+    c_spi_dschips = {{0, "cs0"}, {1, "cs1"}, {2, "cs2"}, {3, "cs3"}};
 
     // thermocouples
-    c_thermocouples = {{"MashTun", 0}, {"RIMS", 1}, {"HLT", 2}};
+    c_thermocouples = {{"MashTun", 0}, {"RIMS", 1}, {"HLT", 2}, {"BK", 3}};
 
     // thermocouple reading interval
     c_thermoival = 1;
 
     // the PR ZMQ socket
     c_zmq_pr_port = 42069;
+
+    // the heating element's power
+    c_hepower = 3500;
   }
 
   void Config::load() {
@@ -243,6 +252,14 @@ namespace aegir {
 	c_zmq_pr_port = prsock.as<uint16_t>();
       }
 
+      // Heating Element's Power
+      if ( config["elementpower"] && config["elementpower"].IsScalar() ) {
+	YAML::Node hep = config["elementpower"];
+	c_hepower = hep.as<uint32_t>();
+	if ( c_hepower < 1000 || c_hepower > 10000 )
+	  throw Exception("Heating element's power is out of range");
+      }
+
     }
     catch (std::exception &e) {
       throw Exception("Error during parsing config: %s", e.what());
@@ -304,7 +321,11 @@ namespace aegir {
 
     yout << YAML::EndMap; // end of SPI
 
+    // ZMQ PR port
     yout << YAML::Key << "prport" << YAML::Value << c_zmq_pr_port;
+
+    // Heating element's power in watts
+    yout << YAML::Key << "elementpower" << YAML::Value << c_hepower;
 
     // End the config
     yout << YAML::EndMap;

@@ -151,6 +151,7 @@ namespace aegir {
     gpio_config_t *pinlist(0);
     int pinret;
 
+    c_pins.clear();
     pinret = gpio_pin_list(c_handle, &pinlist);
     for ( int i=0; i < pinret; ++i ) {
       c_pins.insert(std::make_pair(pinlist[i].g_pin, PIN(*this, pinlist[i].g_pin)));
@@ -175,6 +176,8 @@ namespace aegir {
 
       if ( cfg.mode == PinMode::OUT ) {
 	pin.output();
+	if ( cfg.defval ) pin.high();
+	else pin.low();
       } else if ( cfg.mode == PinMode::IN ) {
 	pin.input();
 	if ( cfg.pull == PinPull::DOWN ) pin.pulldown();

@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 
   {
     // Initialize the SPI bus
-    std::map<int, std::string> dsmap{{0,"cs0",},{1,"cs1"},{2,"cs2"}};
+    std::map<int, std::string> dsmap{{0,"cs0"},{1,"cs1"},{2,"cs2"},{3,"cs3"}};
     aegir::DirectSelect ds(*gpio, dsmap);
     aegir::SPI spi(ds, *gpio, cfg->getSPIDevice());
 
