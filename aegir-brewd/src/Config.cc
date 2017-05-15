@@ -19,7 +19,8 @@ namespace aegir {
     {"cs2", PinConfig(PinMode::OUT, PinPull::NONE)},
     {"cs3", PinConfig(PinMode::OUT, PinPull::NONE)},
     {"rimsheat", PinConfig(PinMode::OUT, PinPull::NONE)},
-    {"rimspump", PinConfig(PinMode::OUT, PinPull::NONE)}
+    {"rimspump", PinConfig(PinMode::OUT, PinPull::NONE)},
+    {"buzzer", PinConfig(PinMode::OUT, PinPull::NONE)}
   };
 
   static std::set<std::string> g_tcnames{"RIMS", "MashTun", "HLT", "BK"};
@@ -92,6 +93,7 @@ namespace aegir {
     c_pinlayout["swoff"] = 21;
     c_pinlayout["rimsheat"] = 23;
     c_pinlayout["rimspump"] = 24;
+    c_pinlayout["buzzer"] = 26;
 
     // SPI config
     c_spidev = "/dev/spigen0";
@@ -116,7 +118,7 @@ namespace aegir {
     c_zmq_pr_port = 42069;
 
     // the heating element's power
-    c_hepower = 3500;
+    c_hepower = 3000;
   }
 
   void Config::load() {
