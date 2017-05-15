@@ -134,8 +134,27 @@ namespace aegir {
     return *this;
   }
 
-  MAX31856 &MAX31856::dumpState() {
+  MAX31856 &MAX31856::setCJOffset(float _offset) {
+    SPI::Data cmd{(uint8_t)Register::CJTO}, data(1);
 
+    uint8_t mask = 0b11110000;
+    uint8_t offset = ((_offset<0)?1<<8:0)|(uint8_t)(_offset*16);
+
+    printf("setCJOffset(%i, %.4f): offset:%u\n", c_chipid, _offset, offset);
+
+    data[0] = offset;
+#ifdef MAX31856_DEBUG
+    printf("setTCType(%i): Setting to %s/%s, c_chipidn", c_chipid, data.hexdump().c_str(),
+	   data.bindump().c_str());
+#endif
+    cmd[0] = 0x80|(uint8_t)Register::CJTO;
+
+    xfer(cmd, data);
+
+    return *this;
+  }
+
+  MAX31856 &MAX31856::dumpState() {
     printf("Dumping MAX31856 id:%i\n", c_chipid);
     for (auto &it: std::list<Register>({
 	  Register::CR0,
@@ -211,6 +230,22 @@ namespace aegir {
     dumpState();
 #endif
     return temp;
+  }
+
+  float MAX31856::getCJOffset() {
+    float offset;
+    uint8_t reading(0);
+    SPI::Data cmd{(uint8_t)Register::CJTO}, data(1);
+
+    xfer(cmd, data);
+    reading = data[0];
+
+    //printf("getCJOffset(%i): CJTO:%u/%s\n", c_chipid, reading, data.bindump().c_str());
+
+    offset = (1.0*(reading&0x7f))/16.0;
+    if ( reading&0x80 ) offset *= -1;
+
+    return offset;
   }
 
   void MAX31856::setOneShot() {

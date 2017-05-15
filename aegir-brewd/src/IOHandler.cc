@@ -55,14 +55,17 @@ namespace aegir {
   void IOHandler::readTCs() {
     struct timeval tv;
     gettimeofday(&tv, 0);
+#ifdef AEGIR_DEBUG
+    printf("\nIOHandler::readTCs():\n");
+#endif
     for (auto &it: c_tcmap) {
       float temp = c_tcs[it.second]->readTCTemp();
       float cjtemp = c_tcs[it.second]->readCJTemp();
-#define AEGIR_DEBUG
 #ifdef AEGIR_DEBUG
-      printf("Sensor %s/%i temp: %f C Time: %li CJ:%.2f\n", it.first.c_str(), it.second, temp, tv.tv_sec, cjtemp);
+      float cjto = c_tcs[it.second]->getCJOffset();
+      printf("Sensor %s/%i temp: %f C Time: %li CJ:%.2f CJTO:%.4f\n", it.first.c_str(), it.second, temp,
+	     tv.tv_sec, cjtemp, cjto);
 #endif
-#undef AEGIR_DEBUG
       c_mq_pub.send(ThermoReadingMessage(it.first, temp, tv.tv_sec));
     }
   }
@@ -104,7 +107,7 @@ namespace aegir {
       // start with kevent
       ival.tv_sec = 0;
       ival.tv_nsec = 10000000;
-      if ( (nchanges = kevent(kq, 0, 0, ke, 9, &ival)) > 0 ) {
+      if ( (nchanges = kevent(kq, 0, 0, ke, 8, &ival)) > 0 ) {
 	for (int i=0; i<nchanges; ++i) {
 	  // EVFILT_TIMER with ident=0 is our sensor timer
 	  // we only ready the sensors, when a brew process is active
