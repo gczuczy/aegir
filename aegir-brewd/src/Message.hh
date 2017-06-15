@@ -10,6 +10,8 @@
 #include <memory>
 #include <functional>
 
+#include "GPIO.hh"
+
 namespace aegir {
 
   typedef std::basic_string<uint8_t> msgstring;
@@ -70,18 +72,22 @@ namespace aegir {
   public:
     PinStateMessage() = delete;
     PinStateMessage(const msgstring &_msg);
-    PinStateMessage(const std::string &_name, int _state);
+    PinStateMessage(const std::string &_name, PINState _state, float _cycletime=3.0f, float _onratio=0.2f);
     virtual msgstring serialize() const override;
     virtual MessageType type() const override;
     inline const std::string &getName() const {return c_name;};
-    inline int getState() const {return c_state;};
+    inline PINState getState() const {return c_state;};
+    inline bool isOn() const {return c_state==PINState::On; };
+    inline bool isOff() const {return c_state==PINState::Off; };
     virtual ~PinStateMessage();
 
     static std::shared_ptr<Message> create(const msgstring &_msg);
 
   public:
     std::string c_name;
-    int c_state;
+    PINState c_state;
+    float c_cycletime;
+    float c_onratio;
   };
 
   // Thermocouple reading results

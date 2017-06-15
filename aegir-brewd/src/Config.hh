@@ -70,6 +70,8 @@ namespace aegir {
     uint16_t c_zmq_pr_port;
     // The heating element's power
     uint32_t c_hepower;
+    // pin handling interval, milisecs
+    uint32_t c_pinival;
 
   public:
     ~Config();
@@ -89,6 +91,7 @@ namespace aegir {
     inline const uint32_t getTCival() const { return c_thermoival;};
     inline const uint16_t getPRPort() const { return c_zmq_pr_port; };
     inline const uint32_t getHEPower() const { return c_hepower; };
+    inline const uint32_t getPINival() const { return c_pinival; };
   };
 }
 

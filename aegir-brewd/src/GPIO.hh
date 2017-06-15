@@ -16,6 +16,14 @@
 
 namespace aegir {
 
+  enum class PINState: uint8_t {
+    Off=0,
+      On=1,
+      Pulsate=2,
+      Unknown=255
+      };
+
+
   class GPIO {
     GPIO() = delete;
     GPIO(GPIO &&) = delete;
@@ -50,7 +58,7 @@ namespace aegir {
       PIN &pulldown();
       PIN &opendrain();
       PIN &tristate();
-      int get();
+      PINState get();
     private:
       // In this app we don't need setname to be public,
       // because names are set up from Config

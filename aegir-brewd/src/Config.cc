@@ -119,6 +119,9 @@ namespace aegir {
 
     // the heating element's power
     c_hepower = 3000;
+
+    // pin polling interval
+    c_pinival = 100;
   }
 
   void Config::load() {
@@ -262,6 +265,14 @@ namespace aegir {
 	  throw Exception("Heating element's power is out of range");
       }
 
+      // pin polling interval
+      if ( config["pinpollinterval"] && config["pinpollinterval"].IsScalar() ) {
+	YAML::Node ppi = config["pinpollinterval"];
+	c_pinival = ppi.as<uint32_t>();
+	if ( c_pinival < 20 || c_pinival > 1000 )
+	  throw Exception("Pin polling interval is out of range");
+      }
+
     }
     catch (std::exception &e) {
       throw Exception("Error during parsing config: %s", e.what());
@@ -328,6 +339,9 @@ namespace aegir {
 
     // Heating element's power in watts
     yout << YAML::Key << "elementpower" << YAML::Value << c_hepower;
+
+    // pin polling interval
+    yout << YAML::Key << "pinpollinterval" << YAML::Value << c_pinival;
 
     // End the config
     yout << YAML::EndMap;

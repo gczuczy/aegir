@@ -97,10 +97,14 @@ namespace aegir {
     return *this;
   }
 
-  int GPIO::PIN::get() {
+  PINState GPIO::PIN::get() {
     int value;
 
-    return gpio_pin_get(c_gpio.c_handle, c_pin);
+    value = gpio_pin_get(c_gpio.c_handle, c_pin);
+
+    if ( value == 0 ) return PINState::Off;
+    if ( value == 1 ) return PINState::On;
+    throw Exception("Unknown value for pin %i: %i", c_pin, value);
   }
 
   /*

@@ -69,7 +69,7 @@ namespace aegir {
 	    printf("Controller: received %s:%i\n", psmsg->getName().c_str(), psmsg->getState());
 #endif
 	    try {
-	      setPIN(psmsg->getName(), psmsg->getState()==1);
+	      setPIN(psmsg->getName(), psmsg->getState());
 	    }
 	    catch (Exception &e) {
 	      printf("No such pin: '%s' %lu\n", psmsg->getName().c_str(), psmsg->getName().length());
@@ -125,10 +125,12 @@ namespace aegir {
       std::shared_ptr<PINTracker::PIN> swoff(_pt.getPIN("swoff"));
       // whether we have at least one of the controls
       if ( swon->isChanged() || swoff->isChanged() ) {
-	if ( swon->getNewValue() && !swoff->getNewValue() ) {
-	  setPIN("swled", true);
-	} else if ( !swon->getNewValue() && swoff->getNewValue() ) {
-	  setPIN("swled", false);
+	if ( swon->getNewValue() != PINState::Off
+	     && swoff->getNewValue() == PINState::Off ) {
+	  setPIN("swled", PINState::On);
+	} else if ( swon->getNewValue() == PINState::Off &&
+		    swoff->getNewValue() != PINState::Off ) {
+	  setPIN("swled", PINState::Off);
 	}
       }
     } // pump&heat switch
@@ -171,7 +173,7 @@ namespace aegir {
   }
 
   void Controller::handleOutPIN(PINTracker::PIN &_pin) {
-    c_mq_iocmd.send(PinStateMessage(_pin.getName(), _pin.getNewValue()?1:0));
+    c_mq_iocmd.send(PinStateMessage(_pin.getName(), _pin.getNewValue()));
   }
 
   uint32_t Controller::calcHeatTime(uint32_t _vol, uint32_t _tempdiff, float _pkw) const {

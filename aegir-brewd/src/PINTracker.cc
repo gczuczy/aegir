@@ -9,14 +9,14 @@ namespace aegir {
    * PINTracker::PIN
    */
   PINTracker::PIN::PIN(const std::string &_name): c_name(_name) {
-    c_value = false;
-    c_newvalue = false;
+    c_value = PINState::Off;
+    c_newvalue = PINState::Off;
   }
 
   PINTracker::PIN::~PIN() {
   }
 
-  bool PINTracker::PIN::getValue() {
+  PINState PINTracker::PIN::getValue() {
     return c_value;
   }
 
@@ -34,7 +34,7 @@ namespace aegir {
   PINTracker::OutPIN::~OutPIN() {
   }
 
-  bool PINTracker::OutPIN::getValue() {
+  PINState PINTracker::OutPIN::getValue() {
     return c_value;
   }
 
@@ -42,7 +42,7 @@ namespace aegir {
    * if newval!=oldval, then has to be in the queue
    * if newval==oldval, then hos to be absent from the queue
    */
-  void PINTracker::OutPIN::setValue(bool _v) {
+  void PINTracker::OutPIN::setValue(PINState _v) {
     c_newvalue = _v;
 
     auto it = c_pcq.find(this);
@@ -69,7 +69,7 @@ namespace aegir {
   PINTracker::InPIN::~InPIN() {
   }
 
-  bool PINTracker::InPIN::getValue() {
+  PINState PINTracker::InPIN::getValue() {
     return c_newvalue;
   }
 
@@ -77,7 +77,7 @@ namespace aegir {
    * if newval!=oldval, then has to be in the queue
    * if newval==oldval, then hos to be absent from the queue
    */
-  void PINTracker::InPIN::setValue(bool _v) {
+  void PINTracker::InPIN::setValue(PINState _v) {
     c_newvalue = _v;
 
 #ifdef AEGIR_DEBUG
@@ -150,7 +150,7 @@ namespace aegir {
     return it->second;
   }
 
-  void PINTracker::setPIN(const std::string &_name, bool _value) {
+  void PINTracker::setPIN(const std::string &_name, PINState _value) {
     auto it = c_pins.find(_name);
     if ( it != c_pins.end() ) {
       if ( it->second->getType() == PIN::PINType::OUT ) {

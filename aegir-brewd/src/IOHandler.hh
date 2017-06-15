@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <memory>
+#include <set>
 #include <map>
 #include <string>
 
@@ -35,9 +36,14 @@ namespace aegir {
     std::vector<std::unique_ptr<MAX31856>> c_tcs;
     std::map<std::string, int> c_tcmap;
     uint32_t c_thermoival;
+    uint32_t c_pinival;
+    // PIN holding structures
+    std::map<std::string, PINState> c_inpins;
+    std::set<std::string> c_outpins;
 
   private:
     void readTCs();
+    void handlePins();
 
   public:
     virtual void run();

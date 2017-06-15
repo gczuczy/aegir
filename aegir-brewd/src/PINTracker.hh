@@ -11,6 +11,8 @@
 #include <cstdint>
 #include <memory>
 
+#include "GPIO.hh"
+
 namespace aegir {
 
   class PINTracker {
@@ -34,19 +36,19 @@ namespace aegir {
       virtual ~PIN() = 0;
 
       inline const std::string &getName() const { return c_name; };
-      inline bool getOldValue() const { return c_value; };
-      inline bool getNewValue() const { return c_newvalue; };
+      inline PINState getOldValue() const { return c_value; };
+      inline PINState getNewValue() const { return c_newvalue; };
       inline bool isChanged() const { return c_value != c_newvalue; };
-      virtual bool getValue();
-      virtual void setValue(bool _v) = 0;
+      virtual PINState getValue();
+      virtual void setValue(PINState _v) = 0;
       PINType getType() const {return c_type; };
 
       void pushback();
 
     protected:
       std::string c_name;
-      bool c_value;
-      bool c_newvalue;
+      PINState c_value;
+      PINState c_newvalue;
       PINType c_type;
     }; // PIN
     typedef std::map<std::string, std::shared_ptr<PIN> > PINMap;
@@ -64,8 +66,8 @@ namespace aegir {
       OutPIN(const std::string &_name, PINChanges &_pcq);
       virtual ~OutPIN();
 
-      virtual bool getValue() override;
-      virtual void setValue(bool _v) override;
+      virtual PINState getValue() override;
+      virtual void setValue(PINState _v) override;
 
     private:
       PINChanges &c_pcq;
@@ -83,8 +85,8 @@ namespace aegir {
       InPIN(const std::string &_name, PINChanges &_inch);
       virtual ~InPIN();
 
-      virtual bool getValue() override;
-      virtual void setValue(bool _v) override;
+      virtual PINState getValue() override;
+      virtual void setValue(PINState _v) override;
 
     private:
       PINChanges &c_inch; // in changes
@@ -102,7 +104,7 @@ namespace aegir {
     void endCycle();
 
     std::shared_ptr<PIN> getPIN(const std::string &_name);
-    void setPIN(const std::string &_name, bool _value);
+    void setPIN(const std::string &_name, PINState _value);
     bool hasChanged(const std::string &_name);
     bool hasChanged(const std::string &_name, std::shared_ptr<PIN> &_pin);
     inline bool hasChanges() const { return !!c_inpinchanges.size(); };
