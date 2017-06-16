@@ -5,12 +5,19 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include <chrono>
 
 #include "ZMQ.hh"
 #include "GPIO.hh"
 #include "Config.hh"
+
+#define KE_LEN 32
+// the oneshot offset for kqueue ident
+#define ID_OS_OFFSET 100
+// the pulse offset for kqueue ident
+#define ID_PULSE_OFFSET 1000
 
 namespace aegir {
 
@@ -54,14 +61,19 @@ namespace aegir {
 #endif
 	c_inpins[it.first] = PINState::Unknown;
       } else if ( it.second.mode == PinMode::OUT ) {
-	c_outpins.insert(it.first);
+	c_outpins[it.first].state = PINState::Off;
+	c_outpins[it.first].name = it.first;
+	c_gpio[it.first].low();
       }
     }
+
+    c_kq = kqueue();
 
     thrmgr->addThread("IOHandler", *this);
   }
 
   IOHandler::~IOHandler() {
+    close(c_kq);
   }
 
   void IOHandler::readTCs() {
@@ -116,9 +128,38 @@ namespace aegir {
 	  printf("IOHandler: setting %s to %hhu\n", psmsg->getName().c_str(), (uint8_t)psmsg->getState());
 #endif
 	  if ( psmsg->getState() == PINState::On ) {
+	    if ( c_outpins[psmsg->getName()].state == PINState::Pulsate )
+	      clearPulsate(c_gpio[psmsg->getName()].getID());
+
 	    c_gpio[psmsg->getName()].high();
+	    c_outpins[psmsg->getName()].state = PINState::On;
 	  } else if ( psmsg->getState() == PINState::Off )  {
+	    if ( c_outpins[psmsg->getName()].state == PINState::Pulsate )
+	      clearPulsate(c_gpio[psmsg->getName()].getID());
+
 	    c_gpio[psmsg->getName()].low();
+	    c_outpins[psmsg->getName()].state = PINState::Off;
+	  } else if ( psmsg->getState() == PINState::Pulsate ) {
+	    // for pulsating, we have to start with an On state, then
+	    // create a oneshot for adding the repeating Off
+	    struct kevent ke[2];
+	    // cycle time in milliseconds
+	    int ctms = 1000*psmsg->getCycletime();
+	    // offset in milliseconds
+	    int offsetms = ctms*psmsg->getOnratio();
+	    // the gpio pin id
+	    int id = c_gpio[psmsg->getName()].getID();
+	    // the passed udata
+	    void *udata = (void*)&(c_outpins[psmsg->getName()]);
+
+	    // EV_SET(kev, ident, filter, flags, fflags, data, udata);
+	    EV_SET(&ke[0], ID_PULSE_OFFSET+2*id+1, EVFILT_TIMER, EV_ADD|EV_ENABLE, NOTE_MSECONDS, ctms, udata);
+	    EV_SET(&ke[1], ID_OS_OFFSET+id, EVFILT_TIMER, EV_ADD|EV_ENABLE|EV_ONESHOT, NOTE_MSECONDS, offsetms, udata);
+	    if ( kevent(c_kq, ke, 2, 0, 0, 0) < 0 ) {
+	      printf("kevent failed: %i/%s\n", errno, strerror(errno));
+	    }
+	    c_gpio[psmsg->getName()].high();
+	    c_outpins[psmsg->getName()].state = PINState::Pulsate;
 	  } else {
 	    printf("IOHandler:%i: Unhandled pinstate %hhu\n", __LINE__, psmsg->getState());
 	  }
@@ -129,33 +170,70 @@ namespace aegir {
     }
   }
 
+  void IOHandler::clearPulsate(int id) {
+    struct kevent ke[3];
+
+    // EV_SET(kev, ident, filter, flags, fflags, data, udata);
+    EV_SET(&ke[0], ID_PULSE_OFFSET+2*id+0, EVFILT_TIMER, EV_DELETE, 0, 0, 0);
+    EV_SET(&ke[1], ID_PULSE_OFFSET+2*id+1, EVFILT_TIMER, EV_DELETE, 0, 0, 0);
+    EV_SET(&ke[2], ID_OS_OFFSET+id, EVFILT_TIMER, EV_DELETE, 0, 0, 0);
+    if ( kevent(c_kq, ke, 3, 0, 0, 0) < 0 ) {
+      printf("kevent failed: %i/%s\n", errno, strerror(errno));
+    }
+  }
+
   void IOHandler::run() {
     printf("IOHandler started\n");
 
-
     // set our kqueue up
-    int kq;
-    kq = kqueue();
-#define KE_LEN 32
     struct kevent ke[KE_LEN];
-    int nchanges = 32;
+    struct kevent oske;
+    int nchanges = KE_LEN;
+    int ident;
+    int filter;
     // EV_SET(kev, ident, filter, flags, fflags, data, udata);
     EV_SET(&ke[0], 0, EVFILT_TIMER, EV_ADD|EV_ENABLE, NOTE_SECONDS, c_thermoival, 0);
     EV_SET(&ke[1], 1, EVFILT_TIMER, EV_ADD|EV_ENABLE, NOTE_MSECONDS, c_pinival, 0);
-    if ( kevent(kq, ke, 2, 0, 0, 0) < 0 ) {
+    if ( kevent(c_kq, ke, 2, 0, 0, 0) < 0 ) {
       printf("kevent failed: %i/%s\n", errno, strerror(errno));
     }
 
     while ( c_run ) {
       // start with kevent
-      if ( (nchanges = kevent(kq, 0, 0, ke, KE_LEN, 0)) > 0 ) {
+      if ( (nchanges = kevent(c_kq, 0, 0, ke, KE_LEN, 0)) > 0 ) {
 	for (int i=0; i<nchanges; ++i) {
+	  ident  = ke[i].ident;
+	  filter = ke[i].filter;
 	  // EVFILT_TIMER with ident=0 is our sensor timer
 	  // we only ready the sensors, when a brew process is active
-	  if ( ke[i].filter == EVFILT_TIMER && ke[i].ident == 0 ) {
+	  if ( filter == EVFILT_TIMER && ident == 0 ) {
+	    // TC reading
 	    readTCs();
-	  } else if ( ke[i].filter == EVFILT_TIMER && ke[i].ident == 1 ) {
+	  } else if ( filter == EVFILT_TIMER && ident == 1 ) {
+	    // general PIN handling
 	    handlePins();
+	  } else if ( filter == EVFILT_TIMER && ident >= ID_OS_OFFSET && ident < ID_PULSE_OFFSET ) {
+	    // offset timer installation
+	    int pindent = ident - ID_OS_OFFSET;
+	    outpindata *opd = (outpindata*)ke[i].udata;
+
+	    EV_SET(&oske, ID_PULSE_OFFSET+2*pindent+0, EVFILT_TIMER, EV_ADD|EV_ENABLE, NOTE_MSECONDS, opd->cycletime, (void*)opd);
+	    if ( kevent(c_kq, &oske, 1, 0, 0, 0) < 0 ) {
+	      printf("kevent failed: %i/%s\n", errno, strerror(errno));
+	    }
+
+	  } else if ( filter == EVFILT_TIMER && ident >= ID_PULSE_OFFSET ) {
+	    int pindent = ((ident - ID_OS_OFFSET) & 0x0ffe)/2;
+	    int up = ident & 1;
+	    outpindata *opd = (outpindata*)ke[i].udata;
+
+	    printf("IOHandler timer ident %i -> %i up:%i\n", ident, pindent, up);
+
+	    if ( up ) {
+	      c_gpio[opd->name].high();
+	    } else {
+	      c_gpio[opd->name].low();
+	    }
 	  }
 	}
       }

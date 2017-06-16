@@ -59,6 +59,7 @@ namespace aegir {
       PIN &opendrain();
       PIN &tristate();
       PINState get();
+      inline int getID() const { return c_pin; };
     private:
       // In this app we don't need setname to be public,
       // because names are set up from Config

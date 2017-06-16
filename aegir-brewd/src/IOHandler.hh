@@ -12,7 +12,6 @@
 
 #include <vector>
 #include <memory>
-#include <set>
 #include <map>
 #include <string>
 
@@ -29,6 +28,12 @@ namespace aegir {
     virtual ~IOHandler();
 
   private:
+    struct outpindata {
+      PINState state;
+      int cycletime; //miliseconds
+      float onratio;
+      std::string name;
+    };
     GPIO &c_gpio;
     SPI &c_spi;
     ZMQ::Socket c_mq_pub;
@@ -39,11 +44,14 @@ namespace aegir {
     uint32_t c_pinival;
     // PIN holding structures
     std::map<std::string, PINState> c_inpins;
-    std::set<std::string> c_outpins;
+    std::map<std::string, outpindata> c_outpins;
+    // the kqueue socket
+    int c_kq;
 
   private:
     void readTCs();
     void handlePins();
+    void clearPulsate(int id);
 
   public:
     virtual void run();

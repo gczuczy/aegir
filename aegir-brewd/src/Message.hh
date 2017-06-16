@@ -79,6 +79,8 @@ namespace aegir {
     inline PINState getState() const {return c_state;};
     inline bool isOn() const {return c_state==PINState::On; };
     inline bool isOff() const {return c_state==PINState::Off; };
+    inline float getCycletime() const { return c_cycletime; };
+    inline float getOnratio() const { return c_onratio; };
     virtual ~PinStateMessage();
 
     static std::shared_ptr<Message> create(const msgstring &_msg);
