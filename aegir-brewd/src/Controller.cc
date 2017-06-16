@@ -173,7 +173,10 @@ namespace aegir {
   }
 
   void Controller::handleOutPIN(PINTracker::PIN &_pin) {
-    c_mq_iocmd.send(PinStateMessage(_pin.getName(), _pin.getNewValue()));
+    c_mq_iocmd.send(PinStateMessage(_pin.getName(),
+				    _pin.getNewValue(),
+				    _pin.getNewCycletime(),
+				    _pin.getNewOnratio()));
   }
 
   uint32_t Controller::calcHeatTime(uint32_t _vol, uint32_t _tempdiff, float _pkw) const {

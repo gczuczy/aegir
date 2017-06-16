@@ -20,8 +20,18 @@ namespace aegir {
     return c_value;
   }
 
+  float PINTracker::PIN::getCycletime() {
+    return c_cycletime;
+  }
+
+  float PINTracker::PIN::getOnratio() {
+    return c_onratio;
+  }
+
   void PINTracker::PIN::pushback() {
     c_value = c_newvalue;
+    c_cycletime = c_newcycletime;
+    c_onratio = c_newonratio;
   }
 
   /*
@@ -42,7 +52,7 @@ namespace aegir {
    * if newval!=oldval, then has to be in the queue
    * if newval==oldval, then hos to be absent from the queue
    */
-  void PINTracker::OutPIN::setValue(PINState _v) {
+  void PINTracker::OutPIN::setValue(PINState _v, float _cycletime, float _onratio) {
     c_newvalue = _v;
 
     auto it = c_pcq.find(this);
@@ -77,16 +87,20 @@ namespace aegir {
    * if newval!=oldval, then has to be in the queue
    * if newval==oldval, then hos to be absent from the queue
    */
-  void PINTracker::InPIN::setValue(PINState _v) {
+  void PINTracker::InPIN::setValue(PINState _v, float _cycletime, float _onratio) {
     c_newvalue = _v;
+    c_newcycletime = _cycletime;
+    c_newonratio = _onratio;
 
 #ifdef AEGIR_DEBUG
-    printf("PINTracker::InPIN::setValue(%s, %i->%i)\n", c_name.c_str(),
-	   c_value?1:0, c_newvalue?1:0);
+    printf("PINTracker::InPIN::setValue(%s, %i->%i, %.2f->%.2f, %.2f->%.2f)\n", c_name.c_str(),
+	   c_value, c_newvalue, c_cycletime, c_newcycletime, c_onratio, c_newonratio);
 #endif
 
     auto it = c_inch.find(this);
-    if ( c_value == c_newvalue ) {
+    if ( c_value == c_newvalue ||
+	 ((c_newvalue == PINState::Pulsate) &&
+	  ( c_cycletime == c_newcycletime && c_onratio == c_newonratio)) ) {
       if ( it != c_inch.end() ) c_inch.erase(it);
       return;
     }
@@ -132,14 +146,17 @@ namespace aegir {
   }
 
   void PINTracker::endCycle() {
-    if ( c_pinchangequeue.size() || c_inpinchanges.size() )
-    for ( auto &it: c_inpinchanges ) it->pushback();
-    c_inpinchanges.clear();
-    for ( auto &it: c_pinchangequeue ) {
-      handleOutPIN(*it);
-      it->pushback();
+    if ( c_inpinchanges.size() ) {
+      for ( auto &it: c_inpinchanges ) it->pushback();
+      c_inpinchanges.clear();
     }
-    c_pinchangequeue.clear();
+    if ( c_pinchangequeue.size() ) {
+      for ( auto &it: c_pinchangequeue ) {
+	handleOutPIN(*it);
+	it->pushback();
+      }
+      c_pinchangequeue.clear();
+    }
   }
 
   std::shared_ptr<PINTracker::PIN> PINTracker::getPIN(const std::string &_name) {
@@ -150,12 +167,12 @@ namespace aegir {
     return it->second;
   }
 
-  void PINTracker::setPIN(const std::string &_name, PINState _value) {
+  void PINTracker::setPIN(const std::string &_name, PINState _value, float _cycletime, float _onratio) {
     auto it = c_pins.find(_name);
     if ( it != c_pins.end() ) {
       if ( it->second->getType() == PIN::PINType::OUT ) {
 	auto sppin = std::static_pointer_cast<OutPIN>(it->second);
-	sppin->setValue(_value);
+	sppin->setValue(_value, _cycletime, _onratio);
 	//it->second->setValue(_value);
       } else if ( it->second->getType() == PIN::PINType::IN ) {
 	auto sppin = std::static_pointer_cast<InPIN>(it->second);

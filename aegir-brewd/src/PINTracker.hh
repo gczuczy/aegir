@@ -38,9 +38,17 @@ namespace aegir {
       inline const std::string &getName() const { return c_name; };
       inline PINState getOldValue() const { return c_value; };
       inline PINState getNewValue() const { return c_newvalue; };
-      inline bool isChanged() const { return c_value != c_newvalue; };
+      inline float getOldCycletime() const { return c_cycletime; };
+      inline float getNewCycletime() const { return c_newcycletime; };
+      inline float getOldOnratio() const { return c_onratio; };
+      inline float getNewOnratio() const { return c_newonratio; };
+      inline bool isChanged() const { return (c_value != c_newvalue ||
+					      ((c_newvalue == PINState::Pulsate) &&
+					       (c_cycletime != c_newcycletime || c_onratio != c_newonratio))); };
       virtual PINState getValue();
-      virtual void setValue(PINState _v) = 0;
+      virtual float getCycletime();
+      virtual float getOnratio();
+      virtual void setValue(PINState _v, float _cycletime = 3.0f, float _onratio=0.4f) = 0;
       PINType getType() const {return c_type; };
 
       void pushback();
@@ -49,6 +57,10 @@ namespace aegir {
       std::string c_name;
       PINState c_value;
       PINState c_newvalue;
+      float c_cycletime;
+      float c_newcycletime;
+      float c_onratio;
+      float c_newonratio;
       PINType c_type;
     }; // PIN
     typedef std::map<std::string, std::shared_ptr<PIN> > PINMap;
@@ -67,7 +79,7 @@ namespace aegir {
       virtual ~OutPIN();
 
       virtual PINState getValue() override;
-      virtual void setValue(PINState _v) override;
+      virtual void setValue(PINState _v, float _cycletime = 3.0f, float _onratio=0.4f) override;
 
     private:
       PINChanges &c_pcq;
@@ -86,7 +98,7 @@ namespace aegir {
       virtual ~InPIN();
 
       virtual PINState getValue() override;
-      virtual void setValue(PINState _v) override;
+      virtual void setValue(PINState _v, float _cycletime = 3.0f, float _onratio=0.4f) override;
 
     private:
       PINChanges &c_inch; // in changes
@@ -104,7 +116,7 @@ namespace aegir {
     void endCycle();
 
     std::shared_ptr<PIN> getPIN(const std::string &_name);
-    void setPIN(const std::string &_name, PINState _value);
+    void setPIN(const std::string &_name, PINState _value, float _cycletime=2.0f, float _onratio=0.4f);
     bool hasChanged(const std::string &_name);
     bool hasChanged(const std::string &_name, std::shared_ptr<PIN> &_pin);
     inline bool hasChanges() const { return !!c_inpinchanges.size(); };
