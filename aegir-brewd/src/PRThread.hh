@@ -30,7 +30,7 @@ namespace aegir {
     virtual void run();
 
   private:
-    ZMQ::Socket c_mq_pr;
+    ZMQ::Socket c_mq_pr, c_mq_iocmd;
     std::map<std::string, std::function<std::shared_ptr<Json::Value> (const Json::Value&) > > c_handlers;
 
   private:
@@ -38,6 +38,7 @@ namespace aegir {
     std::shared_ptr<Json::Value> handleLoadProgram(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleGetLoadedProgram(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleGetState(const Json::Value &_data);
+    std::shared_ptr<Json::Value> handleBuzzer(const Json::Value &_data);
   };
 }
 

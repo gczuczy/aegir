@@ -150,9 +150,23 @@ namespace aegir {
 	    // the gpio pin id
 	    int id = c_gpio[psmsg->getName()].getID();
 	    // the passed udata
-	    void *udata = (void*)&(c_outpins[psmsg->getName()]);
+	    outpindata *opd = &(c_outpins[psmsg->getName()]);
+	    void *udata = (void*)opd;
+	    opd->cycletime = ctms;
+	    opd->onratio   = psmsg->getOnratio();
+
+#ifdef AEGIR_DEBUG
+	    printf("IOHandler starting pulsate: %s/%i C:%i OR:%.2f\n", psmsg->getName().c_str(), id,
+		   opd->cycletime, opd->onratio);
+#endif
 
 	    // EV_SET(kev, ident, filter, flags, fflags, data, udata);
+#ifdef AEGIR_DEBUG
+	    printf("IOHandler EV_SET(%i, TIMER, ADD|ENABLE, MSECONDS, %i, udata)\n",
+		   ID_PULSE_OFFSET+2*id+1, ctms);
+	    printf("IOHandler EV_SET(%i, TIMER, ADD|ENABLE|ONESHOT, MSECONDS, %i, udata)\n",
+		   ID_OS_OFFSET+id, offsetms);
+#endif
 	    EV_SET(&ke[0], ID_PULSE_OFFSET+2*id+1, EVFILT_TIMER, EV_ADD|EV_ENABLE, NOTE_MSECONDS, ctms, udata);
 	    EV_SET(&ke[1], ID_OS_OFFSET+id, EVFILT_TIMER, EV_ADD|EV_ENABLE|EV_ONESHOT, NOTE_MSECONDS, offsetms, udata);
 	    if ( kevent(c_kq, ke, 2, 0, 0, 0) < 0 ) {
@@ -177,9 +191,7 @@ namespace aegir {
     EV_SET(&ke[0], ID_PULSE_OFFSET+2*id+0, EVFILT_TIMER, EV_DELETE, 0, 0, 0);
     EV_SET(&ke[1], ID_PULSE_OFFSET+2*id+1, EVFILT_TIMER, EV_DELETE, 0, 0, 0);
     EV_SET(&ke[2], ID_OS_OFFSET+id, EVFILT_TIMER, EV_DELETE, 0, 0, 0);
-    if ( kevent(c_kq, ke, 3, 0, 0, 0) < 0 ) {
-      printf("kevent failed: %i/%s\n", errno, strerror(errno));
-    }
+    kevent(c_kq, ke, 3, 0, 0, 0);
   }
 
   void IOHandler::run() {
@@ -223,11 +235,13 @@ namespace aegir {
 	    }
 
 	  } else if ( filter == EVFILT_TIMER && ident >= ID_PULSE_OFFSET ) {
-	    int pindent = ((ident - ID_OS_OFFSET) & 0x0ffe)/2;
+	    int pindent = ((ident - ID_PULSE_OFFSET) & 0x0ffe)/2;
 	    int up = ident & 1;
 	    outpindata *opd = (outpindata*)ke[i].udata;
 
+#ifdef AEGIR_DEBUG
 	    printf("IOHandler timer ident %i -> %i up:%i\n", ident, pindent, up);
+#endif
 
 	    if ( up ) {
 	      c_gpio[opd->name].high();

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <time.h>
 
+#include <algorithm>
 #include <vector>
 #include <set>
 #include <string>
@@ -57,7 +58,7 @@ namespace aegir {
     return ret;
   }
 
-  PRThread::PRThread(): c_mq_pr(ZMQ::SocketType::REP) {
+  PRThread::PRThread(): c_mq_pr(ZMQ::SocketType::REP), c_mq_iocmd(ZMQ::SocketType::PUB) {
     auto cfg = Config::getInstance();
 
     // bind the PR socket
@@ -67,10 +68,13 @@ namespace aegir {
       c_mq_pr.bind(buff);
     }
 
+    c_mq_iocmd.connect("inproc://iocmd");
+
     // Load the JSON Message handlers
     c_handlers["loadProgram"] = std::bind(&PRThread::handleLoadProgram, this, std::placeholders::_1);
     c_handlers["getProgram"] = std::bind(&PRThread::handleGetLoadedProgram, this, std::placeholders::_1);
     c_handlers["getState"] = std::bind(&PRThread::handleGetState, this, std::placeholders::_1);
+    c_handlers["buzzer"] = std::bind(&PRThread::handleBuzzer, this, std::placeholders::_1);
 
     auto thrmgr = ThreadManager::getInstance();
     thrmgr->addThread("PR", *this);
@@ -457,6 +461,70 @@ namespace aegir {
       return std::make_shared<Json::Value>(resp);
     }
     retval["data"] = data;
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  /*
+    required: state
+    if state==pulsate: cycletime, onratio
+   */
+  std::shared_ptr<Json::Value> PRThread::handleBuzzer(const Json::Value &_data) {
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value();
+
+    if ( _data.type() != Json::ValueType::objectValue )
+      throw Exception("Data type should be an objectvalue");
+    // first get the start time and the volume
+    std::string strstate;
+    PINState state(PINState::Unknown);
+    float cycletime(0.2), onratio(0.2);
+
+    // check for required members in the data struct
+    for ( auto &it: std::vector<std::string>({"state"}) ) {
+      if ( !_data.isMember(it) )
+	throw Exception("Missing member in data: %s", it.c_str());
+    }
+
+    Json::Value jsonvalue = _data["state"];
+    if ( jsonvalue.type() != Json::ValueType::stringValue )
+      throw Exception("data.state must be a string type, and not %s", jsvt2str(jsonvalue.type()).c_str());
+    strstate = jsonvalue.asString();
+    std::transform(strstate.begin(), strstate.end(), strstate.begin(),
+		   [](char c) {return std::tolower(c);});
+
+    if ( strstate == "on" ) {
+      state = PINState::On;
+    } else if ( strstate == "off" ) {
+      state = PINState::Off;
+    } else if ( strstate == "pulsate" ) {
+      state = PINState::Pulsate;
+    } else {
+      throw Exception("Unknown state: %s", strstate.c_str());
+    }
+
+    // get the additional parameters for pulsate
+    if ( state == PINState::Pulsate ) {
+      for ( auto &it: std::vector<std::string>({"cycletime", "onratio"}) ) {
+	if ( !_data.isMember(it) )
+	  throw Exception("Missing member in data: %s", it.c_str());
+      }
+
+      jsonvalue = _data["cycletime"];
+      if ( !jsonvalue.isNumeric() )
+	throw Exception("data.cycletime must be a numeric type, and not %s", jsvt2str(jsonvalue.type()).c_str());
+
+      cycletime = jsonvalue.asFloat();
+
+      jsonvalue = _data["onratio"];
+      if ( !jsonvalue.isNumeric() )
+	throw Exception("data.onratio must be a numeric type, and not %s", jsvt2str(jsonvalue.type()).c_str());
+
+      onratio = jsonvalue.asFloat();
+    }
+
+    c_mq_iocmd.send(PinStateMessage("buzzer", state, cycletime, onratio));
 
     return std::make_shared<Json::Value>(retval);
   }
