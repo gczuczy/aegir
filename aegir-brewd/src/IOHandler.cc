@@ -127,18 +127,19 @@ namespace aegir {
 #ifdef AEGIR_DEBUG
 	  printf("IOHandler: setting %s to %hhu\n", psmsg->getName().c_str(), (uint8_t)psmsg->getState());
 #endif
-	  if ( psmsg->getState() == PINState::On ) {
-	    if ( c_outpins[psmsg->getName()].state == PINState::Pulsate )
-	      clearPulsate(c_gpio[psmsg->getName()].getID());
+	  // always clear the pulsate state, it's either not needed,
+	  // or has to be replaced by new parameters
+	  if ( c_outpins[psmsg->getName()].state == PINState::Pulsate )
+	    clearPulsate(c_gpio[psmsg->getName()].getID());
 
+	  if ( psmsg->getState() == PINState::On ) {
 	    c_gpio[psmsg->getName()].high();
 	    c_outpins[psmsg->getName()].state = PINState::On;
-	  } else if ( psmsg->getState() == PINState::Off )  {
-	    if ( c_outpins[psmsg->getName()].state == PINState::Pulsate )
-	      clearPulsate(c_gpio[psmsg->getName()].getID());
 
+	  } else if ( psmsg->getState() == PINState::Off )  {
 	    c_gpio[psmsg->getName()].low();
 	    c_outpins[psmsg->getName()].state = PINState::Off;
+
 	  } else if ( psmsg->getState() == PINState::Pulsate ) {
 	    // for pulsating, we have to start with an On state, then
 	    // create a oneshot for adding the repeating Off
