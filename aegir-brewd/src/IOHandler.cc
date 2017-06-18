@@ -129,8 +129,10 @@ namespace aegir {
 #endif
 	  // always clear the pulsate state, it's either not needed,
 	  // or has to be replaced by new parameters
-	  if ( c_outpins[psmsg->getName()].state == PINState::Pulsate )
+	  if ( c_outpins[psmsg->getName()].state == PINState::Pulsate ) {
 	    clearPulsate(c_gpio[psmsg->getName()].getID());
+	    c_gpio[psmsg->getName()].low();
+	  }
 
 	  if ( psmsg->getState() == PINState::On ) {
 	    c_gpio[psmsg->getName()].high();
@@ -231,6 +233,7 @@ namespace aegir {
 	    outpindata *opd = (outpindata*)ke[i].udata;
 
 	    EV_SET(&oske, ID_PULSE_OFFSET+2*pindent+0, EVFILT_TIMER, EV_ADD|EV_ENABLE, NOTE_MSECONDS, opd->cycletime, (void*)opd);
+	    c_gpio[opd->name].low();
 	    if ( kevent(c_kq, &oske, 1, 0, 0, 0) < 0 ) {
 	      printf("kevent failed: %i/%s\n", errno, strerror(errno));
 	    }
