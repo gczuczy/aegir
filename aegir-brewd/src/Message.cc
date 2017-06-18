@@ -111,10 +111,10 @@ namespace aegir {
 #endif
     // cycletime checks
     if ( _cycletime < 0.2f ) throw Exception("PinStateMessage() cycletime must be greater than 0.2");
-    if ( _cycletime > 10.0f ) throw Exception("PinStateMessage() cycletime must be less than 0.2");
+    if ( _cycletime > 10.0f ) throw Exception("PinStateMessage() cycletime must be less than 10");
     // on ratio checks
-    if ( _onratio < 0.0f ) throw Exception("PinStateMessage() onratio must be greater than 0");
-    if ( _onratio > 1.0f ) throw Exception("PinStateMessage() onratio must be less than 1");
+    if ( _onratio < 0.0f ) c_state = PINState::Off;
+    if ( _onratio > 1.0f ) c_state = PINState::On;
 
 #ifdef AEGIR_DEBUG
     printf("'%s'\n", hexdump(serialize()).c_str());
