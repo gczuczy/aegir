@@ -122,6 +122,9 @@ namespace aegir {
 
     // pin polling interval
     c_pinival = 100;
+
+    // temperature accuracy
+    c_tempaccuracy = 0.3;
   }
 
   void Config::load() {
@@ -273,6 +276,14 @@ namespace aegir {
 	  throw Exception("Pin polling interval is out of range");
       }
 
+      // temperature accuracy
+      if ( config["tempaccuracy"] && config["tempaccuracy"].IsScalar() ) {
+	YAML::Node ppi = config["tempaccuracy"];
+	c_tempaccuracy = ppi.as<float>();
+	if ( c_tempaccuracy < 0.1 || c_tempaccuracy > 3.0 )
+	  throw Exception("Temperature accuracy is out of range");
+      }
+
     }
     catch (std::exception &e) {
       throw Exception("Error during parsing config: %s", e.what());
@@ -342,6 +353,9 @@ namespace aegir {
 
     // pin polling interval
     yout << YAML::Key << "pinpollinterval" << YAML::Value << c_pinival;
+
+    // temperature accuracy
+    yout << YAML::Key << "tempaccuracy" << YAML::Value << c_tempaccuracy;
 
     // End the config
     yout << YAML::EndMap;

@@ -72,6 +72,8 @@ namespace aegir {
     uint32_t c_hepower;
     // pin handling interval, milisecs
     uint32_t c_pinival;
+    // temperature accuracy
+    float c_tempaccuracy;
 
   public:
     ~Config();
@@ -92,6 +94,7 @@ namespace aegir {
     inline const uint16_t getPRPort() const { return c_zmq_pr_port; };
     inline const uint32_t getHEPower() const { return c_hepower; };
     inline const uint32_t getPINival() const { return c_pinival; };
+    inline const float getTempAccuracy() const { return c_tempaccuracy; };
   };
 }
 
