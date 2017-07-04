@@ -33,6 +33,7 @@ namespace aegir {
   private:
     static Controller *c_instance;
     ZMQ::Socket c_mq_io, c_mq_iocmd;
+    bool c_stoprecirc;
   };
 }
 

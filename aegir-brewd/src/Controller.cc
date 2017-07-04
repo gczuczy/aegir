@@ -18,7 +18,7 @@ namespace aegir {
   Controller *Controller::c_instance(0);
 
   Controller::Controller(): PINTracker(), c_mq_io(ZMQ::SocketType::SUB),
-			    c_mq_iocmd(ZMQ::SocketType::PUB) {
+			    c_mq_iocmd(ZMQ::SocketType::PUB), c_stoprecirc(false) {
     // subscribe to our publisher for IO events
     try {
       c_mq_io.connect("inproc://iopub").subscribe("");
@@ -66,7 +66,7 @@ namespace aegir {
 	  if ( msg->type() == MessageType::PINSTATE ) {
 	    auto psmsg = std::static_pointer_cast<PinStateMessage>(msg);
 #ifdef AEGIR_DEBUG
-	    printf("Controller: received %s:%i\n", psmsg->getName().c_str(), psmsg->getState());
+	    printf("Controller: received %s:%hhu\n", psmsg->getName().c_str(), psmsg->getState());
 #endif
 	    try {
 	      setPIN(psmsg->getName(), psmsg->getState());
@@ -128,9 +128,11 @@ namespace aegir {
 	if ( swon->getNewValue() != PINState::Off
 	     && swoff->getNewValue() == PINState::Off ) {
 	  setPIN("swled", PINState::On);
+	  c_stoprecirc = true;
 	} else if ( swon->getNewValue() == PINState::Off &&
 		    swoff->getNewValue() != PINState::Off ) {
 	  setPIN("swled", PINState::Off);
+	  c_stoprecirc = false;
 	}
       }
     } // pump&heat switch
@@ -145,7 +147,7 @@ namespace aegir {
 	ps.setState(ProcessState::States::PreWait);
       }
       return;
-    } // Loaded
+    } else // Loaded
 
     if ( state == ProcessState::States::PreWait ) {
       float mttemp = ps.getSensorTemp("MashTun");
@@ -155,7 +157,10 @@ namespace aegir {
       // calculate how much time
       Config *cfg = Config::getInstance();
       float tempdiff = prog->getStartTemp() - mttemp;
+      // Pre-Heat time
+      // the time we have till pre-heating has to actually start
       uint32_t phtime = 0;
+
       if ( tempdiff > 0 )
 	phtime = calcHeatTime(ps.getVolume(), tempdiff, 0.001*cfg->getHEPower());
 
@@ -165,11 +170,35 @@ namespace aegir {
 	ps.setState(ProcessState::States::PreHeat);
       else
 	return;
-    } // PreWait
+    } else // PreWait
 
     if ( state == ProcessState::States::PreHeat ) {
+      float mttemp = ps.getSensorTemp("MashTun");
+      float rimstemp = ps.getSensorTemp("RIMS");
+      float targettemp = prog->getStartTemp();
+      float tempdiff = targettemp - mttemp;
+
+      printf("Controller/PreHeat: MT:%.2f RIMS:%.2f T:%.2f D:%.2f\n", mttemp, rimstemp, targettemp, tempdiff);
+
+      if ( mttemp < targettemp ) {
+	setPIN("rimspump", PINState::On);
+	setPIN("rimsheat", PINState::On);
+      } else {
+	setPIN("rimspump", PINState::Off);
+	setPIN("rimsheat", PINState::Off);
+	ps.setState(ProcessState::States::NeedMalt);
+      }
     }
 
+    if ( c_stoprecirc ) {
+      setPIN("rimspump", PINState::On);
+      setPIN("rimsheat", PINState::Off);
+
+      std::shared_ptr<PINTracker::PIN> buzzer(_pt.getPIN("buzzer"));
+      if ( buzzer->getValue() != PINState::Pulsate ) {
+	setPIN("buzzer", PINState::Pulsate, 2.1f, 0.4f);
+      }
+    }
   }
 
   void Controller::handleOutPIN(PINTracker::PIN &_pin) {
