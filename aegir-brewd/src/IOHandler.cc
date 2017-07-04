@@ -74,6 +74,9 @@ namespace aegir {
 
   IOHandler::~IOHandler() {
     close(c_kq);
+    for ( auto &it: c_outpins ) {
+      c_gpio[it.first].low();
+    }
   }
 
   void IOHandler::readTCs() {
