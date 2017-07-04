@@ -83,7 +83,7 @@ namespace aegir {
       it.second.derivate1st.clear();
     }
 
-    c_state = States::Loaded;
+    setState(States::Loaded);
     return *this;
   }
 
@@ -106,6 +106,9 @@ namespace aegir {
 
     // and finally set the state
     c_state = _st;
+#ifdef AEGIR_DEBUG
+    printf("State changed to %s\n", g_strstates[c_state].c_str());
+#endif
     return *this;
   }
 
