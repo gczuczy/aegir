@@ -34,6 +34,7 @@ namespace aegir {
     static Controller *c_instance;
     ZMQ::Socket c_mq_io, c_mq_iocmd;
     bool c_stoprecirc;
+    int c_preheat_phase;
   };
 }
 
