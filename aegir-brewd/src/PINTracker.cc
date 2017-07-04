@@ -54,6 +54,8 @@ namespace aegir {
    */
   void PINTracker::OutPIN::setValue(PINState _v, float _cycletime, float _onratio) {
     c_newvalue = _v;
+    c_newcycletime = _cycletime;
+    c_newonratio = _onratio;
 
     auto it = c_pcq.find(this);
     if ( c_value != c_newvalue ) {
@@ -93,7 +95,7 @@ namespace aegir {
     c_newonratio = _onratio;
 
 #ifdef AEGIR_DEBUG
-    printf("PINTracker::InPIN::setValue(%s, %i->%i, %.2f->%.2f, %.2f->%.2f)\n", c_name.c_str(),
+    printf("PINTracker::InPIN::setValue(%s, %hhu->%hhu, %.2f->%.2f, %.2f->%.2f)\n", c_name.c_str(),
 	   c_value, c_newvalue, c_cycletime, c_newcycletime, c_onratio, c_newonratio);
 #endif
 
