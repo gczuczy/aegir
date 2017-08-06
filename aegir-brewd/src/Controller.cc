@@ -7,7 +7,6 @@
 #include <string>
 
 #include "Exception.hh"
-#include "ProcessState.hh"
 #include "Config.hh"
 
 namespace aegir {
@@ -17,7 +16,7 @@ namespace aegir {
 
   Controller *Controller::c_instance(0);
 
-  Controller::Controller(): PINTracker(), c_mq_io(ZMQ::SocketType::SUB),
+  Controller::Controller(): PINTracker(), c_mq_io(ZMQ::SocketType::SUB), c_ps(ProcessState::getInstance()),
 			    c_mq_iocmd(ZMQ::SocketType::PUB), c_stoprecirc(false) {
     // subscribe to our publisher for IO events
     try {
@@ -37,6 +36,29 @@ namespace aegir {
     // finally register to the threadmanager
     auto thrmgr = ThreadManager::getInstance();
     thrmgr->addThread("Controller", *this);
+
+    c_stagehandlers[ProcessState::States::Empty] = std::bind(&Controller::stageEmpty,
+							     std::placeholders::_1, std::placeholders::_2);
+    c_stagehandlers[ProcessState::States::Loaded] = std::bind(&Controller::stageLoaded
+							      , std::placeholders::_1, std::placeholders::_2);
+    c_stagehandlers[ProcessState::States::PreWait] = std::bind(&Controller::stagePreWait,
+							       std::placeholders::_1, std::placeholders::_2);
+    c_stagehandlers[ProcessState::States::PreHeat] = std::bind(&Controller::stagePreHeat,
+							       std::placeholders::_1, std::placeholders::_2);
+    c_stagehandlers[ProcessState::States::NeedMalt] = std::bind(&Controller::stageNeedMalt,
+								std::placeholders::_1, std::placeholders::_2);
+    c_stagehandlers[ProcessState::States::Mashing] = std::bind(&Controller::stageMashing,
+							       std::placeholders::_1, std::placeholders::_2);
+    c_stagehandlers[ProcessState::States::Sparging] = std::bind(&Controller::stageSparging,
+								std::placeholders::_1, std::placeholders::_2);
+    c_stagehandlers[ProcessState::States::PreBoil] = std::bind(&Controller::stagePreBoil,
+							       std::placeholders::_1, std::placeholders::_2);
+    c_stagehandlers[ProcessState::States::Hopping] = std::bind(&Controller::stageHopping,
+							       std::placeholders::_1, std::placeholders::_2);
+    c_stagehandlers[ProcessState::States::Cooling] = std::bind(&Controller::stageCooling,
+							       std::placeholders::_1, std::placeholders::_2);
+    c_stagehandlers[ProcessState::States::Finished] = std::bind(&Controller::stageFinished, std::placeholders::_1,
+								std::placeholders::_2);
   }
 
   Controller::~Controller() {
@@ -49,9 +71,6 @@ namespace aegir {
 
   void Controller::run() {
     printf("Controller started\n");
-
-    // the process states
-    ProcessState &ps(ProcessState::getInstance());
 
     // The main event loop
     std::shared_ptr<Message> msg;
@@ -84,7 +103,7 @@ namespace aegir {
 		   trmsg->getTimestamp());
 #endif
 	    // add it to the process state
-	    ps.addThermoReading(trmsg->getName(), trmsg->getTimestamp(), trmsg->getTemp());
+	    c_ps.addThermoReading(trmsg->getName(), trmsg->getTimestamp(), trmsg->getTemp());
 	  } else {
 	    printf("Got unhandled message type: %i\n", (int)msg->type());
 	    continue;
@@ -114,10 +133,8 @@ namespace aegir {
   }
 
   void Controller::controlProcess(PINTracker &_pt) {
-    ProcessState &ps(ProcessState::getInstance());
-    ProcessState::Guard guard_ps(ps);
-    ProcessState::States state = ps.getState();
-    auto prog = ps.getProgram();
+    ProcessState::Guard guard_ps(c_ps);
+    ProcessState::States state = c_ps.getState();
 
     // The pump&heat control button
     if ( _pt.hasChanges() ) {
@@ -137,92 +154,13 @@ namespace aegir {
       }
     } // pump&heat switch
 
-    if ( state == ProcessState::States::Loaded ) {
-      // Loaded, so we should verify the timestamps
-      uint32_t startat = ps.getStartat();
-      c_preheat_phase = 0;
-      // if we start immediately then jump to PreHeat
-      if ( startat == 0 ) {
-	ps.setState(ProcessState::States::PreHeat);
-      } else {
-	ps.setState(ProcessState::States::PreWait);
-      }
-      return;
-    } // Loaded
-
-    else if ( state == ProcessState::States::PreWait ) {
-      float mttemp = ps.getSensorTemp("MashTun");
-      if ( mttemp == 0 ) return;
-      // let's see how much time do we have till we have to start pre-heating
-      uint32_t now = time(0);
-      // calculate how much time
-      Config *cfg = Config::getInstance();
-      float tempdiff = prog->getStartTemp() - mttemp;
-      // Pre-Heat time
-      // the time we have till pre-heating has to actually start
-      uint32_t phtime = 0;
-
-      if ( tempdiff > 0 )
-	phtime = calcHeatTime(ps.getVolume(), tempdiff, 0.001*cfg->getHEPower());
-
-      printf("Controller::controllProcess() td:%.2f PreHeatTime:%u\n", tempdiff, phtime);
-      uint32_t startat = ps.getStartat();
-      if ( (now + phtime*1.15) > startat )
-	ps.setState(ProcessState::States::PreHeat);
-    } // PreWait
-
-    else if ( state == ProcessState::States::PreHeat ) {
-      float mttemp = ps.getSensorTemp("MashTun");
-      float rimstemp = ps.getSensorTemp("RIMS");
-      float targettemp = prog->getStartTemp();
-      float tempdiff = targettemp - mttemp;
-      int newphase = 0;
-
-      if ( mttemp == 0 || rimstemp == 0 ) {
-	newphase = 0;
-      } else if ( tempdiff < 0) {
-	newphase = 1;
-      } else if ( tempdiff < 0.2) {
-	newphase = 2;
-      } else if ( tempdiff < 1 ) {
-	newphase = 3;
-      } else {
-	newphase = 4;
-      }
-
-      printf("Controller/PreHeat: MT:%.2f RIMS:%.2f T:%.2f D:%.2f NP:%i\n",
-	     mttemp, rimstemp, targettemp, tempdiff, newphase);
-
-      if ( c_preheat_phase != newphase ) {
-	c_preheat_phase = newphase;
-	if ( newphase == 0 ) {
-	  setPIN("rimspump", PINState::Off);
-	  setPIN("rimsheat", PINState::Off);
-	} else if ( newphase == 4 ) {
-	  setPIN("rimspump", PINState::On);
-	  setPIN("rimsheat", PINState::On);
-	} else if ( newphase == 3 ) {
-	  setPIN("rimspump", PINState::On);
-	  setPIN("rimsheat", PINState::Pulsate, 4, 0.7);
-	} else if ( newphase == 2 ) {
-	  setPIN("rimspump", PINState::On);
-	  setPIN("rimsheat", PINState::Pulsate, 3, 0.15);
-	} else if ( newphase == 1 ) {
-	  setPIN("rimspump", PINState::On);
-	  setPIN("rimsheat", PINState::Off);
-	  ps.setState(ProcessState::States::NeedMalt);
-	}
-      }
-
-    } // PreHeat
-
-    else if ( state == ProcessState::States::NeedMalt ) {
-      setPIN("rimsheat", PINState::Off);
-      std::shared_ptr<PINTracker::PIN> buzzer(_pt.getPIN("buzzer"));
-      if ( buzzer->getValue() != PINState::Pulsate ) {
-	setPIN("buzzer", PINState::Pulsate, 2.1f, 0.4f);
-      }
-    } // NeedMalt
+    // state function
+    auto it = c_stagehandlers.find(state);
+    if ( it != c_stagehandlers.end() ) {
+      it->second(this, _pt);
+    } else {
+      printf("No function found for state %hhu\n", state);
+    }
 
     if ( c_stoprecirc ) {
       setPIN("rimspump", PINState::Off);
@@ -230,6 +168,127 @@ namespace aegir {
     } // stop recirc
 
   } // controlProcess
+
+  void Controller::stageEmpty(PINTracker &_pt) {
+  }
+
+  void Controller::stageLoaded(PINTracker &_pt) {
+    c_prog = c_ps.getProgram();
+    // Loaded, so we should verify the timestamps
+    uint32_t startat = c_ps.getStartat();
+    c_preheat_phase = 0;
+    // if we start immediately then jump to PreHeat
+    if ( startat == 0 ) {
+      c_ps.setState(ProcessState::States::PreHeat);
+    } else {
+      c_ps.setState(ProcessState::States::PreWait);
+    }
+    return;
+  }
+
+  void Controller::stagePreWait(PINTracker &_pt) {
+    float mttemp = c_ps.getSensorTemp("MashTun");
+    if ( mttemp == 0 ) return;
+    // let's see how much time do we have till we have to start pre-heating
+    uint32_t now = time(0);
+    // calculate how much time
+    Config *cfg = Config::getInstance();
+    float tempdiff = c_prog->getStartTemp() - mttemp;
+    // Pre-Heat time
+    // the time we have till pre-heating has to actually start
+    uint32_t phtime = 0;
+
+    if ( tempdiff > 0 )
+      phtime = calcHeatTime(c_ps.getVolume(), tempdiff, 0.001*cfg->getHEPower());
+
+    printf("Controller::controllProcess() td:%.2f PreHeatTime:%u\n", tempdiff, phtime);
+    uint32_t startat = c_ps.getStartat();
+    if ( (now + phtime*1.15) > startat )
+      c_ps.setState(ProcessState::States::PreHeat);
+  }
+
+  void Controller::stagePreHeat(PINTracker &_pt) {
+    float mttemp = c_ps.getSensorTemp("MashTun");
+    float rimstemp = c_ps.getSensorTemp("RIMS");
+    float targettemp = c_prog->getStartTemp();
+    float tempdiff = targettemp - mttemp;
+    int newphase = 0;
+
+    if ( mttemp == 0 || rimstemp == 0 ) {
+      newphase = 0;
+    } else if ( tempdiff < 0) {
+      newphase = 1;
+    } else if ( tempdiff < 0.2) {
+      newphase = 2;
+    } else if ( tempdiff < 1 ) {
+      newphase = 3;
+    } else {
+      newphase = 4;
+    }
+
+    printf("Controller/PreHeat: MT:%.2f RIMS:%.2f T:%.2f D:%.2f NP:%i\n",
+	   mttemp, rimstemp, targettemp, tempdiff, newphase);
+
+    if ( c_preheat_phase != newphase ) {
+      c_preheat_phase = newphase;
+      if ( newphase == 0 ) {
+	setPIN("rimspump", PINState::Off);
+	setPIN("rimsheat", PINState::Off);
+      } else if ( newphase == 4 ) {
+	setPIN("rimspump", PINState::On);
+	setPIN("rimsheat", PINState::On);
+      } else if ( newphase == 3 ) {
+	setPIN("rimspump", PINState::On);
+	setPIN("rimsheat", PINState::Pulsate, 4, 0.7);
+      } else if ( newphase == 2 ) {
+	setPIN("rimspump", PINState::On);
+	setPIN("rimsheat", PINState::Pulsate, 3, 0.15);
+      } else if ( newphase == 1 ) {
+	setPIN("rimspump", PINState::On);
+	setPIN("rimsheat", PINState::Off);
+	c_ps.setState(ProcessState::States::NeedMalt);
+      }
+    }
+  }
+
+  void Controller::stageNeedMalt(PINTracker &_pt) {
+    setPIN("rimsheat", PINState::Off);
+    std::shared_ptr<PINTracker::PIN> buzzer(_pt.getPIN("buzzer"));
+
+    // we keep on beeping
+    if ( buzzer->getValue() != PINState::Pulsate ) {
+      setPIN("buzzer", PINState::Pulsate, 2.1f, 0.4f);
+    }
+
+    // When the malts are added, temperature decreases
+    // We have to heat it back up to the designated temperature
+    float targettemp = c_prog->getStartTemp();
+  }
+
+  void Controller::stageMashing(PINTracker &_pt) {
+    printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+  }
+
+  void Controller::stageSparging(PINTracker &_pt) {
+    printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+  }
+
+  void Controller::stagePreBoil(PINTracker &_pt) {
+    printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+  }
+
+  void Controller::stageHopping(PINTracker &_pt) {
+    printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+  }
+
+  void Controller::stageCooling(PINTracker &_pt) {
+    printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+  }
+
+  void Controller::stageFinished(PINTracker &_pt) {
+    printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+  }
+
 
   void Controller::handleOutPIN(PINTracker::PIN &_pin) {
     c_mq_iocmd.send(PinStateMessage(_pin.getName(),
