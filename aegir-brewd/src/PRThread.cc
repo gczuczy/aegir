@@ -75,6 +75,7 @@ namespace aegir {
     c_handlers["getProgram"] = std::bind(&PRThread::handleGetLoadedProgram, this, std::placeholders::_1);
     c_handlers["getState"] = std::bind(&PRThread::handleGetState, this, std::placeholders::_1);
     c_handlers["buzzer"] = std::bind(&PRThread::handleBuzzer, this, std::placeholders::_1);
+    c_handlers["hasMalt"] = std::bind(&PRThread::handleHasMalt, this, std::placeholders::_1);
 
     auto thrmgr = ThreadManager::getInstance();
     thrmgr->addThread("PR", *this);
@@ -476,7 +477,6 @@ namespace aegir {
 
     if ( _data.type() != Json::ValueType::objectValue )
       throw Exception("Data type should be an objectvalue");
-    // first get the start time and the volume
     std::string strstate;
     PINState state(PINState::Unknown);
     float cycletime(0.2), onratio(0.2);
@@ -525,6 +525,25 @@ namespace aegir {
     }
 
     c_mq_iocmd.send(PinStateMessage("buzzer", state, cycletime, onratio));
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRThread::handleHasMalt(const Json::Value &_data) {
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value();
+
+    if ( _data.type() != Json::ValueType::objectValue )
+      throw Exception("Data type should be an objectvalue");
+
+    ProcessState &ps(ProcessState::getInstance());
+    ProcessState::Guard guard_ps(ps);
+    if ( ps.getState() != ProcessState::States::NeedMalt ) {
+      throw Exception("Only valid at state NeedMalt");
+    }
+
+    ps.setState(ProcessState::States::Mashing);
 
     return std::make_shared<Json::Value>(retval);
   }
