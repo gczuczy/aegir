@@ -10,6 +10,7 @@
 #include <string>
 #include <cstdint>
 #include <memory>
+#include <cstdint>
 
 #include "GPIO.hh"
 
@@ -21,8 +22,8 @@ namespace aegir {
     // reprsents a pin and its old and new state
     class PIN {
     public:
-      enum class PINType {
-	IN, OUT
+      enum class PINType: uint8_t {
+	IN=0, OUT=1
       };
     public:
       PIN() = delete;

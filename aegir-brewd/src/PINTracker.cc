@@ -29,6 +29,13 @@ namespace aegir {
   }
 
   void PINTracker::PIN::pushback() {
+#ifdef AEGIR_DEBUG
+    printf("PINTracker::PIN::pushback(%p): %s V:%hhu<-%hhu CT:%.2f<-%.2f OR:%.2f<-%.2f\n",
+	   (void*)this, c_name.c_str(),
+	   c_value, c_newvalue,
+	   c_cycletime, c_newcycletime,
+	   c_onratio, c_newonratio);
+#endif
     c_value = c_newvalue;
     c_cycletime = c_newcycletime;
     c_onratio = c_newonratio;
@@ -57,8 +64,14 @@ namespace aegir {
     c_newcycletime = _cycletime;
     c_newonratio = _onratio;
 
+#ifdef AEGIR_DEBUG
+    printf("PINTracker::OutPIN::setValue(%p, %s, %hhu->%hhu, %.2f->%.2f, %.2f->%.2f)\n", (void*)this, c_name.c_str(),
+	   c_value, c_newvalue, c_cycletime, c_newcycletime, c_onratio, c_newonratio);
+#endif
+
     auto it = c_pcq.find(this);
-    if ( c_value != c_newvalue ) {
+    if ( c_value != c_newvalue ||
+	 (c_newvalue == PINState::Pulsate && (c_cycletime != c_newcycletime || c_onratio != c_newonratio))) {
       if ( it == c_pcq.end() ) {
 	c_pcq.insert(this);
       }
@@ -170,16 +183,23 @@ namespace aegir {
   }
 
   void PINTracker::setPIN(const std::string &_name, PINState _value, float _cycletime, float _onratio) {
+#ifdef AEGIR_DEBUG
+    printf("PINTracker::setPIN(%s, %hhu, %.2f %.2f)\n", _name.c_str(), _value, _cycletime, _onratio);
+#endif
     auto it = c_pins.find(_name);
     if ( it != c_pins.end() ) {
+#ifdef AEGIR_DEBUG
+      printf("PINTracker::setPIN(%s): type: %hhu\n", _name.c_str(), it->second->getType());
+#endif
       if ( it->second->getType() == PIN::PINType::OUT ) {
 	auto sppin = std::static_pointer_cast<OutPIN>(it->second);
 	sppin->setValue(_value, _cycletime, _onratio);
-	//it->second->setValue(_value);
       } else if ( it->second->getType() == PIN::PINType::IN ) {
 	auto sppin = std::static_pointer_cast<InPIN>(it->second);
 	sppin->setValue(_value);
       }
+    } else {
+      printf("PINTracker::setPIN(%s): not found\n", _name.c_str());
     }
   }
 
