@@ -430,7 +430,7 @@ namespace aegir {
       for ( auto &it: tcs ) {
 
 	// Add the current sensor temps
-	data["curretmp"][it] = ps.getSensorTemp(it);
+	data["currtemp"][it] = ps.getSensorTemp(it);
 
 	// Add the TC History
 	ps.getTCReadings(it, tcvals);
