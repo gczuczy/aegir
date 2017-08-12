@@ -2,12 +2,13 @@
 
 #include <time.h>
 
+#include <cmath>
+
 #include <map>
 #include <set>
 #include <string>
 
 #include "Exception.hh"
-#include "Config.hh"
 
 namespace aegir {
   /*
@@ -30,12 +31,10 @@ namespace aegir {
       printf("Sub failed: unknown exception\n");
     }
 
+    c_cfg = Config::getInstance();
+
     // reconfigure state variables
     reconfigure();
-
-    // finally register to the threadmanager
-    auto thrmgr = ThreadManager::getInstance();
-    thrmgr->addThread("Controller", *this);
 
     c_stagehandlers[ProcessState::States::Empty] = std::bind(&Controller::stageEmpty,
 							     std::placeholders::_1, std::placeholders::_2);
@@ -59,6 +58,10 @@ namespace aegir {
 							       std::placeholders::_1, std::placeholders::_2);
     c_stagehandlers[ProcessState::States::Finished] = std::bind(&Controller::stageFinished, std::placeholders::_1,
 								std::placeholders::_2);
+
+      // finally register to the threadmanager
+    auto thrmgr = ThreadManager::getInstance();
+    thrmgr->addThread("Controller", *this);
   }
 
   Controller::~Controller() {
@@ -130,6 +133,7 @@ namespace aegir {
 
   void Controller::reconfigure() {
     PINTracker::reconfigure();
+    c_hecycletime = c_cfg->getHECycleTime();
   }
 
   void Controller::controlProcess(PINTracker &_pt) {
@@ -170,6 +174,7 @@ namespace aegir {
   } // controlProcess
 
   void Controller::stageEmpty(PINTracker &_pt) {
+    c_lastcontrol = 0;
   }
 
   void Controller::stageLoaded(PINTracker &_pt) {
@@ -177,11 +182,14 @@ namespace aegir {
     // Loaded, so we should verify the timestamps
     uint32_t startat = c_ps.getStartat();
     c_preheat_phase = 0;
+    c_hecycletime = c_cfg->getHECycleTime();
     // if we start immediately then jump to PreHeat
     if ( startat == 0 ) {
       c_ps.setState(ProcessState::States::PreHeat);
+      c_lastcontrol = 0;
     } else {
       c_ps.setState(ProcessState::States::PreWait);
+      c_lastcontrol = 0;
     }
     return;
   }
@@ -192,19 +200,20 @@ namespace aegir {
     // let's see how much time do we have till we have to start pre-heating
     uint32_t now = time(0);
     // calculate how much time
-    Config *cfg = Config::getInstance();
     float tempdiff = c_prog->getStartTemp() - mttemp;
     // Pre-Heat time
     // the time we have till pre-heating has to actually start
     uint32_t phtime = 0;
 
     if ( tempdiff > 0 )
-      phtime = calcHeatTime(c_ps.getVolume(), tempdiff, 0.001*cfg->getHEPower());
+      phtime = calcHeatTime(c_ps.getVolume(), tempdiff, 0.001*c_cfg->getHEPower());
 
     printf("Controller::controllProcess() td:%.2f PreHeatTime:%u\n", tempdiff, phtime);
     uint32_t startat = c_ps.getStartat();
-    if ( (now + phtime*1.15) > startat )
+    if ( (now + phtime*1.15) > startat ) {
       c_ps.setState(ProcessState::States::PreHeat);
+      c_lastcontrol = 0;
+    }
   }
 
   void Controller::stagePreHeat(PINTracker &_pt) {
@@ -212,6 +221,8 @@ namespace aegir {
     float rimstemp = c_ps.getSensorTemp("RIMS");
     float targettemp = c_prog->getStartTemp();
     float tempdiff = targettemp - mttemp;
+
+#if 0
     int newphase = 0;
 
     if ( mttemp == 0 || rimstemp == 0 ) {
@@ -239,15 +250,22 @@ namespace aegir {
 	setPIN("rimsheat", PINState::On);
       } else if ( newphase == 3 ) {
 	setPIN("rimspump", PINState::On);
-	setPIN("rimsheat", PINState::Pulsate, 4, 0.7);
+	setPIN("rimsheat", PINState::Pulsate, c_hecycletime, 0.7);
       } else if ( newphase == 2 ) {
 	setPIN("rimspump", PINState::On);
-	setPIN("rimsheat", PINState::Pulsate, 3, 0.15);
+	setPIN("rimsheat", PINState::Pulsate, c_hecycletime, 0.15);
       } else if ( newphase == 1 ) {
 	setPIN("rimspump", PINState::On);
 	setPIN("rimsheat", PINState::Off);
 	c_ps.setState(ProcessState::States::NeedMalt);
+	c_lastcontrol = 0;
       }
+    }
+#endif
+    tempControl(targettemp, 6);
+    if ( tempdiff < c_cfg->getTempAccuracy() ) {
+	c_ps.setState(ProcessState::States::NeedMalt);
+	c_lastcontrol = 0;
     }
   }
 
@@ -263,6 +281,7 @@ namespace aegir {
     // When the malts are added, temperature decreases
     // We have to heat it back up to the designated temperature
     float targettemp = c_prog->getStartTemp();
+    tempControl(targettemp, c_cfg->getHeatOverhad());
   }
 
   void Controller::stageMashing(PINTracker &_pt) {
@@ -295,6 +314,54 @@ namespace aegir {
 				    _pin.getNewValue(),
 				    _pin.getNewCycletime(),
 				    _pin.getNewOnratio()));
+  }
+
+  void Controller::tempControl(float _target, float _maxoverheat) {
+    float mttemp = c_ps.getSensorTemp("MashTun");
+    float rimstemp = c_ps.getSensorTemp("RIMS");
+    float tgtdiff = _target - mttemp;
+    float rimsdiff = rimstemp - _target;
+
+    time_t now = time(0);
+
+    if ( getPIN("rimspump")->getOldValue() != PINState::On )
+      setPIN("rimspump", PINState::On);
+
+    // only control every 3 seconds
+    if ( now - c_lastcontrol < std::ceil(c_hecycletime) ) return;
+
+    if ( tgtdiff < c_cfg->getTempAccuracy() ) {
+      return;
+    }
+    c_lastcontrol = now;
+
+    // coefficient based on the target temperature different
+    float coeff_tgt=0;
+    // coefficient based on the rims-mashtun tempdiff
+    float coeff_rt=1;
+
+    float halfpi = std::atan(INFINITY);
+    if ( tgtdiff  > 0 ) coeff_tgt = std::atan(tgtdiff)/halfpi;
+    if ( rimsdiff > 0 ) coeff_rt = std::atan(_maxoverheat-rimsdiff)/halfpi;
+    if ( coeff_rt < 0 ) coeff_rt = 0;
+    coeff_rt = std::pow(coeff_rt, 1.0/4);
+    coeff_tgt = std::pow(coeff_tgt, 1.3);
+
+    float heratio = coeff_tgt * coeff_rt;
+
+#ifdef AEGIR_DEBUG
+    printf("Controller::tempControl(): MT:%.2f RIMS:%.2f TGT:%.2f d_tgt:%.2f d_rims:%.2f c_tgt:%.2f c_rt:%.2f HEr:%.2f\n",
+	   mttemp, rimstemp, _target, tgtdiff, rimsdiff, coeff_tgt, coeff_rt, heratio);
+#endif
+
+    auto pin_he = getPIN("rimsheat");
+#ifdef AEGIR_DEBUG
+    printf("Controller::tempControl(): rimsheat: ST:%hhu CT:%.2f OR:%.2f\n",
+	   pin_he->getValue(), pin_he->getOldCycletime(), pin_he->getOldOnratio());
+#endif
+
+    if ( std::abs(pin_he->getOldOnratio()-heratio) > 0.03 )
+      setPIN("rimsheat", PINState::Pulsate, c_hecycletime, heratio);
   }
 
   uint32_t Controller::calcHeatTime(uint32_t _vol, uint32_t _tempdiff, float _pkw) const {

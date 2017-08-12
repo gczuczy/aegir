@@ -74,6 +74,10 @@ namespace aegir {
     uint32_t c_pinival;
     // temperature accuracy
     float c_tempaccuracy;
+    // max heating overhead
+    float c_heatoverhead;
+    // heating element cycle time
+    float c_hecycletime;
 
   public:
     ~Config();
@@ -95,6 +99,8 @@ namespace aegir {
     inline const uint32_t getHEPower() const { return c_hepower; };
     inline const uint32_t getPINival() const { return c_pinival; };
     inline const float getTempAccuracy() const { return c_tempaccuracy; };
+    inline const float getHeatOverhad() const { return c_heatoverhead; };
+    inline const float getHECycleTime() const { return c_hecycletime; };
   };
 }
 

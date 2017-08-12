@@ -125,6 +125,12 @@ namespace aegir {
 
     // temperature accuracy
     c_tempaccuracy = 0.3;
+
+    // max heating overhead
+    c_heatoverhead = 2.0;
+
+    // heating element cycle time
+    c_hecycletime = 3.0;
   }
 
   void Config::load() {
@@ -284,6 +290,22 @@ namespace aegir {
 	  throw Exception("Temperature accuracy is out of range");
       }
 
+      // max heating overhead
+      if ( config["heatoverhead"] && config["heatoverhead"].IsScalar() ) {
+	YAML::Node ho = config["heatoverhead"];
+	c_tempaccuracy = ho.as<float>();
+	if ( c_heatoverhead< 0.1 || c_heatoverhead > 5.0 )
+	  throw Exception("Heating overhead is out of range");
+      }
+
+      // heating element cycle time
+      if ( config["hecycletime"] && config["hecycletime"].IsScalar() ) {
+	YAML::Node hect = config["hecycletime"];
+	c_hecycletime = hect.as<float>();
+	if ( c_hecycletime < 1.5 || c_hecycletime > 5.0 )
+	  throw Exception("Heating element cycle time is out of range");
+      }
+
     }
     catch (std::exception &e) {
       throw Exception("Error during parsing config: %s", e.what());
@@ -356,6 +378,12 @@ namespace aegir {
 
     // temperature accuracy
     yout << YAML::Key << "tempaccuracy" << YAML::Value << c_tempaccuracy;
+
+    // max heating overhead
+    yout << YAML::Key << "tempaccuracy" << YAML::Value << c_tempaccuracy;
+
+    // max heating overhead
+    yout << YAML::Key << "hecycletime" << YAML::Value << c_hecycletime;
 
     // End the config
     yout << YAML::EndMap;

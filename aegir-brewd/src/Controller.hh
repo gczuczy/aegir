@@ -5,6 +5,8 @@
 #ifndef AEGIR_CONTROLLER_H
 #define AEGIR_CONTROLLER_H
 
+#include <time.h>
+
 #include <map>
 #include <functional>
 
@@ -12,6 +14,7 @@
 #include "PINTracker.hh"
 #include "ZMQ.hh"
 #include "ProcessState.hh"
+#include "Config.hh"
 
 namespace aegir {
 
@@ -50,13 +53,19 @@ namespace aegir {
     void stageFinished(PINTracker &_pt);
     //    void stage();
 
+    // tempareture control
+    void tempControl(float _target, float _maxoverheat);
+
   private:
     static Controller *c_instance;
     ZMQ::Socket c_mq_io, c_mq_iocmd;
     bool c_stoprecirc;
     int c_preheat_phase;
+    time_t c_lastcontrol;
     ProcessState &c_ps;
     std::shared_ptr<Program> c_prog;
+    Config *c_cfg;
+    float c_hecycletime;
   };
 }
 
