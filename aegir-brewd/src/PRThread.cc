@@ -434,11 +434,9 @@ namespace aegir {
 
 	// Add the TC History
 	ps.getTCReadings(it, tcvals);
-	jstcr[it] = Json::Value(Json::ValueType::objectValue);
+	jstcr[it] = Json::Value(Json::ValueType::arrayValue);
 	for ( auto &it2: tcvals ) {
-	  printf("Adding thermodata %s/%u(%s) = %.2f\n", it.c_str(), it2.first,
-		 epoch2iso(it2.first).c_str(), it2.second);
-	  jstcr[it][epoch2iso(it2.first)] = it2.second;
+	  jstcr[it][it2.first] = it2.second;
 	}
       }
       data["temphistory"] = jstcr;
