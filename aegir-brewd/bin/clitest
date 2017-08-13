@@ -4,6 +4,7 @@ import json
 import zmq
 import time
 import sys
+import select
 from pprint import pprint
 
 program = {'boiltime': 60,
@@ -27,23 +28,49 @@ def cmd(sock, cmd, data):
     pprint(["Sending", zreq])
     sock.send_json(zreq)
     zresp = sock.recv_json()
-    pprint(['Reply', zresp])
     return zresp
 
 test = 'program'
 
 if test == 'program':
     # see whether anything is loaded
-    cmd(sock, 'getProgram', None)
+    res = cmd(sock, 'getProgram', None)
+    pprint(['Reply', res])
     # load some program
-    cmd(sock, 'loadProgram', {'program': program, 'startat': 0, 'volume': 35})
+    res = cmd(sock, 'loadProgram', {'program': program, 'startat': 0, 'volume': 35})
+    pprint(['Reply', res])
     # see whether anything is loaded
-    cmd(sock, 'getProgram', None)
-    # get the process state 3 times, 1 sec delays
+    res = cmd(sock, 'getProgram', None)
+    pprint(['Reply', res])
+    # wait for the preheat to finish
     while True:
         state = cmd(sock, 'getState', None)
+        pprint(['Waiting for PreHeat to finish', state])
+        if state['data']['state'] != 'PreHeat': break
         time.sleep(1)
+    # wait for enter, then send hasmalts
+    hasmalt = False
+    while not hasmalt:
+        state = cmd(sock, 'getState', None)
+        pprint(['State', state])
+        print("Press ENTER to hasmalts")
+        si,_,_ = select.select([sys.stdin], [], [], 1.0)
+        for fd in si:
+            if fd == sys.stdin:
+                sys.stdin.readline()
+                hasmalt = True
+                pass
+            pass
         pass
+    # now we have malt
+    res = cmd(sock, 'hasMalt', None);
+    pprint(['hasMalt result:', res])
+    # now we are monitoring the brew process
+    while True:
+        state = cmd(sock, 'getState', None)
+        pprint(['Waiting for Mashing to finish', state])
+        time.sleep(1)
+
 elif test == 'buzzer':
     cmd(sock, 'buzzer', {'state': 'pulsate',
                          'cycletime': 2.3,
