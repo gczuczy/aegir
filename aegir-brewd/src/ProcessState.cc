@@ -142,7 +142,9 @@ namespace aegir {
     // add the reading
     if ( c_state >= States::Mashing ) {
       it->second.readings[_time - c_startedat] = _temp;
+#ifdef AEGIR_DEBUG
       printf("ProcessState::addThemoReading(): added %s/%u/%.2f\n", _sensor.c_str(), _time, _temp);
+#endif
     }
     return *this;
   }
