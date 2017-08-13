@@ -30,6 +30,40 @@ def cmd(sock, cmd, data):
     zresp = sock.recv_json()
     return zresp
 
+def prettystate(data):
+    currtemp = data['currtemp']
+    print('State: {state} RIMS:{rims:.2f} MashTun:{mt:.2f} BK:{bk:.2f} HLT:{hlt:.2f}'.format(
+        state = data['state'],
+        rims = currtemp['RIMS'],
+        mt = currtemp['MashTun'],
+        bk = currtemp['BK'],
+        hlt = currtemp['HLT']))
+    # and the temp history
+    for sensor,history in data['temphistory'].items():
+        if len(history) == 0: continue
+        v = history[-5:]
+        v.reverse()
+        values = ''
+        for value in v:
+            values += ' {v:.2f}C'.format(v=value)
+            pass
+        print('{sensor:<10}:\t{values}'.format(sensor=sensor, values=values))
+    pass
+
+def waitfor(sock, status):
+    while True:
+        state = cmd(sock, 'getState', None)
+        if not 'data' in state:
+            pprint(['no data', state])
+            time.sleep(1)
+            continue
+        data = state['data']
+        prettystate(data)
+
+        if state['data']['state'] == status: break
+        time.sleep(1)
+    pass
+
 test = 'program'
 
 if test == 'program':
@@ -43,11 +77,7 @@ if test == 'program':
     res = cmd(sock, 'getProgram', None)
     pprint(['Reply', res])
     # wait for the preheat to finish
-    while True:
-        state = cmd(sock, 'getState', None)
-        pprint(['Waiting for PreHeat to finish', state])
-        if state['data']['state'] != 'PreHeat': break
-        time.sleep(1)
+    waitfor(sock, 'NeedMalt')
     # wait for enter, then send hasmalts
     hasmalt = False
     while not hasmalt:
@@ -66,10 +96,7 @@ if test == 'program':
     res = cmd(sock, 'hasMalt', None);
     pprint(['hasMalt result:', res])
     # now we are monitoring the brew process
-    while True:
-        state = cmd(sock, 'getState', None)
-        pprint(['Waiting for Mashing to finish', state])
-        time.sleep(1)
+    waitfor(sock, 'Sparging')
 
 elif test == 'buzzer':
     cmd(sock, 'buzzer', {'state': 'pulsate',
