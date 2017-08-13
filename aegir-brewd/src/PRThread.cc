@@ -534,9 +534,6 @@ namespace aegir {
     retval["status"] = "success";
     retval["data"] = Json::Value();
 
-    if ( _data.type() != Json::ValueType::objectValue )
-      throw Exception("Data type should be an objectvalue");
-
     ProcessState &ps(ProcessState::getInstance());
     ProcessState::Guard guard_ps(ps);
     if ( ps.getState() != ProcessState::States::NeedMalt ) {
