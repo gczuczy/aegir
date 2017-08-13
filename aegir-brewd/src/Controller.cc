@@ -263,14 +263,13 @@ namespace aegir {
     }
 #endif
     tempControl(targettemp, 6);
-    if ( tempdiff < c_cfg->getTempAccuracy() ) {
+    if ( tempdiff < 0.2 ) {
 	c_ps.setState(ProcessState::States::NeedMalt);
 	c_lastcontrol = 0;
     }
   }
 
   void Controller::stageNeedMalt(PINTracker &_pt) {
-    setPIN("rimsheat", PINState::Off);
     std::shared_ptr<PINTracker::PIN> buzzer(_pt.getPIN("buzzer"));
 
     // we keep on beeping
@@ -319,6 +318,9 @@ namespace aegir {
   void Controller::tempControl(float _target, float _maxoverheat) {
     float mttemp = c_ps.getSensorTemp("MashTun");
     float rimstemp = c_ps.getSensorTemp("RIMS");
+
+    if ( mttemp == 0.0f || rimstemp == 0.0f ) return;
+
     float tgtdiff = _target - mttemp;
     float rimsdiff = rimstemp - _target;
 
@@ -349,19 +351,21 @@ namespace aegir {
 
     float heratio = coeff_tgt * coeff_rt;
 
-#ifdef AEGIR_DEBUG
+#ifdef AEGIR_DEBUG_TEMPCTRL
     printf("Controller::tempControl(): MT:%.2f RIMS:%.2f TGT:%.2f d_tgt:%.2f d_rims:%.2f c_tgt:%.2f c_rt:%.2f HEr:%.2f\n",
 	   mttemp, rimstemp, _target, tgtdiff, rimsdiff, coeff_tgt, coeff_rt, heratio);
 #endif
 
     auto pin_he = getPIN("rimsheat");
-#ifdef AEGIR_DEBUG
-    printf("Controller::tempControl(): rimsheat: ST:%hhu CT:%.2f OR:%.2f\n",
-	   pin_he->getValue(), pin_he->getOldCycletime(), pin_he->getOldOnratio());
+    float absherdiff = std::abs(pin_he->getOldOnratio()-heratio);
+#ifdef AEGIR_DEBUG_TEMPCTRL
+    printf("Controller::tempControl(): rimsheat: ST:%hhu CT:%.2f OR:%.2f AHD:%.2f\n",
+	   pin_he->getValue(), pin_he->getOldCycletime(), pin_he->getOldOnratio(), absherdiff);
 #endif
 
-    if ( std::abs(pin_he->getOldOnratio()-heratio) > 0.03 )
+    if (  absherdiff > 0.03 ) {
       setPIN("rimsheat", PINState::Pulsate, c_hecycletime, heratio);
+    }
   }
 
   uint32_t Controller::calcHeatTime(uint32_t _vol, uint32_t _tempdiff, float _pkw) const {
