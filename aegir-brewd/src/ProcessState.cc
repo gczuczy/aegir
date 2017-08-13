@@ -105,7 +105,11 @@ namespace aegir {
       c_startedat = time(0);
 
     // and finally set the state
+    States old(c_state);
     c_state = _st;
+    for (auto &it: c_stcbs) {
+      it(old, c_state);
+    }
 #ifdef AEGIR_DEBUG
     printf("State changed to %s\n", g_strstates[c_state].c_str());
 #endif
@@ -114,6 +118,11 @@ namespace aegir {
 
   std::string ProcessState::getStringState() const {
     return g_strstates[c_state];
+  }
+
+  void ProcessState::registerStateChange(statechange_t _stch) {
+    std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
+    c_stcbs.push_back(_stch);
   }
 
   ProcessState &ProcessState::addThermoReading(const std::string &_sensor, const uint32_t _time, const float _temp) {

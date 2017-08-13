@@ -14,7 +14,9 @@
 #include <mutex>
 #include <map>
 #include <set>
+#include <list>
 #include <string>
+#include <functional>
 
 #include "Program.hh"
 
@@ -49,6 +51,7 @@ namespace aegir {
 	Finished // Brewind process finished
     };
     typedef std::map<uint32_t, float> ThermoDataPoints;
+    typedef std::function<void(States, States)> statechange_t;
   private:
     struct ThermoData {
       ThermoDataPoints readings;
@@ -72,6 +75,7 @@ namespace aegir {
     inline States getState() const { return c_state; };
     std::string getStringState() const;
     ProcessState &setState(States _st);
+    void registerStateChange(statechange_t _stch);
     inline uint32_t getStartat() const { return c_startat; };
     inline uint32_t getVolume() const { return c_volume; };
     ProcessState &addThermoReading(const std::string &_sensor, const uint32_t _time, const float _temp);
@@ -82,6 +86,8 @@ namespace aegir {
   protected:
     std::recursive_mutex c_mtx_state;
   private:
+    // state change callbacks
+    std::list<statechange_t> c_stcbs;
     // inputs
     std::shared_ptr<Program> c_program;
     uint32_t c_startat;

@@ -9,6 +9,10 @@
 
 #include <map>
 #include <functional>
+#include <mutex>
+#include <thread>
+#include <list>
+#include <utility>
 
 #include "ThreadManager.hh"
 #include "PINTracker.hh"
@@ -40,6 +44,7 @@ namespace aegir {
     // control stages
     typedef std::function<void(Controller*, PINTracker&)> stagefunc_t;
     std::map<ProcessState::States, stagefunc_t> c_stagehandlers;
+    void onStateChange(ProcessState::States _old, ProcessState::States _new);
     void stageEmpty(PINTracker &_pt);
     void stageLoaded(PINTracker &_pt);
     void stagePreWait(PINTracker &_pt);
@@ -59,8 +64,10 @@ namespace aegir {
   private:
     static Controller *c_instance;
     ZMQ::Socket c_mq_io, c_mq_iocmd;
+    std::thread::id c_mythread;
+    std::mutex c_mtx_stchqueue;
+    std::list<std::pair<ProcessState::States, ProcessState::States> > c_stchqueue;
     bool c_stoprecirc;
-    int c_preheat_phase;
     time_t c_lastcontrol;
     ProcessState &c_ps;
     std::shared_ptr<Program> c_prog;

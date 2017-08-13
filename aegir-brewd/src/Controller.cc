@@ -36,6 +36,10 @@ namespace aegir {
     // reconfigure state variables
     reconfigure();
 
+    // state change callback
+    c_ps.registerStateChange(std::bind(&Controller::onStateChange, this, std::placeholders::_1, std::placeholders::_2));
+
+    // the stage handlers
     c_stagehandlers[ProcessState::States::Empty] = std::bind(&Controller::stageEmpty,
 							     std::placeholders::_1, std::placeholders::_2);
     c_stagehandlers[ProcessState::States::Loaded] = std::bind(&Controller::stageLoaded
@@ -74,6 +78,8 @@ namespace aegir {
 
   void Controller::run() {
     printf("Controller started\n");
+
+    c_mythread = std::this_thread::get_id();
 
     // The main event loop
     std::shared_ptr<Message> msg;
@@ -115,6 +121,17 @@ namespace aegir {
       } // End of pin and sensor readings
       catch (Exception &e) {
 	printf("Exception: %s\n", e.what());
+      }
+
+      // handle the state changes
+      {
+	std::lock_guard<std::mutex> g(c_mtx_stchqueue);
+	if ( c_stchqueue.size() ) {
+	  for ( auto &it: c_stchqueue ) {
+	    onStateChange(it.first, it.second);
+	  }
+	  c_stchqueue.clear();
+	}
       }
 
       // handle the changes
@@ -173,23 +190,39 @@ namespace aegir {
 
   } // controlProcess
 
-  void Controller::stageEmpty(PINTracker &_pt) {
+  void Controller::onStateChange(ProcessState::States _old, ProcessState::States _new) {
+
+    // if it's not in our thread, then queue the call and return
+    if ( std::this_thread::get_id() != c_mythread ) {
+      std::lock_guard<std::mutex> g(c_mtx_stchqueue);
+      c_stchqueue.push_back(std::pair<ProcessState::States, ProcessState::States>(_old, _new));
+      return;
+    }
+
     c_lastcontrol = 0;
+
+    if ( _new == ProcessState::States::NeedMalt ) {
+	setPIN("buzzer", PINState::Pulsate, 2.1f, 0.4f);
+    }
+
+    if ( _old == ProcessState::States::NeedMalt ) {
+      setPIN("buzzer", PINState::Off);
+    }
+}
+
+  void Controller::stageEmpty(PINTracker &_pt) {
   }
 
   void Controller::stageLoaded(PINTracker &_pt) {
     c_prog = c_ps.getProgram();
     // Loaded, so we should verify the timestamps
     uint32_t startat = c_ps.getStartat();
-    c_preheat_phase = 0;
     c_hecycletime = c_cfg->getHECycleTime();
     // if we start immediately then jump to PreHeat
     if ( startat == 0 ) {
       c_ps.setState(ProcessState::States::PreHeat);
-      c_lastcontrol = 0;
     } else {
       c_ps.setState(ProcessState::States::PreWait);
-      c_lastcontrol = 0;
     }
     return;
   }
@@ -212,7 +245,6 @@ namespace aegir {
     uint32_t startat = c_ps.getStartat();
     if ( (now + phtime*1.15) > startat ) {
       c_ps.setState(ProcessState::States::PreHeat);
-      c_lastcontrol = 0;
     }
   }
 
@@ -222,61 +254,13 @@ namespace aegir {
     float targettemp = c_prog->getStartTemp();
     float tempdiff = targettemp - mttemp;
 
-#if 0
-    int newphase = 0;
-
-    if ( mttemp == 0 || rimstemp == 0 ) {
-      newphase = 0;
-    } else if ( tempdiff < 0) {
-      newphase = 1;
-    } else if ( tempdiff < 0.2) {
-      newphase = 2;
-    } else if ( tempdiff < 1 ) {
-      newphase = 3;
-    } else {
-      newphase = 4;
-    }
-
-    printf("Controller/PreHeat: MT:%.2f RIMS:%.2f T:%.2f D:%.2f NP:%i\n",
-	   mttemp, rimstemp, targettemp, tempdiff, newphase);
-
-    if ( c_preheat_phase != newphase ) {
-      c_preheat_phase = newphase;
-      if ( newphase == 0 ) {
-	setPIN("rimspump", PINState::Off);
-	setPIN("rimsheat", PINState::Off);
-      } else if ( newphase == 4 ) {
-	setPIN("rimspump", PINState::On);
-	setPIN("rimsheat", PINState::On);
-      } else if ( newphase == 3 ) {
-	setPIN("rimspump", PINState::On);
-	setPIN("rimsheat", PINState::Pulsate, c_hecycletime, 0.7);
-      } else if ( newphase == 2 ) {
-	setPIN("rimspump", PINState::On);
-	setPIN("rimsheat", PINState::Pulsate, c_hecycletime, 0.15);
-      } else if ( newphase == 1 ) {
-	setPIN("rimspump", PINState::On);
-	setPIN("rimsheat", PINState::Off);
-	c_ps.setState(ProcessState::States::NeedMalt);
-	c_lastcontrol = 0;
-      }
-    }
-#endif
     tempControl(targettemp, 6);
     if ( tempdiff < 0.2 ) {
 	c_ps.setState(ProcessState::States::NeedMalt);
-	c_lastcontrol = 0;
     }
   }
 
   void Controller::stageNeedMalt(PINTracker &_pt) {
-    std::shared_ptr<PINTracker::PIN> buzzer(_pt.getPIN("buzzer"));
-
-    // we keep on beeping
-    if ( buzzer->getValue() != PINState::Pulsate ) {
-      setPIN("buzzer", PINState::Pulsate, 2.1f, 0.4f);
-    }
-
     // When the malts are added, temperature decreases
     // We have to heat it back up to the designated temperature
     float targettemp = c_prog->getStartTemp();
