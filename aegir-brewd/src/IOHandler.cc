@@ -88,8 +88,8 @@ namespace aegir {
 #endif
     for (auto &it: c_tcmap) {
       float temp = c_tcs[it.second]->readTCTemp();
-      float cjtemp = c_tcs[it.second]->readCJTemp();
 #ifdef AEGIR_DEBUG
+      float cjtemp = c_tcs[it.second]->readCJTemp();
       float cjto = c_tcs[it.second]->getCJOffset();
       printf("Sensor %s/%i temp: %f C Time: %li CJ:%.2f CJTO:%.4f\n", it.first.c_str(), it.second, temp,
 	     tv.tv_sec, cjtemp, cjto);
