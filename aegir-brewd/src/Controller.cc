@@ -208,6 +208,11 @@ namespace aegir {
     if ( _old == ProcessState::States::NeedMalt ) {
       setPIN("buzzer", PINState::Off);
     }
+
+    if ( _new == ProcessState::States::Mashing ) {
+      c_ps.setMashStep(-1);
+      c_ps.setMashStepStart(0);
+    }
 }
 
   void Controller::stageEmpty(PINTracker &_pt) {
@@ -252,10 +257,10 @@ namespace aegir {
     float mttemp = c_ps.getSensorTemp("MashTun");
     float rimstemp = c_ps.getSensorTemp("RIMS");
     float targettemp = c_prog->getStartTemp();
-    float tempdiff = targettemp - mttemp;
+    //    float tempdiff = targettemp - mttemp;
 
     tempControl(targettemp, 6);
-    if ( tempdiff < 0.2 ) {
+    if ( mttemp >= targettemp ) {
 	c_ps.setState(ProcessState::States::NeedMalt);
     }
   }
@@ -264,15 +269,74 @@ namespace aegir {
     // When the malts are added, temperature decreases
     // We have to heat it back up to the designated temperature
     float targettemp = c_prog->getStartTemp();
-    tempControl(targettemp, c_cfg->getHeatOverhad());
+    tempControl(targettemp, c_cfg->getHeatOverhead());
   }
 
   void Controller::stageMashing(PINTracker &_pt) {
-    printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    const Program::MashSteps &steps = c_prog->getMashSteps();
+
+    int8_t msno = c_ps.getMashStep();
+    float mttemp = c_ps.getSensorTemp("MashTun");
+    int nsteps = steps.size();
+    if ( msno >= nsteps ) {
+      printf("Controller::stageMashing(): msno:%i nsteps:%lu\n", msno, steps.size());
+      // we'll go to sparging here, but first we go up to endtemp
+      float endtemp = c_prog->getEndTemp();
+
+      tempControl(endtemp, c_cfg->getHeatOverhead());
+      if ( mttemp >= endtemp ) {
+	c_ps.setState(ProcessState::States::Sparging);
+      }
+      return;
+    }
+
+    // here we are doing the steps
+    Program::MashStep ms(steps[msno<0?0:msno]);
+    time_t now = time(0);
+    // if it's <0, then we still have to get to
+    // the first step's temperature
+    if ( msno < 0 ) {
+      tempControl(ms.temp, c_cfg->getHeatOverhead());
+
+      if ( mttemp >= ms.temp - c_cfg->getTempAccuracy() ) {
+	c_ps.setMashStep(0);
+	c_ps.setMashStepStart(now);
+	printf("Controller::stageMashing(): starting step 0 at %.2f/%.2f\n", mttemp, ms.temp);
+	return;
+      }
+    } else {
+      // here we are doing the regular steps
+      // heating up to the next step, is the responsibility of
+      // the previous one, hence the -1 previously, heating up to the 0th step
+      time_t start = c_ps.getMashStepStart();
+      float target = ms.temp;
+      time_t held = now - start;
+
+      // we held it for long enough, now we're aiming for the next step
+      // and if we've reached it, we bump the step
+      if ( held > ms.holdtime*60 ) {
+	target = ((msno+1)<nsteps) ? steps[msno+1].temp : c_prog->getStartTemp();
+	if ( mttemp + c_cfg->getTempAccuracy() > target) {
+	  c_ps.setMashStep(msno+1);
+	  c_ps.setMashStepStart(now);
+	  printf("Controller::stageMashing(): step %i->%i\n", msno, msno+1);
+	}
+      }
+
+      static time_t lastreport;
+      if ( lastreport != now && now % 5 == 0 ) {
+	printf("Controller::stageMashing(): S:%hhi HT:%li/%i MT:%.2f T:%.2f\n",
+	       msno, held, ms.holdtime, mttemp, target);
+	lastreport = now;
+      }
+      tempControl(target, c_cfg->getHeatOverhead());
+    }
   }
 
   void Controller::stageSparging(PINTracker &_pt) {
     printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    float endtemp = c_prog->getEndTemp();
+    tempControl(endtemp, c_cfg->getHeatOverhead());
   }
 
   void Controller::stagePreBoil(PINTracker &_pt) {
@@ -316,7 +380,8 @@ namespace aegir {
     // only control every 3 seconds
     if ( now - c_lastcontrol < std::ceil(c_hecycletime) ) return;
 
-    if ( tgtdiff < c_cfg->getTempAccuracy() ) {
+    if ( mttemp > _target ) {
+      setPIN("rimsheat", PINState::Off);
       return;
     }
     c_lastcontrol = now;
@@ -327,14 +392,18 @@ namespace aegir {
     float coeff_rt=1;
 
     float halfpi = std::atan(INFINITY);
-    if ( tgtdiff  > 0 ) coeff_tgt = std::atan(tgtdiff)/halfpi;
-    if ( rimsdiff > 0 ) coeff_rt = std::atan(_maxoverheat-rimsdiff)/halfpi;
-    if ( coeff_rt < 0 ) coeff_rt = 0;
-    coeff_rt = std::pow(coeff_rt, 1.0/4);
-    coeff_tgt = std::pow(coeff_tgt, 1.3);
+    if ( tgtdiff  > 0 ) {
+      coeff_tgt = std::atan(tgtdiff)/halfpi;
+      coeff_tgt = std::pow(coeff_tgt, 0.91);
+    }
+    if ( rimsdiff > 0 ) {
+      coeff_rt = std::atan(_maxoverheat-rimsdiff)/halfpi;
+      if ( coeff_rt < 0 ) coeff_rt = 0;
+      else coeff_rt = std::pow(coeff_rt, 1.0/4);
+    }
 
-    float heratio = coeff_tgt * coeff_rt;
-
+    float heratio = std::pow(coeff_tgt * coeff_rt, 0.71);
+#define AEGIR_DEBUG_TEMPCTRL
 #ifdef AEGIR_DEBUG_TEMPCTRL
     printf("Controller::tempControl(): MT:%.2f RIMS:%.2f TGT:%.2f d_tgt:%.2f d_rims:%.2f c_tgt:%.2f c_rt:%.2f HEr:%.2f\n",
 	   mttemp, rimstemp, _target, tgtdiff, rimsdiff, coeff_tgt, coeff_rt, heratio);

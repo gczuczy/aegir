@@ -13,9 +13,9 @@ program = {'boiltime': 60,
                     {'attime': 5, 'hopname': 'Hop 2', 'hopqty': 10, 'id': 6},
                     {'attime': 0, 'hopname': 'Hop 3', 'hopqty': 5, 'id': 7}],
            'id': 6,
-           'mashsteps': [{'holdtime': 8, 'id': 16, 'orderno': 0, 'temperature': 45},
-                         {'holdtime': 20, 'id': 17, 'orderno': 1, 'temperature': 64},
-                         {'holdtime': 80, 'id': 18, 'orderno': 2, 'temperature': 68}],
+           'mashsteps': [{'holdtime': 5, 'id': 16, 'orderno': 0, 'temperature': 45},
+                         {'holdtime': 6, 'id': 17, 'orderno': 1, 'temperature': 64},
+                         {'holdtime': 7, 'id': 18, 'orderno': 2, 'temperature': 68}],
            'name': 'Test 3',
            'starttemp': 37.5};
 
@@ -45,9 +45,16 @@ def prettystate(data):
         v.reverse()
         values = ''
         for value in v:
-            values += ' {v:.2f}C'.format(v=value)
+            if not value is None:
+                values += " {v:.2f}C".format(v=value)
             pass
         print('{sensor:<10}:\t{values}'.format(sensor=sensor, values=values))
+        pass
+    # now the mash step
+    if 'mashstep' in data:
+        ms = data['mashstep']
+        print('Mash Step: #{orderno} {time} seconds'.format(orderno = ms['orderno'],
+                                                           time = ms['time']))
     pass
 
 def waitfor(sock, status):
@@ -82,7 +89,7 @@ if test == 'program':
     hasmalt = False
     while not hasmalt:
         state = cmd(sock, 'getState', None)
-        pprint(['State', state])
+        prettystate(state['data'])
         print("Press ENTER to hasmalts")
         si,_,_ = select.select([sys.stdin], [], [], 1.0)
         for fd in si:

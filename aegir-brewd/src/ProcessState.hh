@@ -17,6 +17,7 @@
 #include <list>
 #include <string>
 #include <functional>
+#include <ctime>
 
 #include "Program.hh"
 
@@ -82,6 +83,11 @@ namespace aegir {
     ProcessState &getThermoCouples(std::set<std::string> &_tcs);
     ProcessState &getTCReadings(const std::string &_sensor, ThermoDataPoints &_tcvals);
     inline float getSensorTemp(const std::string &_sensor) const {return c_lasttemps.find(_sensor)->second;};
+    // mash steps
+    inline ProcessState &setMashStep(int8_t _ms) {c_mashstep=_ms; return *this;};
+    inline int8_t getMashStep() const {return c_mashstep;};
+    inline ProcessState &setMashStepStart(time_t _mst) {c_mashstepstart = _mst; return *this;};
+    inline time_t getMashStepStart() const {return c_mashstepstart;}
 
   protected:
     std::recursive_mutex c_mtx_state;
@@ -98,6 +104,9 @@ namespace aegir {
     // states
     std::atomic<States> c_state;
     std::map<std::string, ThermoData> c_thermoreadings;
+    // active mash step
+    std::atomic<int8_t> c_mashstep;
+    std::atomic<time_t> c_mashstepstart;
   };
 }
 

@@ -440,6 +440,18 @@ namespace aegir {
 	}
       }
       data["temphistory"] = jstcr;
+
+      // If we're mashing, then display the current step
+      if ( ps.getState() == ProcessState::States::Mashing ) {
+	Json::Value jms;
+	time_t now = time(0);
+	int8_t step = ps.getMashStep();
+	time_t start = ps.getMashStepStart();
+
+	jms["orderno"] = step;
+	jms["time"] = now - start;
+	data["mashstep"] = jms;
+      }
     }
     catch (Exception &e) {
       Json::Value resp;
