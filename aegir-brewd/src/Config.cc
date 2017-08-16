@@ -98,8 +98,8 @@ namespace aegir {
     // SPI config
     c_spidev = "/dev/spigen0";
     c_spi_chipselector = ChipSelectors::DirectSelect;
-    c_pinlayout["cs0"] = 8;
-    c_pinlayout["cs1"] = 7;
+    c_pinlayout["cs0"] = 7;
+    c_pinlayout["cs1"] = 8;
     c_pinlayout["cs2"] = 5;
     c_pinlayout["cs3"] = 6;
     // SPI / MAX31856
@@ -109,7 +109,7 @@ namespace aegir {
     c_spi_dschips = {{0, "cs0"}, {1, "cs1"}, {2, "cs2"}, {3, "cs3"}};
 
     // thermocouples
-    c_thermocouples = {{"MashTun", 0}, {"RIMS", 2}, {"HLT", 1}, {"BK", 3}};
+    c_thermocouples = {{"MashTun", 1}, {"RIMS", 0}, {"HLT", 2}, {"BK", 3}};
 
     // thermocouple reading interval
     c_thermoival = 1;
