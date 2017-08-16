@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
   // initialize the thread manager
   auto threadmgr = aegir::ThreadManager::getInstance();
 
-  {
+  try {
     // Initialize the SPI bus
     std::map<int, std::string> dsmap{{0,"cs0"},{1,"cs1"},{2,"cs2"},{3,"cs3"}};
     aegir::DirectSelect ds(*gpio, dsmap);
@@ -110,6 +110,10 @@ int main(int argc, char *argv[]) {
     threadmgr->start();
     delete ioh;
     delete ctrl;
+  }
+  catch (aegir::Exception &e) {
+    fprintf(stderr, "Error initializing GPIO interface: %s\n", e.what());
+    return 2;
   }
 
   // deallocating stuff here
