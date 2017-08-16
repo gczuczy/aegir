@@ -21,12 +21,17 @@ namespace aegir {
   /*
    * CSGuard
    */
-
   CSGuard::CSGuard(ChipSelector &_cs, int _id): c_cs(_cs), c_id(_id) {
+#ifdef SPI_DEBUG
+    printf("CSGuard(%i): low\n", c_id);
+#endif
     c_cs.low(c_id);
   }
 
   CSGuard::~CSGuard() {
+#ifdef SPI_DEBUG
+    printf("CSGuard(%i): high\n", c_id);
+#endif
     c_cs.high(c_id);
   }
 
