@@ -16,6 +16,9 @@ namespace aegir {
     if ( it == c_chips.end() )
       throw Exception("DirectSelect: id not found: %i", _id);
 
+#ifdef SPI_DEBUG
+    printf("DirectSelect::high(%i): %s\n", _id, it->second.c_str());
+#endif
     c_gpio[it->second].high();
   }
 
@@ -26,6 +29,9 @@ namespace aegir {
       throw Exception("DirectSelect: id not found: %i", _id);
     }
 
+#ifdef SPI_DEBUG
+    printf("DirectSelect::low(%i): %s\n", _id, it->second.c_str());
+#endif
     c_gpio[it->second].low();
   }
 
