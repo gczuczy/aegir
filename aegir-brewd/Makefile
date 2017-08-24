@@ -1,4 +1,4 @@
-INCPATH=-I/usr/local/include
+INCPATH=-I/usr/local/include -I../contrib/include
 CXXFLAGS=-Werror -pedantic -std=c++14 $(INCPATH)
 LDFLAGS=-pthread -L/usr/local/lib -lboost_program_options -lgpio -lyaml-cpp -lzmq -ljsoncpp
 
