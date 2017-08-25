@@ -1,15 +1,15 @@
 
 NG=node_modules/@angular/cli/bin/ng
 
-.PHONY: devserver npm-install-modules clean
+.PHONY: devserver clean
 
-devserver:
-	$(NG) serve --host 0.0.0.0
+.MAIN: devserver
+
+devserver: $(NG)
+	$(NG) serve --host 0.0.0.0 --disable-host-check
 
 clean:
 	rm -rf $(MODULEDIR)
 
-npm-install-modules:
+$(NG):
 	npm install
-
-$(NG): npm-install-modules
