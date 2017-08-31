@@ -417,6 +417,21 @@ namespace aegir {
     std::set<std::string> tcs;
     ProcessState::ThermoDataPoints tcvals;
 
+    // first check, whether we have to provide the history
+    bool needhistory = false;
+    if ( _data.isMember("history") ) {
+      Json::Value history = _data["history"];
+
+      if ( !history.isBool() ) {
+	Json::Value resp;
+	resp["status"] = "error";
+	resp["message"] = "history is not a bool";
+	return std::make_shared<Json::Value>(resp);
+      }
+
+      needhistory = history.asBool();
+    }
+
     ProcessState &ps(ProcessState::getInstance());
     ProcessState::Guard guard_ps(ps);
 
@@ -426,6 +441,7 @@ namespace aegir {
       Json::Value jstcr;
 
       // Thermo readings
+      ProcessState::ThermoDataPoints tcvals;
       ps.getThermoCouples(tcs);
       for ( auto &it: tcs ) {
 
@@ -433,13 +449,15 @@ namespace aegir {
 	data["currtemp"][it] = ps.getSensorTemp(it);
 
 	// Add the TC History
-	ps.getTCReadings(it, tcvals);
-	jstcr[it] = Json::Value(Json::ValueType::arrayValue);
-	for ( auto &it2: tcvals ) {
-	  jstcr[it][it2.first] = it2.second;
+	if ( needhistory ) {
+	  ps.getTCReadings(it, tcvals);
+	  jstcr[it] = Json::Value(Json::ValueType::arrayValue);
+	  for ( auto &it2: tcvals ) {
+	    jstcr[it][it2.first] = it2.second;
+	  }
 	}
       }
-      data["temphistory"] = jstcr;
+      if ( needhistory ) data["temphistory"] = jstcr;
 
       // If we're mashing, then display the current step
       if ( ps.getState() == ProcessState::States::Mashing ) {
