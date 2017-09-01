@@ -13,8 +13,8 @@ import aegir.zmq
 
 def init(app, api):
     api.add_resource(BrewProgram, '/api/brewd/program')
+    api.add_resource(BrewState, '/api/brewd/state')
     pass
-
 
 class BrewProgram(flask_restful.Resource):
     def post(this):
@@ -80,3 +80,31 @@ class BrewProgram(flask_restful.Resource):
 
         return zresp
     pass
+
+class BrewState(flask_restful.Resource):
+    def get(this):
+        data = flask.request.get_json();
+        needhistory = False
+
+        # handle the defaults
+        if isinstance(data, map) and 'history' in data:
+            if not isinstance(data['history'], bool):
+                return {'status': 'error', 'errors': ['history must be bool']}, 400
+            needhistory = data['history']
+            pass
+
+        zresp = None
+        try:
+            zresp = aegir.zmq.prmessage("getState", {"history": needhistory})
+        except Exception as e:
+            return {"status": "error", "errors": [str(e)]}, 422
+
+        if not 'status' in zresp:
+            return {"status": "error", "errors": ['Malformed response']}, 422
+
+        if zresp['status'] != 'success':
+            return {"status": "error", "errors": ['Error in response']}, 422
+
+        pprint(zresp)
+        return {'status': 'success', 'data': zresp['data']}
+
