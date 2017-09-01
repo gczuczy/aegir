@@ -465,9 +465,10 @@ namespace aegir {
 	time_t now = time(0);
 	int8_t step = ps.getMashStep();
 	time_t start = ps.getMashStepStart();
+	time_t diff = now - start;
 
 	jms["orderno"] = step;
-	jms["time"] = now - start;
+	jms["time"] = diff<0 ? 0 : diff;
 	data["mashstep"] = jms;
       }
     }
