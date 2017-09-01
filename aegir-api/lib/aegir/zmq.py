@@ -20,6 +20,8 @@ def instance_init():
     _ctx = zmq.Context()
     _socket_pr = _ctx.socket(zmq.REQ)
     _socket_pr.connect('tcp://127.0.0.1:{port}'.format(port = aegir.config.config['prport']))
+    _socket_pr.setsockopt(zmq.RCVTIMEO, 1000)
+    _socket_pr.setsockopt(zmq.LINGER, 0)
     pass
 
 def prmessage(command, data):
@@ -27,5 +29,8 @@ def prmessage(command, data):
 
     msg = {'command': command,
            'data': data}
-    _socket_pr.send_json(msg)
+    try:
+        _socket_pr.send_json(msg)
+    except Exception:
+        raise Exception("brewd is not running")
     return _socket_pr.recv_json()
