@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
-import { Headers, Http, Response, RequestOptions } from '@angular/http';
+import { Headers, Http, Response, RequestOptions, URLSearchParams } from '@angular/http';
+import { Observable } from 'rxjs/Rx';
 
 import { Program } from './programs/program';
 
-import { Observable } from 'rxjs/Observable';
 import { Subject } from 'rxjs/Subject';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/catch';
@@ -19,12 +19,48 @@ export class ApiResponse {
 @Injectable()
 export class ApiService {
 
+    private static instance: ApiService = null;
+
     // Observable resources
     private updateSource = new Subject<boolean>();
     // observable streams
     updateAnnounce$ = this.updateSource.asObservable();
+    // state timer
+    private timer_state;
+    // state observable
+    private state = new Subject();
+    private temphistory = new Subject();
 
-    constructor(private http: Http) { }
+    constructor(private http: Http) {
+	if ( ApiService.instance != null ) return ApiService.instance;
+	ApiService.instance = this;
+	this.timer_state = Observable.timer(2000,1000);
+	this.timer_state.subscribe(t => {this.updateState(t)});
+
+	console.log('ApiService ctor');
+    }
+
+    getState(): Observable<{}> {
+	return this.state.asObservable();
+    }
+
+    getTempHistory(): Observable<{}> {
+	return this.temphistory.asObservable();
+    }
+
+    updateState(t) {
+	let params: URLSearchParams = new URLSearchParams();
+	let needhistory = t%5==0;
+	params.set('history', needhistory?'yes':'no');
+
+	this.http.get(`/api/brewd/state`, {search: params})
+	    .subscribe(res => {
+		this.state.next(res.json()['data']);
+		if ( needhistory ) {
+		    this.temphistory.next(res.json()['data']['temphistory']);
+		}
+	    });
+    }
 
     announceUpdate() {
 	//console.log('API announcing update');
