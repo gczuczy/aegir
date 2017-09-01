@@ -83,15 +83,9 @@ class BrewProgram(flask_restful.Resource):
 
 class BrewState(flask_restful.Resource):
     def get(this):
-        data = flask.request.get_json();
-        needhistory = False
-
+        history = flask.request.args.get('history', None)
         # handle the defaults
-        if isinstance(data, map) and 'history' in data:
-            if not isinstance(data['history'], bool):
-                return {'status': 'error', 'errors': ['history must be bool']}, 400
-            needhistory = data['history']
-            pass
+        needhistory = history == 'yes'
 
         zresp = None
         try:
