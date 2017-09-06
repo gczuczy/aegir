@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include <chrono>
+#include <regex>
 
 #include "ZMQ.hh"
 #include "GPIO.hh"
@@ -73,9 +74,15 @@ namespace aegir {
   }
 
   IOHandler::~IOHandler() {
+    std::regex re_cs("^cs[0-9]$");
+    std::smatch m;
     close(c_kq);
     for ( auto &it: c_outpins ) {
-      c_gpio[it.first].low();
+      if ( std::regex_match(it.first, m, re_cs) ) {
+	c_gpio[it.first].high();
+      } else {
+	c_gpio[it.first].low();
+      }
     }
   }
 
