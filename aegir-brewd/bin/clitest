@@ -40,7 +40,7 @@ def prettystate(data):
         hlt = currtemp['HLT']))
     # and the temp history
     if 'temphistory' in data:
-        for sensor,history in data['temphistory'].items():
+        for sensor,history in data['temphistory']['readings'].items():
             if len(history) == 0: continue
             v = history[-5:]
             v.reverse()
@@ -49,8 +49,8 @@ def prettystate(data):
                 if not value is None:
                     values += " {v:.2f}C".format(v=value)
                     pass
-                print('{sensor:<10}:\t{values}'.format(sensor=sensor, values=values))
                 pass
+            print('{sensor:<10}:\t{values}'.format(sensor=sensor, values=values))
             pass
         pass
     # now the mash step
@@ -62,7 +62,7 @@ def prettystate(data):
 
 def waitfor(sock, status):
     while True:
-        state = cmd(sock, 'getState', None)
+        state = cmd(sock, 'getState', {'history': True})
         if not 'data' in state:
             pprint(['no data', state])
             time.sleep(1)

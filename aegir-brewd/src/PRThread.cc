@@ -8,6 +8,7 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <limits>
 
 #include "Config.hh"
 #include "JSONMessage.hh"
@@ -417,9 +418,10 @@ namespace aegir {
     std::set<std::string> tcs;
     ProcessState::ThermoDataPoints tcvals;
 
+    ProcessState &ps(ProcessState::getInstance());
     // first check, whether we have to provide the history
     bool needhistory = false;
-    if ( _data.isMember("history") ) {
+    if ( ps.getState() == ProcessState::States::Mashing && _data.isMember("history") ) {
       Json::Value history = _data["history"];
 
       if ( !history.isBool() ) {
@@ -432,32 +434,53 @@ namespace aegir {
       needhistory = history.asBool();
     }
 
-    ProcessState &ps(ProcessState::getInstance());
     ProcessState::Guard guard_ps(ps);
 
     try {
       // first get the current state
       data["state"] = ps.getStringState();
-      Json::Value jstcr;
 
       // Thermo readings
-      ProcessState::ThermoDataPoints tcvals;
       ps.getThermoCouples(tcs);
       for ( auto &it: tcs ) {
-
 	// Add the current sensor temps
 	data["currtemp"][it] = ps.getSensorTemp(it);
+      }
+      // Add the TC History
+      if ( needhistory ) {
 
-	// Add the TC History
-	if ( needhistory ) {
-	  ps.getTCReadings(it, tcvals);
-	  jstcr[it] = Json::Value(Json::ValueType::arrayValue);
-	  for ( auto &it2: tcvals ) {
-	    jstcr[it][it2.first] = it2.second;
+	uint32_t maxtime = std::numeric_limits<uint32_t>::max();
+	// first, get all our TC readings, and calculate the max time we have currently
+	std::map<std::string, ProcessState::ThermoDataPoints> tcvals;
+	for ( auto &it: tcs ) {
+	  tcvals[it] = ProcessState::ThermoDataPoints();
+	  ps.getTCReadings(it, tcvals[it]);
+	  if ( tcvals[it].rbegin() != tcvals[it].rend() ) {
+	    uint32_t lasttime = tcvals[it].rbegin()->first;
+	    if ( lasttime < maxtime ) maxtime = lasttime;
+	  } else {
+	    maxtime = 0;
 	  }
 	}
+	// create the structure
+	// one for the timestamps, and under .readings one for each TC
+	Json::Value th;
+	th["timestamps"] = Json::Value(Json::ValueType::arrayValue);
+	th["readings"] = Json::Value(Json::ValueType::objectValue);
+	for ( auto &it: tcvals ) th["readings"][it.first] = Json::Value(Json::ValueType::arrayValue);
+	for ( uint32_t i=0; i<maxtime; ++i ) {
+	  th["timestamps"].append(i);
+	  for ( auto &it: tcvals ) {
+	    printf("PRThread::getState(): tc:%s len:%lu\n", it.first.c_str(), it.second.size());
+	    if ( it.second.find(i) != it.second.end() ) {
+	      th["readings"][it.first].append(it.second[i]);
+	    } else {
+	      th["readings"][it.first].append(Json::Value(Json::ValueType::nullValue));
+	    }
+	  }
+	}
+	data["temphistory"] = th;
       }
-      if ( needhistory ) data["temphistory"] = jstcr;
 
       // If we're mashing, then display the current step
       if ( ps.getState() == ProcessState::States::Mashing ) {
