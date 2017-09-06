@@ -210,6 +210,7 @@ namespace aegir {
     }
 
     if ( _new == ProcessState::States::Mashing ) {
+      setPIN("buzzer", PINState::Off);
       c_ps.setMashStep(-1);
       c_ps.setMashStepStart(0);
     }
