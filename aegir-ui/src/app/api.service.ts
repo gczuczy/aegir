@@ -55,9 +55,10 @@ export class ApiService {
 
 	this.http.get(`/api/brewd/state`, {search: params})
 	    .subscribe(res => {
-		this.state.next(res.json()['data']);
-		if ( needhistory ) {
-		    this.temphistory.next(res.json()['data']['temphistory']);
+		let rjson = res.json()['data'];
+		this.state.next(rjson);
+		if ( rjson['temphistory'] ) {
+		    this.temphistory.next(rjson['temphistory']);
 		}
 	    });
     }

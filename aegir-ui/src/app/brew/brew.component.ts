@@ -1,4 +1,8 @@
 import { Component, OnInit } from '@angular/core';
+import 'rxjs/add/operator/switchMap';
+
+import { Program } from '../programs/program';
+import { ApiService } from '../api.service';
 
 @Component({
   selector: 'app-brew',
@@ -6,10 +10,26 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./brew.component.css']
 })
 export class BrewComponent implements OnInit {
+    public program: Program;
 
-  constructor() { }
+    public sensors = [];
 
-  ngOnInit() {
-  }
+    constructor(private api: ApiService) {
+    }
+
+    ngOnInit() {
+	this.api.getState().subscribe(data => {
+	    this.updateState(data);
+	});
+    }
+
+    updateState(data) {
+	console.log('BrewComponent updating data: ', data);
+	this.sensors = [];
+	for (let key in data['currtemp']) {
+	    this.sensors.push({'sensor': key, 'temp': data['currtemp'][key]});
+	}
+	console.log(this.sensors);
+    }
 
 }
