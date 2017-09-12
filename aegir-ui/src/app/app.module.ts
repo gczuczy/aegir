@@ -24,7 +24,7 @@ import { APP_ROUTES } from './app.routes';
 	BrewModule,
 	SettingsModule,
 	ProgramsModule,
-	RouterModule.forRoot(APP_ROUTES)
+	RouterModule.forRoot(APP_ROUTES),
     ],
     providers: [
 	ApiService

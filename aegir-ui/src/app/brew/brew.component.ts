@@ -17,6 +17,17 @@ export class BrewComponent implements OnInit {
     public state: string = null;
     public needmalt = false;
 
+    // chart
+    public brewChartData: Array<any> = [
+	{data: [], label: 'Mash Tun'},
+	{data: [], label: 'RIMS Tube'}];
+    public brewChartLabels: Array<any> = [];
+    public brewChartOptions: any = {
+	responsive: true
+    };
+    public brewChartLegend:boolean = true;
+    public brewChartType:string = 'line';
+
     constructor(private api: ApiService) {
     }
 
@@ -41,12 +52,35 @@ export class BrewComponent implements OnInit {
     }
 
     updateTempHistory(data) {
-	console.log('Updating temphistory with ', data);
+	//console.log('Updating temphistory with ', data);
+
+	// first clear the data
+
+	let mt = [];
+	let rims = [];
+
+	for (let key in data['readings']) {
+	    if ( key == 'MashTun' ) {
+		mt = data['readings'][key];
+	    } else if ( key == 'RIMS' ) {
+		rims = data['readings'][key];
+	    }
+	}
+	this.brewChartData = [
+	    {data: mt, label: 'Mash Tun'},
+	    {data: rims, label: 'RIMS Tube'}
+	];
+	this.brewChartLabels.length = 0;
+	for ( let i in data['timestamps'] ) {
+	    this.brewChartLabels.push(i);
+	}
+	//console.log('chartdata', this.brewChartData);
+	//console.log('chart labels', this.brewChartLabels);
     }
 
     onHasMalts() {
 	this.api.hasMalt().subscribe();
-	console.log("HasMalts pushed");
+	//console.log("HasMalts pushed");
     }
 
 }

@@ -36,8 +36,6 @@ export class ApiService {
 	ApiService.instance = this;
 	this.timer_state = Observable.timer(2000,1000);
 	this.timer_state.subscribe(t => {this.updateState(t)});
-
-	console.log('ApiService ctor');
     }
 
     getState(): Observable<{}> {

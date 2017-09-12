@@ -33,7 +33,15 @@
     <div class="col-8 card">
       <div class="card-header bg-light">Graph</div>
       <div class="card-body">
-	<p class="card-text">graph will be here</p>
+	<div style="display: block;">
+	  <canvas baseChart width="400" height="400"
+		  [datasets]="brewChartData"
+		  [labels]="brewChartLabels"
+		  [options]="brewChartOptions"
+		  [legend]="brewChartLegend"
+		  [chartType]="brewChartType"></canvas>
+		  <!--[colors]="brewChartColors"-->
+	</div>
       </div>
     </div>
   </div>
