@@ -68,6 +68,20 @@ export class ApiService {
 	this.updateSource.next(true);
     }
 
+    hasMalt(): Observable<{}> {
+	let body = JSON.stringify({'command': 'hasMalt'});
+	let headers = new Headers({'Content-Type': 'application/json'});
+	let options = new RequestOptions({headers: headers});
+
+	console.log('calling /api/brewd/state', body, options);
+
+	return this.http.post('/api/brewd/state', body, options)
+	    .map((res:Response) => {
+		console.log('Catching result, ', res.status);
+		return res.json();
+	    });
+    }
+
     getPrograms(): Observable<Program[]> {
 	return this.http.get('/api/programs')
 	    .map(this.extractData)
