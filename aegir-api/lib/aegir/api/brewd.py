@@ -99,6 +99,29 @@ class BrewState(flask_restful.Resource):
         if zresp['status'] != 'success':
             return {"status": "error", "errors": ['Error in response']}, 422
 
-        pprint(zresp)
+        #pprint(zresp)
         return {'status': 'success', 'data': zresp['data']}
 
+    def post(this):
+        '''
+        POST is used to indicate state controls, such as having malts added,
+        whether sparging is completed and boiling can begin, etc.
+        '''
+        data = flask.request.get_json();
+        zresp = None
+
+        if not 'command' in data:
+            return {"status": "error", "errors": ['Missing command member in data']}, 422
+
+        try:
+            zresp = aegir.zmq.prmessage('hasMalt', None)
+        except Exception as e:
+            return {"status": "error", "errors": [str(e)]}, 422
+
+        if not 'status' in zresp:
+            return {"status": "error", "errors": ['Malformed response']}, 422
+
+        if zresp['status'] != 'success':
+            return {"status": "error", "errors": ['Error in response']}, 422
+
+        return {'status': 'success'}
