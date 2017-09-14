@@ -87,7 +87,9 @@ namespace aegir {
     inline ProcessState &setMashStep(int8_t _ms) {c_mashstep=_ms; return *this;};
     inline int8_t getMashStep() const {return c_mashstep;};
     inline ProcessState &setMashStepStart(time_t _mst) {c_mashstepstart = _mst; return *this;};
-    inline time_t getMashStepStart() const {return c_mashstepstart;}
+    inline time_t getMashStepStart() const {return c_mashstepstart;};
+    inline ProcessState &setTargetTemp(float _tt) { c_targettemp = _tt; return *this; };
+    inline float getTargetTemp() const { return c_targettemp;};
 
   protected:
     std::recursive_mutex c_mtx_state;
@@ -107,6 +109,8 @@ namespace aegir {
     // active mash step
     std::atomic<int8_t> c_mashstep;
     std::atomic<time_t> c_mashstepstart;
+    // the current target temp
+    std::atomic<float> c_targettemp;
   };
 }
 

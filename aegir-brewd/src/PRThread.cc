@@ -446,6 +446,10 @@ namespace aegir {
 	// Add the current sensor temps
 	data["currtemp"][it] = ps.getSensorTemp(it);
       }
+
+      // Add the current target temperature
+      data["targettemp"] = ps.getTargetTemp();
+
       // Add the TC History
       if ( needhistory ) {
 	std::set<std::string> historytcs{"MashTun", "RIMS"};

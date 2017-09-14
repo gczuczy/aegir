@@ -280,7 +280,6 @@ namespace aegir {
     float mttemp = c_ps.getSensorTemp("MashTun");
     int nsteps = steps.size();
     if ( msno >= nsteps ) {
-      printf("Controller::stageMashing(): msno:%i nsteps:%lu\n", msno, steps.size());
       // we'll go to sparging here, but first we go up to endtemp
       float endtemp = c_prog->getEndTemp();
 
@@ -367,6 +366,8 @@ namespace aegir {
   void Controller::tempControl(float _target, float _maxoverheat) {
     float mttemp = c_ps.getSensorTemp("MashTun");
     float rimstemp = c_ps.getSensorTemp("RIMS");
+
+    c_ps.setTargetTemp(_target);
 
     if ( mttemp == 0.0f || rimstemp == 0.0f ) return;
 
