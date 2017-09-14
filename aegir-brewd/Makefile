@@ -8,7 +8,9 @@ OBJS=main.o GPIO.o Config.o Exception.o ThreadManager.o IOHandler.o ZMQ.o \
 OUT=../bin/aegir-brewd
 
 .if defined(DEBUG)
-CXXFLAGS+= -g
+CXXFLAGS+= -O0 -glldb
+.else
+CXXFLAGS+= -O2
 .endif
 .ifdef defined(DEBUG_AEGIR)
 CXXFLAGS+=  -DMAX31856_DEBUG -DGPIO_DEBUG -DAEGIR_DEBUG
