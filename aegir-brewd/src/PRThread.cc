@@ -448,11 +448,15 @@ namespace aegir {
       }
       // Add the TC History
       if ( needhistory ) {
+	std::set<std::string> historytcs{"MashTun", "RIMS"};
 
 	uint32_t maxtime = std::numeric_limits<uint32_t>::max();
 	// first, get all our TC readings, and calculate the max time we have currently
 	std::map<std::string, ProcessState::ThermoDataPoints> tcvals;
 	for ( auto &it: tcs ) {
+	  // we only return the graphed TCs here
+	  if ( historytcs.find(it) == historytcs.end() ) continue;
+
 	  tcvals[it] = ProcessState::ThermoDataPoints();
 	  ps.getTCReadings(it, tcvals[it]);
 	  if ( tcvals[it].rbegin() != tcvals[it].rend() ) {
@@ -467,11 +471,14 @@ namespace aegir {
 	Json::Value th;
 	th["timestamps"] = Json::Value(Json::ValueType::arrayValue);
 	th["readings"] = Json::Value(Json::ValueType::objectValue);
+
+	// create the array JSON object type for each returnd TC
 	for ( auto &it: tcvals ) th["readings"][it.first] = Json::Value(Json::ValueType::arrayValue);
+
+	// add the timestamps, and the readings to the respective arrays
 	for ( uint32_t i=0; i<maxtime; ++i ) {
 	  th["timestamps"].append(i);
 	  for ( auto &it: tcvals ) {
-	    printf("PRThread::getState(): tc:%s len:%lu\n", it.first.c_str(), it.second.size());
 	    if ( it.second.find(i) != it.second.end() ) {
 	      th["readings"][it.first].append(it.second[i]);
 	    } else {
