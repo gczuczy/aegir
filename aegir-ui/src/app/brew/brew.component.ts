@@ -16,6 +16,8 @@ export class BrewComponent implements OnInit {
 
     public state: string = null;
     public needmalt = false;
+    public targettemp = 0;
+    public mashstep = null;
 
     // chart
     public brewChartData: Array<any> = [
@@ -23,10 +25,32 @@ export class BrewComponent implements OnInit {
 	{data: [], label: 'RIMS Tube'}];
     public brewChartLabels: Array<any> = [];
     public brewChartOptions: any = {
-	responsive: true
+	responsive: true,
+	spanGaps: true,
+	title: {
+	    display: true,
+	    text: 'RIMS and MashTun temperature'
+	},
+	scales: {
+	    xAxes: [{
+		ticks: {
+		    callback: function (value, index, values) {
+			return value + 's';
+		    }
+		}
+	    }],
+	    yAxes: [{
+		ticks: {
+		    beginAtZero: true
+		}
+	    }]
+	}
     };
     public brewChartLegend:boolean = true;
     public brewChartType:string = 'line';
+    public brewChartColors: Array<any> = [
+	'blue', 'red'
+    ];
 
     constructor(private api: ApiService) {
     }
@@ -42,8 +66,15 @@ export class BrewComponent implements OnInit {
     }
 
     updateState(data) {
+	//console.log(data);
 	this.sensors = [];
 	this.state = data['state'];
+	this.targettemp = data['targettemp'];
+	if ( 'mashstep' in data ) {
+	    this.mashstep = data['mashstep'];
+	} else {
+	    this.mashstep = null;
+	}
 	for (let key in data['currtemp']) {
 	    let temp = data['currtemp'][key];
 	    if ( temp > 1000 ) temp = 0.0;
@@ -51,13 +82,29 @@ export class BrewComponent implements OnInit {
 	}
     }
 
+    swissCheese(a) {
+	let size:number = a.length;
+	for ( let i in a ) {
+	    let ni:number = +i;
+	    let age:number = size-ni;
+	    if ( age > 3600 ) {
+		if ( ni%180 != 0 ) a[i] = null;
+	    } else if ( age > 600 ) {
+		if ( ni%60 != 0 ) a[i] = null;
+	    } else if ( age > 180 ) {
+		if ( ni%10 != 0 ) a[i] = null;
+	    }
+	}
+	return a;
+    }
+
     updateTempHistory(data) {
 	//console.log('Updating temphistory with ', data);
 
 	// first clear the data
 
-	let mt = [];
-	let rims = [];
+	let mt:Array<number> = [];
+	let rims:Array<number> = [];
 
 	for (let key in data['readings']) {
 	    if ( key == 'MashTun' ) {
@@ -67,11 +114,11 @@ export class BrewComponent implements OnInit {
 	    }
 	}
 	this.brewChartData = [
-	    {data: mt, label: 'Mash Tun'},
-	    {data: rims, label: 'RIMS Tube'}
+	    {data: this.swissCheese(mt), label: 'Mash Tun'},
+	    {data: this.swissCheese(rims), label: 'RIMS Tube'}
 	];
 	this.brewChartLabels.length = 0;
-	for ( let i in data['timestamps'] ) {
+	for ( let i of data['timestamps'] ) {
 	    this.brewChartLabels.push(i);
 	}
 	//console.log('chartdata', this.brewChartData);

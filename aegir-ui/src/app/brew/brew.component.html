@@ -19,6 +19,14 @@
 	      <th>State</th>
 	      <td>{{state}}</td>
 	    </tr>
+	    <tr>
+	      <th>Temp target</th>
+	      <td>{{targettemp}} C</td>
+	    </tr>
+	    <tr *ngIf="state == 'Mashing'">
+	      <th>Mash step</th>
+	      <td>{{mashstep.orderno}}</td>
+	    </tr>
 	    <ng-template ngFor let-step [ngForOf]="sensors">
 	      <tr>
 		<th>{{step.sensor}}</th>
@@ -40,7 +48,9 @@
 		  [options]="brewChartOptions"
 		  [legend]="brewChartLegend"
 		  [chartType]="brewChartType"></canvas>
-		  <!--[colors]="brewChartColors"-->
+	  <!--
+		  [colors]="brewChartColors"
+	    -->
 	</div>
       </div>
     </div>
