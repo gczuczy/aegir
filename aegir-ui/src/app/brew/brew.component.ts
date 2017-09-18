@@ -78,21 +78,43 @@ export class BrewComponent implements OnInit {
 	for (let key in data['currtemp']) {
 	    let temp = data['currtemp'][key];
 	    if ( temp > 1000 ) temp = 0.0;
-	    this.sensors.push({'sensor': key, 'temp': temp});
+	    this.sensors.push({'sensor': key, 'temp': parseFloat(temp).toFixed(2)});
 	}
     }
 
     swissCheese(a) {
 	let size:number = a.length;
+	let skiplog:Array<number> = [];
 	for ( let i in a ) {
 	    let ni:number = +i;
 	    let age:number = size-ni;
 	    if ( age > 3600 ) {
-		if ( ni%180 != 0 ) a[i] = null;
+		if ( ni%180 != 0 ) {
+		    skiplog.push(a[i]);
+		    a[i] = null;
+		} else if ( skiplog.length > 0 ) {
+		    let avg = skiplog.reduce((a,b)=> a+b,0) / skiplog.length;
+		    skiplog.length = 0;
+		    a[i] = avg;
+		}
 	    } else if ( age > 600 ) {
-		if ( ni%60 != 0 ) a[i] = null;
+		if ( ni%60 != 0 ) {
+		    skiplog.push(a[i]);
+		    a[i] = null;
+		} else if ( skiplog.length > 0 ) {
+		    let avg = skiplog.reduce((a,b)=> a+b,0) / skiplog.length;
+		    skiplog.length = 0;
+		    a[i] = avg;
+		}
 	    } else if ( age > 180 ) {
-		if ( ni%10 != 0 ) a[i] = null;
+		if ( ni%10 != 0 ) {
+		    skiplog.push(a[i]);
+		    a[i] = null;
+		} else if ( skiplog.length > 0 ) {
+		    let avg = skiplog.reduce((a,b)=> a+b,0) / skiplog.length;
+		    skiplog.length = 0;
+		    a[i] = avg;
+		}
 	    }
 	}
 	return a;
