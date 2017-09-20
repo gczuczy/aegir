@@ -293,7 +293,7 @@ namespace aegir {
       // max heating overhead
       if ( config["heatoverhead"] && config["heatoverhead"].IsScalar() ) {
 	YAML::Node ho = config["heatoverhead"];
-	c_tempaccuracy = ho.as<float>();
+	c_heatoverhead = ho.as<float>();
 	if ( c_heatoverhead< 0.1 || c_heatoverhead > 5.0 )
 	  throw Exception("Heating overhead is out of range");
       }
@@ -302,7 +302,7 @@ namespace aegir {
       if ( config["hecycletime"] && config["hecycletime"].IsScalar() ) {
 	YAML::Node hect = config["hecycletime"];
 	c_hecycletime = hect.as<float>();
-	if ( c_hecycletime < 1.5 || c_hecycletime > 5.0 )
+	if ( c_hecycletime < 1.0 || c_hecycletime > 5.0 )
 	  throw Exception("Heating element cycle time is out of range");
       }
 
@@ -380,7 +380,7 @@ namespace aegir {
     yout << YAML::Key << "tempaccuracy" << YAML::Value << c_tempaccuracy;
 
     // max heating overhead
-    yout << YAML::Key << "tempaccuracy" << YAML::Value << c_tempaccuracy;
+    yout << YAML::Key << "heatoverhead" << YAML::Value << c_heatoverhead;
 
     // max heating overhead
     yout << YAML::Key << "hecycletime" << YAML::Value << c_hecycletime;
