@@ -113,15 +113,26 @@ class BrewState(flask_restful.Resource):
         if not 'command' in data:
             return {"status": "error", "errors": ['Missing command member in data']}, 422
 
+        zcmd = None
+        zdata = None
+        if data['command'] == 'hasMalt':
+            zcmd = 'hasMalt'
+        elif data['command'] == 'reset':
+            zcmd = 'resetProcess'
+        else:
+            return {"status": "error", "errors": ['Unknown command']}, 422
+
         try:
-            zresp = aegir.zmq.prmessage('hasMalt', None)
+            zresp = aegir.zmq.prmessage(zcmd, zdata)
         except Exception as e:
+            #pprint(['error', zresp, e]);
             return {"status": "error", "errors": [str(e)]}, 422
 
         if not 'status' in zresp:
             return {"status": "error", "errors": ['Malformed response']}, 422
 
         if zresp['status'] != 'success':
+            #pprint(['error in zresp', zresp])
             return {"status": "error", "errors": ['Error in response']}, 422
 
         return {'status': 'success'}

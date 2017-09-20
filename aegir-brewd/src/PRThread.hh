@@ -40,6 +40,7 @@ namespace aegir {
     std::shared_ptr<Json::Value> handleGetState(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleBuzzer(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleHasMalt(const Json::Value &_data);
+    std::shared_ptr<Json::Value> handleResetProcess(const Json::Value &_data);
   };
 }
 

@@ -77,6 +77,7 @@ namespace aegir {
     c_handlers["getState"] = std::bind(&PRThread::handleGetState, this, std::placeholders::_1);
     c_handlers["buzzer"] = std::bind(&PRThread::handleBuzzer, this, std::placeholders::_1);
     c_handlers["hasMalt"] = std::bind(&PRThread::handleHasMalt, this, std::placeholders::_1);
+    c_handlers["resetProcess"] = std::bind(&PRThread::handleResetProcess, this, std::placeholders::_1);
 
     auto thrmgr = ThreadManager::getInstance();
     thrmgr->addThread("PR", *this);
@@ -604,6 +605,22 @@ namespace aegir {
     }
 
     ps.setState(ProcessState::States::Mashing);
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRThread::handleResetProcess(const Json::Value &_data) {
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value();
+
+    ProcessState &ps(ProcessState::getInstance());
+    ProcessState::Guard guard_ps(ps);
+    if ( ps.getState() == ProcessState::States::Empty) {
+      throw Exception("Not valid when Empty");
+    }
+
+    ps.reset();
 
     return std::make_shared<Json::Value>(retval);
   }

@@ -95,8 +95,9 @@ namespace aegir {
   ProcessState &ProcessState::setState(ProcessState::States _st) {
     std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
 
-    // statecan't decrease
-    if ( _st <= c_state )
+    // state can't decrease
+    // except when resetting to Empty
+    if ( _st != States::Empty && _st <= c_state )
       throw Exception("ProcessState::setSate(%s): can't decrease the state", g_strstates[_st].c_str());
 
     // once we need to start keeping track of the time,
@@ -113,6 +114,31 @@ namespace aegir {
 #ifdef AEGIR_DEBUG
     printf("State changed to %s\n", g_strstates[c_state].c_str());
 #endif
+    return *this;
+  }
+
+  ProcessState &ProcessState::reset() {
+    std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
+
+    c_program = nullptr;
+    c_startat = 0;
+    c_volume = 0;
+    c_startedat = 0;
+
+    for (auto &it: c_lasttemps) it.second = 0;
+
+    for (auto &it: c_thermoreadings) {
+      it.second.readings.clear();
+      it.second.moving5s.clear();
+      it.second.derivate1st.clear();
+    }
+
+    c_mashstep = -1;
+    c_mashstepstart = 0;
+    c_targettemp = 0;
+
+    setState(States::Empty);
+
     return *this;
   }
 

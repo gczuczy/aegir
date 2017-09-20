@@ -149,7 +149,12 @@ export class BrewComponent implements OnInit {
 
     onHasMalts() {
 	this.api.hasMalt().subscribe();
-	//console.log("HasMalts pushed");
+    }
+
+    onAbortBrew() {
+	if ( confirm("This will cancel the brew process, are you sure?") ) {
+	    this.api.abortBrew().subscribe();
+	}
     }
 
 }

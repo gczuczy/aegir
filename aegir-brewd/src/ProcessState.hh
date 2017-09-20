@@ -76,6 +76,7 @@ namespace aegir {
     inline States getState() const { return c_state; };
     std::string getStringState() const;
     ProcessState &setState(States _st);
+    ProcessState &reset();
     void registerStateChange(statechange_t _stch);
     inline uint32_t getStartat() const { return c_startat; };
     inline uint32_t getVolume() const { return c_volume; };
@@ -88,6 +89,7 @@ namespace aegir {
     inline int8_t getMashStep() const {return c_mashstep;};
     inline ProcessState &setMashStepStart(time_t _mst) {c_mashstepstart = _mst; return *this;};
     inline time_t getMashStepStart() const {return c_mashstepstart;};
+    // target temperatures
     inline ProcessState &setTargetTemp(float _tt) { c_targettemp = _tt; return *this; };
     inline float getTargetTemp() const { return c_targettemp;};
 

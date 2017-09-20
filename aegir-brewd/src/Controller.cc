@@ -214,9 +214,19 @@ namespace aegir {
       c_ps.setMashStep(-1);
       c_ps.setMashStepStart(0);
     }
+
+    // when the state is reset
+    if ( _old == ProcessState::States::Empty ) {
+      c_prog = nullptr;
+      setPIN("buzzer", PINState::Off);
+      setPIN("rimsheat", PINState::Off);
+      setPIN("rimspump", PINState::Off);
+    }
 }
 
   void Controller::stageEmpty(PINTracker &_pt) {
+    setPIN("rimsheat", PINState::Off);
+    setPIN("rimspump", PINState::Off);
   }
 
   void Controller::stageLoaded(PINTracker &_pt) {
