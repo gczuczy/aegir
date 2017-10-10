@@ -60,6 +60,7 @@ namespace aegir {
 
     // tempareture control
     void tempControl(float _target, float _maxoverheat);
+    bool getTemps(const ProcessState::ThermoDataPoints &_tdp, int _dt, float &_last, float &_curr, float &_dT);
 
   private:
     static Controller *c_instance;

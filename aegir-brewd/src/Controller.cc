@@ -390,50 +390,149 @@ namespace aegir {
       setPIN("rimspump", PINState::On);
 
     // only control every 3 seconds
-    if ( now - c_lastcontrol < std::ceil(c_hecycletime) ) return;
+    int controlival = std::ceil(c_hecycletime)*3;
+    if ( now - c_lastcontrol < controlival ) return;
 
-    if ( mttemp > _target ) {
-      setPIN("rimsheat", PINState::Off);
-      return;
-    }
+    float dt = now - c_lastcontrol;
     c_lastcontrol = now;
 
-    // coefficient based on the target temperature different
-    float coeff_tgt=0;
-    // coefficient based on the rims-mashtun tempdiff
-    float coeff_rt=1;
+    ProcessState::ThermoDataPoints temps_rims, temps_mt;
+    c_ps.getTCReadings("RIMS", temps_rims);
+    c_ps.getTCReadings("MashTun", temps_mt);
 
-    float halfpi = std::atan(INFINITY);
-    if ( tgtdiff  > 0 ) {
-      coeff_tgt = std::atan(tgtdiff)/halfpi;
-      coeff_tgt = std::pow(coeff_tgt, 0.91);
+    float curr_rims(0), curr_mt(0), last_rims(0), last_mt(0);
+    float dT_mt(0), dT_rims(0);
+    bool nodata(false);
+
+    // if we don't have enough data, then wait
+    if ( !getTemps(temps_rims, dt, last_rims, curr_rims, dT_rims) ||
+	 !getTemps(temps_mt, dt, last_mt, curr_mt, dT_mt) ) {
+      setPIN("rimsheat", PINState::Off);
+      // if we don't have historical data, then simply use the last one
+      curr_rims = c_ps.getSensorTemp("RIMS");
+      curr_mt = c_ps.getSensorTemp("MashTun");
+      nodata = true;
     }
-    if ( rimsdiff > 0 ) {
-      coeff_rt = std::atan(_maxoverheat-rimsdiff)/halfpi;
-      if ( coeff_rt < 0 ) coeff_rt = 0;
-      else coeff_rt = std::pow(coeff_rt, 1.0/4);
-    }
+    printf("Controller::tempControl(): %li RIMS: dt:%.2f last:%.2f curr:%.2f dT:%.2f\n",
+	   now, dt, last_rims, curr_rims, dT_rims);
+    printf("Controller::tempControl(): %li MT: dt:%.2f last:%.2f curr:%.2f dT:%.2f\n",
+	   now, dt, last_mt, curr_mt, dT_mt);
 
-    float heratio = std::pow(coeff_tgt * coeff_rt, 0.71);
-#define AEGIR_DEBUG_TEMPCTRL
-#ifdef AEGIR_DEBUG_TEMPCTRL
-    printf("Controller::tempControl(): MT:%.2f RIMS:%.2f TGT:%.2f d_tgt:%.2f d_rims:%.2f c_tgt:%.2f c_rt:%.2f HEr:%.2f\n",
-	   mttemp, rimstemp, _target, tgtdiff, rimsdiff, coeff_tgt, coeff_rt, heratio);
-#endif
+    float last_ratio = getPIN("rimsheat")->getOldOnratio();
 
-    auto pin_he = getPIN("rimsheat");
-    float absherdiff = std::abs(pin_he->getOldOnratio()-heratio);
-#ifdef AEGIR_DEBUG_TEMPCTRL
-    printf("Controller::tempControl(): rimsheat: ST:%hhu CT:%.2f OR:%.2f AHD:%.2f\n",
-	   pin_he->getValue(), pin_he->getOldCycletime(), pin_he->getOldOnratio(), absherdiff);
-#endif
+    // First calculate how much power is needed to
+    // heat up the whole stuff in the mashtun to the
+    // target temperature
 
-    if (  absherdiff > 0.03 ) {
+    float dT_mt_target = _target - curr_mt; // temp difference
+    float dt_mt = dT_mt_target * 60.0; // heating with 1C/60s
+
+    float hepwr = (1.0*c_cfg->getHEPower())/1000; // in kW
+    float pwr_rims=0; // declared here for debugging purposes
+    float pwr_mt;
+    float dTadjust = 1.2f; // FIXME should be moved to a config variable
+
+    // when we're getting close to the target, but we don't have
+    // data, then try to throttle the heating
+    // this typically happens at Pre-Heating
+    if ( dT_mt_target < dTadjust && nodata ) {
+      float coeff_tgt = 0;
+      float coeff_rt = 1;
+
+      float halfpi = std::atan(INFINITY);
+      float tgtdiff = _target - curr_mt;
+      float rimsdiff = curr_rims - _target;
+
+      if ( tgtdiff > 0 ) {
+	coeff_tgt = std::atan(tgtdiff)/halfpi;
+	coeff_tgt = std::pow(coeff_tgt, 0.91);
+      }
+      if ( rimsdiff > 0 ) {
+	coeff_rt = std::max(0.0f, std::atan(_maxoverheat - rimsdiff)/halfpi);
+	coeff_rt = std::pow(coeff_rt, 0.25);
+      }
+      float heratio = std::pow(coeff_tgt * coeff_rt, 0.71);
+
+      printf("Controller::tempControl(): nodata heratio:%.2f\n", heratio);
       setPIN("rimsheat", PINState::Pulsate, c_hecycletime, heratio);
+      return;
     }
+
+    // now calculate the MT heating requirements
+    if ( nodata ) {
+      // during preheat we don't have to care for 1C/60s
+      if ( c_ps.getState() == ProcessState::States::PreHeat ) {
+	pwr_mt = hepwr;
+      } else {
+	// dT_mt_target is present on both sides of the division, that's why it's
+	// omitted. This way the required power only depends on the volume -
+	// as it's a constant heating
+	pwr_mt = (4.2 * c_ps.getVolume() )/60;
+      }
+    } else {
+      pwr_mt = (4.2 * c_ps.getVolume() )/60;
+      // historical data is available here, so we use that to approximate
+      // when we're hitting the target temperature
+
+      if ( dT > 0 ) {
+	// when the temperature is increasing
+	float timetotarget = dT_mt_target / dT;
+
+	if ( timetotarget < 10 ) {
+	  pwr_mt = 0;
+	} else if ( timetotarget < 30 ) {
+	  pwr_mt *= 0.15;
+	}
+      } else {
+      }
+    }
+
+    printf("Controller::tempControl(): MT: dT_target:%.2f dt:%.2f hepwr:%.2f pwr_mt:%.2f nodata:%c\n",
+	   dT_mt_target, dt_mt, hepwr, pwr_mt,
+	   nodata ? 't' : 'f');
+
+    // heating element on-rations
+    float her_mt = pwr_mt / hepwr;
+    float her_rims = 1; // this will be capped down by min() with her_mt
+
+    // if the rimstube wasn't cooling, then
+    // we can calculate the flowrate from the heating
+    // and how much do we need to heat it up
+    if ( dT_rims > 0 && !nodata ) {
+      // when we're not reaching the mashtun target within a minute,
+      // then it's sufficient to keep the tube at _target+_maxoverheat
+      float target_rims = _target + _maxoverheat;
+
+      // first calculate the water flow
+      float volume = (1.0*dt * hepwr * last_ratio)/(4.2 * (curr_rims - last_mt));
+
+      // calculate the needed power
+      pwr_rims = (4.2 * volume * (target_rims - curr_mt))/dt;
+
+      her_rims = pwr_rims / hepwr;
+    }
+
+    float heratio = std::min(her_mt, her_rims);
+    printf("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.2f(MT:%.2f / RIMS:%.2f)\n",
+	   _target, _maxoverheat,
+	   dT_rims, dT_mt_target,
+	   hepwr, pwr_mt, pwr_rims,
+	   heratio, her_mt, her_rims);
+
+    setPIN("rimsheat", PINState::Pulsate, c_hecycletime, heratio);
+
   }
 
   uint32_t Controller::calcHeatTime(uint32_t _vol, uint32_t _tempdiff, float _pkw) const {
     return (4.2 * _vol * _tempdiff)/_pkw;
+  }
+
+  bool Controller::getTemps(const ProcessState::ThermoDataPoints &_tdp, int _dt, float &_last, float &_curr, float &_dT) {
+    int size = _tdp.size();
+    if ( size < _dt ) return false;
+    _curr = _tdp.at(size-1);
+    _last = _tdp.at(size-1-_dt);
+    _dT = (_curr - _last)/(1.0*_dt);
+    return true;
   }
 }
