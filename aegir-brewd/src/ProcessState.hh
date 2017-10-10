@@ -54,11 +54,6 @@ namespace aegir {
     typedef std::map<uint32_t, float> ThermoDataPoints;
     typedef std::function<void(States, States)> statechange_t;
   private:
-    struct ThermoData {
-      ThermoDataPoints readings;
-      ThermoDataPoints moving5s;
-      ThermoDataPoints derivate1st;
-    };
   private:
     ProcessState();
     ProcessState(ProcessState&&) = delete;
@@ -84,6 +79,7 @@ namespace aegir {
     ProcessState &getThermoCouples(std::set<std::string> &_tcs);
     ProcessState &getTCReadings(const std::string &_sensor, ThermoDataPoints &_tcvals);
     inline float getSensorTemp(const std::string &_sensor) const {return c_lasttemps.find(_sensor)->second;};
+    inline time_t getStartedAt() const {return c_startedat;};
     // mash steps
     inline ProcessState &setMashStep(int8_t _ms) {c_mashstep=_ms; return *this;};
     inline int8_t getMashStep() const {return c_mashstep;};
@@ -107,7 +103,7 @@ namespace aegir {
     std::map<std::string, float> c_lasttemps;
     // states
     std::atomic<States> c_state;
-    std::map<std::string, ThermoData> c_thermoreadings;
+    std::map<std::string, ThermoDataPoints> c_thermoreadings;
     // active mash step
     std::atomic<int8_t> c_mashstep;
     std::atomic<time_t> c_mashstepstart;

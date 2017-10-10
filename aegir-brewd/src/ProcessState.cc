@@ -52,7 +52,7 @@ namespace aegir {
     c_thermoreadings.clear();
     c_lasttemps.clear();
     for ( auto &it: tcs ) {
-      c_thermoreadings[it.first] = ThermoData();
+      c_thermoreadings[it.first] = ThermoDataPoints();
       c_lasttemps[it.first] = 0;
     }
     return *this;
@@ -77,11 +77,7 @@ namespace aegir {
     c_volume  = _volume;
     c_startedat = 0;
     // clear the thermo readings
-    for ( auto &it: c_thermoreadings ) {
-      it.second.readings.clear();
-      it.second.moving5s.clear();
-      it.second.derivate1st.clear();
-    }
+    for ( auto &it: c_thermoreadings )  it.second.clear();
 
     setState(States::Loaded);
     return *this;
@@ -127,11 +123,7 @@ namespace aegir {
 
     for (auto &it: c_lasttemps) it.second = 0;
 
-    for (auto &it: c_thermoreadings) {
-      it.second.readings.clear();
-      it.second.moving5s.clear();
-      it.second.derivate1st.clear();
-    }
+    for (auto &it: c_thermoreadings) it.second.clear();
 
     c_mashstep = -1;
     c_mashstepstart = 0;
@@ -152,6 +144,7 @@ namespace aegir {
   }
 
   ProcessState &ProcessState::addThermoReading(const std::string &_sensor, const uint32_t _time, const float _temp) {
+    c_lasttemps[_sensor] = _temp;
     if ( c_state == States::Empty ||
 	 c_state == States::Finished ) return *this;
     std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
@@ -161,13 +154,9 @@ namespace aegir {
     if ( it == c_thermoreadings.end() )
       throw Exception("ProcessState::adThermoReading(): No such TC: %s", _sensor.c_str());
 
-    // if a program is loaded, then save the temperature as the current
-    if ( c_state >= States::Loaded )
-      c_lasttemps[_sensor] = _temp;
-
     // add the reading
     if ( c_state >= States::Mashing ) {
-      it->second.readings[_time - c_startedat] = _temp;
+      it->second[_time - c_startedat] = _temp;
 #ifdef AEGIR_DEBUG
       printf("ProcessState::addThemoReading(): added %s/%u/%.2f\n", _sensor.c_str(), _time, _temp);
 #endif
@@ -190,7 +179,7 @@ namespace aegir {
     if ( it == c_thermoreadings.end() )
       throw Exception("ProcessState::getTCReadings(): No such TC: %s", _sensor.c_str());
 
-    _tcvals = it->second.readings;
+    _tcvals = it->second;
 
     return *this;
   }
