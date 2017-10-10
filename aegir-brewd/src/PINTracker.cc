@@ -60,9 +60,21 @@ namespace aegir {
    * if newval==oldval, then hos to be absent from the queue
    */
   void PINTracker::OutPIN::setValue(PINState _v, float _cycletime, float _onratio) {
-    c_newvalue = _v;
     c_newcycletime = _cycletime;
-    c_newonratio = _onratio;
+
+    switch (_v) {
+    case PINState::On: c_newonratio = 1; break;
+    case PINState::Off: c_newonratio = 0; break;
+    default:
+      c_newonratio = _onratio;
+    }
+    if ( _v == PINState::Pulsate ) {
+      if ( c_newonratio <= 0 ) c_newvalue = PINState::Off;
+      else if ( c_newonratio >= 1 ) c_newvalue = PINState::On;
+      else c_newvalue = _v;
+    } else {
+      c_newvalue = _v;
+    }
 
 #ifdef AEGIR_DEBUG
     printf("PINTracker::OutPIN::setValue(%p, %s, %hhu->%hhu, %.2f->%.2f, %.2f->%.2f)\n", (void*)this, c_name.c_str(),
