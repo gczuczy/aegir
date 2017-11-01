@@ -1,6 +1,8 @@
 #include "Controller.hh"
 
 #include <time.h>
+#include <sys/event.h>
+#include <unistd.h>
 
 #include <cmath>
 
@@ -18,7 +20,7 @@ namespace aegir {
   Controller *Controller::c_instance(0);
 
   Controller::Controller(): PINTracker(), c_mq_io(ZMQ::SocketType::SUB), c_ps(ProcessState::getInstance()),
-			    c_mq_iocmd(ZMQ::SocketType::PUB), c_stoprecirc(false) {
+			    c_mq_iocmd(ZMQ::SocketType::PUB), c_stoprecirc(false), c_needcontrol(false) {
     // subscribe to our publisher for IO events
     try {
       c_mq_io.connect("inproc://iopub").subscribe("");
@@ -81,14 +83,41 @@ namespace aegir {
 
     c_mythread = std::this_thread::get_id();
 
+    int kq = kqueue();
+    int kq_id_control = 1;
+    int kq_id_temp = 2;
+    int kqerr;
+    struct kevent kevents[3];
+    struct kevent kevchanges[3];
+
+    //EV_SET(kev, ident, filter, flags, fflags, data, udata);
+    EV_SET(&kevchanges[0], kq_id_control, EVFILT_TIMER, EV_ADD, NOTE_SECONDS, 1, 0);
+
+    // register the events
+    kqerr = kevent(kq, kevchanges, 1, 0, 0, 0);
+
     // The main event loop
     std::shared_ptr<Message> msg;
-    std::chrono::microseconds ival(20000);
+    std::set<int> events;
+    int nevents;
+    int nexttempcontrol = 1;
+    bool tc_installed = false;	// tempcontrol timer installed
     while ( c_run ) {
+
+      // first, gather the events
+      nevents = kevent(kq, 0, 0, kevents, 2, 0);
+
+      // in case of errors, check again
+      if ( nevents <= 0 ) continue;
+      events.clear();
+      for ( int i=0; i<nevents; ++i ) {
+	events.insert(kevents[i].ident);
+      }
 
       // PINTracker's cycle
       startCycle();
-      // read the GPIO pin channel first
+
+      // read the GPIO PINs first
       try {
 	while ( (msg = c_mq_io.recv()) != nullptr ) {
 	  if ( msg->type() == MessageType::PINSTATE ) {
@@ -134,16 +163,41 @@ namespace aegir {
 	}
       }
 
-      // handle the changes
-      controlProcess(*this);
+      // the temp control event
+      if ( events.find(kq_id_temp) != events.end() ) {
+	printf("Rnning tempcontrol...\n");
+	nexttempcontrol = tempControl();
+	printf("Tempcontrol said %i secs\n", nexttempcontrol);
+	if ( nexttempcontrol < 3 ) nexttempcontrol = 3;
+	else if ( nexttempcontrol > 30 ) nexttempcontrol = 30;
+	tc_installed = false;	// oneshot fired, needs reinstall
+      }
 
-      // Send back the commands to IOHandler
-      // PINTracker::endCycle() does this
+      // the control event
+      // also run it after the tempcontrol
+      if ( events.find(kq_id_control) != events.end() ||
+	   (!tc_installed && c_needcontrol) ) {
+	// handle the changes
+	controlProcess(*this);
+      }
+
+      // if we need tempcontrols, then keep on
+      // installing the oneshot event
+      if ( c_needcontrol && !tc_installed ) {
+	//EV_SET(kev, ident, filter, flags, fflags, data, udata);
+	EV_SET(&kevchanges[0], kq_id_temp, EVFILT_TIMER, EV_ADD|EV_ONESHOT, NOTE_SECONDS, nexttempcontrol, 0);
+
+	// register the events
+	kqerr = kevent(kq, kevchanges, 1, 0, 0, 0);
+	printf("Installed tempcontrol for %i secs\n", nexttempcontrol);
+	tc_installed = true;
+      }
+
+      // end the GPIO change cycle
       endCycle();
+    } // while ( c_run )
 
-      // sleep a bit
-      std::this_thread::sleep_for(ival);
-    }
+    close(kq);
 
     printf("Controller stopped\n");
   }
@@ -151,6 +205,7 @@ namespace aegir {
   void Controller::reconfigure() {
     PINTracker::reconfigure();
     c_hecycletime = c_cfg->getHECycleTime();
+    c_needcontrol = false;
   }
 
   void Controller::controlProcess(PINTracker &_pt) {
@@ -222,11 +277,12 @@ namespace aegir {
       setPIN("rimsheat", PINState::Off);
       setPIN("rimspump", PINState::Off);
     }
-}
+  }
 
   void Controller::stageEmpty(PINTracker &_pt) {
     setPIN("rimsheat", PINState::Off);
     setPIN("rimspump", PINState::Off);
+    c_needcontrol = false;
   }
 
   void Controller::stageLoaded(PINTracker &_pt) {
@@ -240,6 +296,7 @@ namespace aegir {
     } else {
       c_ps.setState(ProcessState::States::PreWait);
     }
+    c_needcontrol = false;
     return;
   }
 
@@ -262,6 +319,7 @@ namespace aegir {
     if ( (now + phtime*1.15) > startat ) {
       c_ps.setState(ProcessState::States::PreHeat);
     }
+    c_needcontrol = false;
   }
 
   void Controller::stagePreHeat(PINTracker &_pt) {
@@ -270,21 +328,25 @@ namespace aegir {
     float targettemp = c_prog->getStartTemp();
     //    float tempdiff = targettemp - mttemp;
 
-    tempControl(targettemp, 6);
+    setTempTarget(targettemp, 6);
     if ( mttemp >= targettemp ) {
 	c_ps.setState(ProcessState::States::NeedMalt);
     }
+    c_needcontrol = true;
   }
 
   void Controller::stageNeedMalt(PINTracker &_pt) {
     // When the malts are added, temperature decreases
     // We have to heat it back up to the designated temperature
     float targettemp = c_prog->getStartTemp();
-    tempControl(targettemp, c_cfg->getHeatOverhead());
+    setTempTarget(targettemp, c_cfg->getHeatOverhead());
+    c_needcontrol = true;
   }
 
   void Controller::stageMashing(PINTracker &_pt) {
     const Program::MashSteps &steps = c_prog->getMashSteps();
+
+    c_needcontrol = true;
 
     int8_t msno = c_ps.getMashStep();
     float mttemp = c_ps.getSensorTemp("MashTun");
@@ -293,7 +355,7 @@ namespace aegir {
       // we'll go to sparging here, but first we go up to endtemp
       float endtemp = c_prog->getEndTemp();
 
-      tempControl(endtemp, c_cfg->getHeatOverhead());
+      setTempTarget(endtemp, c_cfg->getHeatOverhead());
       if ( mttemp >= endtemp ) {
 	c_ps.setState(ProcessState::States::Sparging);
       }
@@ -306,7 +368,7 @@ namespace aegir {
     // if it's <0, then we still have to get to
     // the first step's temperature
     if ( msno < 0 ) {
-      tempControl(ms.temp, c_cfg->getHeatOverhead());
+      setTempTarget(ms.temp, c_cfg->getHeatOverhead());
 
       if ( mttemp >= ms.temp - c_cfg->getTempAccuracy() ) {
 	c_ps.setMashStep(0);
@@ -339,30 +401,35 @@ namespace aegir {
 	       msno, held, ms.holdtime, mttemp, target);
 	lastreport = now;
       }
-      tempControl(target, c_cfg->getHeatOverhead());
+      setTempTarget(target, c_cfg->getHeatOverhead());
     }
   }
 
   void Controller::stageSparging(PINTracker &_pt) {
     printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
     float endtemp = c_prog->getEndTemp();
-    tempControl(endtemp, c_cfg->getHeatOverhead());
+    setTempTarget(endtemp, c_cfg->getHeatOverhead());
+    c_needcontrol = true;
   }
 
   void Controller::stagePreBoil(PINTracker &_pt) {
     printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    c_needcontrol = false;
   }
 
   void Controller::stageHopping(PINTracker &_pt) {
     printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    c_needcontrol = false;
   }
 
   void Controller::stageCooling(PINTracker &_pt) {
     printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    c_needcontrol = false;
   }
 
   void Controller::stageFinished(PINTracker &_pt) {
     printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    c_needcontrol = false;
   }
 
 
@@ -373,25 +440,22 @@ namespace aegir {
 				    _pin.getNewOnratio()));
   }
 
-  void Controller::tempControl(float _target, float _maxoverheat) {
+  int Controller::tempControl() {
     float mttemp = c_ps.getSensorTemp("MashTun");
     float rimstemp = c_ps.getSensorTemp("RIMS");
 
-    c_ps.setTargetTemp(_target);
+    c_ps.setTargetTemp(c_temptarget);
 
-    if ( mttemp == 0.0f || rimstemp == 0.0f ) return;
+    if ( mttemp == 0.0f || rimstemp == 0.0f ) return 3;
 
-    float tgtdiff = _target - mttemp;
-    float rimsdiff = rimstemp - _target;
+    float tgtdiff = c_temptarget - mttemp;
+    float rimsdiff = rimstemp - c_temptarget;
+    int nextcontrol = 30;
 
     time_t now = time(0);
 
     if ( getPIN("rimspump")->getOldValue() != PINState::On )
       setPIN("rimspump", PINState::On);
-
-    // only control every 3 seconds
-    int controlival = std::ceil(c_hecycletime)*3;
-    if ( now - c_lastcontrol < controlival ) return;
 
     float dt = now - c_lastcontrol;
     c_lastcontrol = now;
@@ -424,8 +488,8 @@ namespace aegir {
     // heat up the whole stuff in the mashtun to the
     // target temperature
 
-    float dT_mt_target = _target - curr_mt; // temp difference
-    float dt_mt = dT_mt_target * 60.0; // heating with 1C/60s
+    float dT_mtc_temptarget = c_temptarget - curr_mt; // temp difference
+    float dt_mt = dT_mtc_temptarget * 60.0; // heating with 1C/60s
 
     float hepwr = (1.0*c_cfg->getHEPower())/1000; // in kW
     float pwr_rims=0; // declared here for debugging purposes
@@ -435,27 +499,27 @@ namespace aegir {
     // when we're getting close to the target, but we don't have
     // data, then try to throttle the heating
     // this typically happens at Pre-Heating
-    if ( dT_mt_target < dTadjust && nodata ) {
+    if ( dT_mtc_temptarget < dTadjust && nodata ) {
       float coeff_tgt = 0;
       float coeff_rt = 1;
 
       float halfpi = std::atan(INFINITY);
-      float tgtdiff = _target - curr_mt;
-      float rimsdiff = curr_rims - _target;
+      float tgtdiff = c_temptarget - curr_mt;
+      float rimsdiff = curr_rims - c_temptarget;
 
       if ( tgtdiff > 0 ) {
 	coeff_tgt = std::atan(tgtdiff)/halfpi;
 	coeff_tgt = std::pow(coeff_tgt, 0.91);
       }
       if ( rimsdiff > 0 ) {
-	coeff_rt = std::max(0.0f, std::atan(_maxoverheat - rimsdiff)/halfpi);
+	coeff_rt = std::max(0.0f, std::atan(c_tempoverheat - rimsdiff)/halfpi);
 	coeff_rt = std::pow(coeff_rt, 0.25);
       }
       float heratio = std::pow(coeff_tgt * coeff_rt, 0.71);
 
       printf("Controller::tempControl(): nodata heratio:%.2f\n", heratio);
       setPIN("rimsheat", PINState::Pulsate, c_hecycletime, heratio);
-      return;
+      return 3;
     }
 
     // now calculate the MT heating requirements
@@ -464,7 +528,7 @@ namespace aegir {
       if ( c_ps.getState() == ProcessState::States::PreHeat ) {
 	pwr_mt = hepwr;
       } else {
-	// dT_mt_target is present on both sides of the division, that's why it's
+	// dT_mtc_temptarget is present on both sides of the division, that's why it's
 	// omitted. This way the required power only depends on the volume -
 	// as it's a constant heating
 	pwr_mt = (4.2 * c_ps.getVolume() )/60;
@@ -474,22 +538,45 @@ namespace aegir {
       // historical data is available here, so we use that to approximate
       // when we're hitting the target temperature
 
-      if ( dT > 0 ) {
-	// when the temperature is increasing
-	float timetotarget = dT_mt_target / dT;
+      if ( dT_mt > 0 ) {
+	// when the temperature of the MashTun is increasing
+
+	// linear approximation of the time it will take to
+	// heat it up with the current HERatio
+	float timetotarget = dT_mtc_temptarget / dT_mt;
 
 	if ( timetotarget < 10 ) {
 	  pwr_mt = 0;
+	  nextcontrol = 5;
 	} else if ( timetotarget < 30 ) {
 	  pwr_mt *= 0.15;
+	  nextcontrol = 10;
 	}
-      } else {
-      }
-    }
+      } else {			// dT_mt < 0
+	// when the MT is cooling, check whether we need to heat at all
+	if ( dT_mtc_temptarget < 0 ) {
+	  // it's fine here, we're already over the target temp
+	  pwr_mt = 0;
+	} else {
+	  // pwr_mt's default should be good here, we're just decreasing the
+	  // control time, if we're close to the target temp
+	  if ( dT_mtc_temptarget < 1 ) {
+	    nextcontrol = 5;
+	  } else if ( dT_mtc_temptarget < 2 ) {
+	    nextcontrol = 10;
+	  }
+	}
+      }	// if ( dT_mt > 0 ) else
+    }	// if ( nodata ) else
 
-    printf("Controller::tempControl(): MT: dT_target:%.2f dt:%.2f hepwr:%.2f pwr_mt:%.2f nodata:%c\n",
-	   dT_mt_target, dt_mt, hepwr, pwr_mt,
+    printf("Controller::tempControl(): MT: dTc_temptarget:%.2f dt:%.2f hepwr:%.2f pwr_mt:%.2f nodata:%c\n",
+	   dT_mtc_temptarget, dt_mt, hepwr, pwr_mt,
 	   nodata ? 't' : 'f');
+
+    // adjust the next control time
+    if ( dt_mt < 60 ) {
+      nextcontrol = dt/3;
+    }
 
     // heating element on-rations
     float her_mt = pwr_mt / hepwr;
@@ -500,8 +587,8 @@ namespace aegir {
     // and how much do we need to heat it up
     if ( dT_rims > 0 && !nodata ) {
       // when we're not reaching the mashtun target within a minute,
-      // then it's sufficient to keep the tube at _target+_maxoverheat
-      float target_rims = _target + _maxoverheat;
+      // then it's sufficient to keep the tube at c_temptarget+c_tempoverheat
+      float target_rims = c_temptarget + c_tempoverheat;
 
       // first calculate the water flow
       float volume = (1.0*dt * hepwr * last_ratio)/(4.2 * (curr_rims - last_mt));
@@ -510,17 +597,34 @@ namespace aegir {
       pwr_rims = (4.2 * volume * (target_rims - curr_mt))/dt;
 
       her_rims = pwr_rims / hepwr;
+
+      // adjust the next control, to avoid rims temp overruns
+      float dt_rims_target = target_rims / dT_rims;
+      nextcontrol = std::min(nextcontrol, int (dt_rims_target / 3));
+    } else if ( dT_rims < 0 ) {
+      // if the RIMS tube is cooling, then check whether we're over the
+      // temperature overhead
+      float target_rims = c_temptarget + c_tempoverheat;
+
+      if ( curr_rims > target_rims ) {
+	pwr_rims = pwr_mt/2;
+	her_rims = pwr_rims / hepwr;
+      } else {
+	// otherwise keep the old ratio
+	her_rims = last_ratio;
+	pwr_rims = hepwr * last_ratio;
+      }
     }
 
     float heratio = std::min(her_mt, her_rims);
     printf("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.2f(MT:%.2f / RIMS:%.2f)\n",
-	   _target, _maxoverheat,
-	   dT_rims, dT_mt_target,
+	   c_temptarget, c_tempoverheat,
+	   dT_rims, dT_mtc_temptarget,
 	   hepwr, pwr_mt, pwr_rims,
 	   heratio, her_mt, her_rims);
 
     setPIN("rimsheat", PINState::Pulsate, c_hecycletime, heratio);
-
+    return nextcontrol;
   }
 
   uint32_t Controller::calcHeatTime(uint32_t _vol, uint32_t _tempdiff, float _pkw) const {
