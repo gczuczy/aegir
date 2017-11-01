@@ -35,7 +35,9 @@ export class BrewComponent implements OnInit {
 	    xAxes: [{
 		ticks: {
 		    callback: function (value, index, values) {
-			return value + 's';
+			let second = value % 60;
+			let minute = (value-second) / 60;
+			return minute + 'm' + second + 's';
 		    }
 		}
 	    }],
@@ -88,12 +90,14 @@ export class BrewComponent implements OnInit {
 	for ( let i in a ) {
 	    let ni:number = +i;
 	    let age:number = size-ni;
+	    if ( ni == 0 ) continue;
 	    if ( age > 3600 ) {
 		if ( ni%180 != 0 ) {
 		    skiplog.push(a[i]);
 		    a[i] = null;
 		} else if ( skiplog.length > 0 ) {
 		    let avg = skiplog.reduce((a,b)=> a+b,0) / skiplog.length;
+		    //console.log(skiplog, avg);
 		    skiplog.length = 0;
 		    a[i] = avg;
 		}
