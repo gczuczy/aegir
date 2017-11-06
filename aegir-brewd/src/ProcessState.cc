@@ -55,6 +55,9 @@ namespace aegir {
       c_thermoreadings[it.first] = ThermoDataPoints();
       c_lasttemps[it.first] = 0;
     }
+
+    reset();
+
     return *this;
   }
 
@@ -156,6 +159,7 @@ namespace aegir {
 
     // add the reading
     if ( c_state >= States::Mashing ) {
+      
       it->second[_time - c_startedat] = _temp;
 #ifdef AEGIR_DEBUG
       printf("ProcessState::addThemoReading(): added %s/%u/%.2f\n", _sensor.c_str(), _time, _temp);

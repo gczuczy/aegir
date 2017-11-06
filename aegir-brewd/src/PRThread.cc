@@ -471,28 +471,34 @@ namespace aegir {
 	    maxtime = 0;
 	  }
 	}
-	// create the structure
-	// one for the timestamps, and under .readings one for each TC
-	Json::Value th;
-	th["timestamps"] = Json::Value(Json::ValueType::arrayValue);
-	th["readings"] = Json::Value(Json::ValueType::objectValue);
 
-	// create the array JSON object type for each returnd TC
-	for ( auto &it: tcvals ) th["readings"][it.first] = Json::Value(Json::ValueType::arrayValue);
+	if ( maxtime > 14400 ) {
+	  // FIXME should be removed later
+	  printf("Aborting history, maxtime too high: %u\n", maxtime);
+	} else {
+	  // create the structure
+	  // one for the timestamps, and under .readings one for each TC
+	  Json::Value th;
+	  th["timestamps"] = Json::Value(Json::ValueType::arrayValue);
+	  th["readings"] = Json::Value(Json::ValueType::objectValue);
 
-	// add the timestamps, and the readings to the respective arrays
-	for ( uint32_t i=0; i<maxtime; ++i ) {
-	  th["timestamps"].append(i);
-	  for ( auto &it: tcvals ) {
-	    if ( it.second.find(i) != it.second.end() ) {
-	      th["readings"][it.first].append(it.second[i]);
-	    } else {
-	      th["readings"][it.first].append(Json::Value(Json::ValueType::nullValue));
+	  // create the array JSON object type for each returnd TC
+	  for ( auto &it: tcvals ) th["readings"][it.first] = Json::Value(Json::ValueType::arrayValue);
+
+	  // add the timestamps, and the readings to the respective arrays
+	  for ( uint32_t i=0; i<maxtime; ++i ) {
+	    th["timestamps"].append(i);
+	    for ( auto &it: tcvals ) {
+	      if ( it.second.find(i) != it.second.end() ) {
+		th["readings"][it.first].append(it.second[i]);
+	      } else {
+		th["readings"][it.first].append(Json::Value(Json::ValueType::nullValue));
+	      }
 	    }
 	  }
-	}
-	data["temphistory"] = th;
-      }
+	  data["temphistory"] = th;
+	} // maxtime > 14400 .. else
+      }	// if ( needhistory )
 
       // If we're mashing, then display the current step
       if ( ps.getState() == ProcessState::States::Mashing ) {
