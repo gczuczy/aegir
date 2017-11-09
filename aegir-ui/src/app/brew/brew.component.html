@@ -3,6 +3,7 @@
   <div class="row">
     <!-- left side will be the controls and short stuff-->
     <div class="col-2">
+
       <!-- controls -->
       <div class="row card">
 	<div class="card-header bg-light">Controls</div>
@@ -11,11 +12,26 @@
 	  <button *ngIf="state!='Empty'" class="btn btn-danger btn-sm" (click)="onAbortBrew()">It's a trap!</button>
 	</div>
       </div>
+
+
+      <!-- volume adjustment -->
+      <div class="row card">
+	<div class="card-header bg-light">Volume</div>
+	<div class="card-body input-group">
+	  <button class="btn btn-default" type="reset" (click)="onVolumeReset()">
+	    <i class="fa fa-refresh"></i>
+	  </button>
+	  <input id="volume" class="form-control" type="number" value="{{volume}}" [(ngModel)]="volume">
+	  <button class="btn btn-primary" type="submit" (click)="onVolumeSet()">Set</button>
+	</div>
+      </div>
+
+
       <!-- data -->
       <div class="row card">
 	<div class="card-header bg-light">Data</div>
 	<div class="card-body">
-	  <table class="table table-striped">
+	  <table class="table table-striped table-pad-2px">
 	    <tr>
 	      <th>State</th>
 	      <td>{{state}}</td>

@@ -80,6 +80,27 @@ export class ApiService {
 	    });
     }
 
+    getVolume(): Observable<{}> {
+	return this.http.get('/api/brewd/state/volume')
+	    .map(this.extractData)
+	    .catch(this.handleError);
+    }
+
+    setVolume(volume): Observable<{}> {
+	let body = JSON.stringify({'volume': volume});
+	let headers = new Headers({'Content-Type': 'application/json'});
+	let options = new RequestOptions({headers: headers});
+
+	console.log("Setting volume to ", volume, body, headers, options);
+
+	return this.http.post('/api/brewd/state/volume', body, options)
+	    .map((res:Response) => {
+		console.log('Catching result, ', res.status);
+		return res.json();
+	    })
+	    .catch(this.handleError);
+    }
+
     abortBrew(): Observable<{}> {
 	let body = JSON.stringify({'command': 'reset'});
 	let headers = new Headers({'Content-Type': 'application/json'});
@@ -171,4 +192,5 @@ export class ApiService {
 	console.log(errMsg);
 	return Observable.throw(errMsg);
     }
+
 }

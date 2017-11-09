@@ -3,6 +3,7 @@ import { NgModule } from '@angular/core';
 import { HttpModule } from '@angular/http';
 import { RouterModule } from '@angular/router';
 import { APP_BASE_HREF } from '@angular/common';
+import { Angular2FontawesomeModule } from 'angular2-fontawesome/angular2-fontawesome';
 
 import { BrewModule } from './brew/brew.module';
 import { ProgramsModule } from './programs/programs.module';
@@ -20,6 +21,7 @@ import { APP_ROUTES } from './app.routes';
     ],
     imports: [
 	BrowserModule,
+	Angular2FontawesomeModule,
 	HttpModule,
 	BrewModule,
 	SettingsModule,

@@ -14,6 +14,7 @@ import aegir.zmq
 def init(app, api):
     api.add_resource(BrewProgram, '/api/brewd/program')
     api.add_resource(BrewState, '/api/brewd/state')
+    api.add_resource(BrewStateVolume, '/api/brewd/state/volume')
     pass
 
 class BrewProgram(flask_restful.Resource):
@@ -136,3 +137,44 @@ class BrewState(flask_restful.Resource):
             return {"status": "error", "errors": ['Error in response']}, 422
 
         return {'status': 'success'}
+
+class BrewStateVolume(flask_restful.Resource):
+    '''
+    This class allows the manipulation of the current Process'
+    volume
+    '''
+    def get(self):
+        '''
+        Retrieves and returns the current volume set
+        '''
+
+        zcmd = 'getVolume'
+        zresp = None
+        try:
+            zresp = aegir.zmq.prmessage(zcmd, None)
+        except Exception as e:
+            #pprint(['error', zresp, e]);
+            return {"status": "error", "errors": [str(e)]}, 422
+
+        if 'status' not in zresp:
+            return {"status": "error", "errors": ['Malformed zmq message']}, 422
+
+        if zresp['status'] == 'error':
+            return {"status": "error", "errors": [zresp['message']]}, 422
+
+        return {'status': 'success', 'data': zresp['data']}
+
+    def post(self):
+        '''
+        Sets a new volume
+        '''
+        data = flask.request.get_json();
+        zcmd = 'setVolume';
+        zdata = {'volume': data['volume']}
+        try:
+            zresp = aegir.zmq.prmessage(zcmd, zdata)
+        except Exception as e:
+            return {"status": "error", "errors": [str(e)]}, 422
+
+        return {'status': 'success'}
+

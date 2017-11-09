@@ -75,6 +75,7 @@ namespace aegir {
     void registerStateChange(statechange_t _stch);
     inline uint32_t getStartat() const { return c_startat; };
     inline uint32_t getVolume() const { return c_volume; };
+    inline ProcessState &setVolume(uint32_t _v) { c_volume = _v; return *this; };
     ProcessState &addThermoReading(const std::string &_sensor, const uint32_t _time, const float _temp);
     ProcessState &getThermoCouples(std::set<std::string> &_tcs);
     ProcessState &getTCReadings(const std::string &_sensor, ThermoDataPoints &_tcvals);
@@ -97,8 +98,8 @@ namespace aegir {
     // inputs
     std::shared_ptr<Program> c_program;
     uint32_t c_startat;
-    uint32_t c_volume; //liters
-    uint32_t c_startedat; //when we went from !isactive->isactive
+    std::atomic<uint32_t> c_volume; //liters
+    std::atomic<uint32_t> c_startedat; //when we went from !isactive->isactive
     // cache the last readings
     std::map<std::string, float> c_lasttemps;
     // states

@@ -14,3 +14,7 @@
 .height-80 {
     height: 80vh;
 }
+
+.table-pad-2px>tbody>tr>td, .table-pad-2px>tbody>tr>th, .table-pad-2px>tfoot>tr>td, .table-pad-2px>tfoot>tr>th, .table-pad-2px>thead>tr>td, .table-pad-2px>thead>tr>th {
+    padding: 2px;
+}

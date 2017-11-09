@@ -19,6 +19,9 @@ export class BrewComponent implements OnInit {
     public targettemp = 0;
     public mashstep = null;
 
+    // volume
+    public volume: number = 42;
+
     // chart
     public brewChartData: Array<any> = [
 	{data: [], label: 'Mash Tun'},
@@ -161,4 +164,18 @@ export class BrewComponent implements OnInit {
 	}
     }
 
+    onVolumeReset() {
+	this.api.getVolume().subscribe(data => {
+	    this.volume = data['volume'];
+	});
+    }
+
+    onVolumeSet() {
+	this.api.setVolume(this.volume)
+	    .subscribe(data => console.log(data),
+		       err => console.log(err));
+
+	// and finally display the newly active volume
+	this.onVolumeReset();
+    }
 }

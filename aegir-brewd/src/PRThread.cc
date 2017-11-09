@@ -78,6 +78,8 @@ namespace aegir {
     c_handlers["buzzer"] = std::bind(&PRThread::handleBuzzer, this, std::placeholders::_1);
     c_handlers["hasMalt"] = std::bind(&PRThread::handleHasMalt, this, std::placeholders::_1);
     c_handlers["resetProcess"] = std::bind(&PRThread::handleResetProcess, this, std::placeholders::_1);
+    c_handlers["getVolume"] = std::bind(&PRThread::handleGetVolume, this, std::placeholders::_1);
+    c_handlers["setVolume"] = std::bind(&PRThread::handleSetVolume, this, std::placeholders::_1);
 
     auto thrmgr = ThreadManager::getInstance();
     thrmgr->addThread("PR", *this);
@@ -627,6 +629,55 @@ namespace aegir {
     }
 
     ps.reset();
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRThread::handleGetVolume(const Json::Value &_data) {
+    ProcessState &ps(ProcessState::getInstance());
+
+    // we cannot get the volume while there's no program loaded
+    if ( ps.getState() == ProcessState::States::Empty ) {
+      throw Exception("Cannot get volume while Empty");
+    }
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value(Json::ValueType::objectValue);
+    retval["data"]["volume"] = ps.getVolume();
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRThread::handleSetVolume(const Json::Value &_data) {
+    ProcessState &ps(ProcessState::getInstance());
+
+    // cannot set the volume when there's no program loaded
+    if ( ps.getState() == ProcessState::States::Empty ) {
+      throw Exception("Cannot set volume while Empty");
+    }
+
+    // verify the input
+    if ( !_data.isMember("volume") ) {
+      throw Exception("Need the volume in data");
+    }
+
+    Json::Value jsonvalue = _data["volume"];
+    if ( !jsonvalue.isNumeric() ) {
+      throw Exception("volume must be numeric");
+    }
+
+    uint32_t volume = jsonvalue.asUInt();
+
+    if ( volume < 5 || volume > 80 ) {
+      throw Exception("Volume is out of bounds");
+    }
+
+    ps.setVolume(volume);
+
+    // return success
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value(Json::ValueType::nullValue);
 
     return std::make_shared<Json::Value>(retval);
   }
