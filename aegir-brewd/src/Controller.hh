@@ -71,6 +71,7 @@ namespace aegir {
     std::list<std::pair<ProcessState::States, ProcessState::States> > c_stchqueue;
     bool c_stoprecirc;
     time_t c_lastcontrol;
+    float c_last_flow_volume;
     ProcessState &c_ps;
     std::shared_ptr<Program> c_prog;
     Config *c_cfg;

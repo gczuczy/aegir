@@ -87,8 +87,8 @@ namespace aegir {
     int kq_id_control = 1;
     int kq_id_temp = 2;
     int kqerr;
-    struct kevent kevents[3];
-    struct kevent kevchanges[3];
+    struct kevent kevents[4];
+    struct kevent kevchanges[4];
 
     //EV_SET(kev, ident, filter, flags, fflags, data, udata);
     EV_SET(&kevchanges[0], kq_id_control, EVFILT_TIMER, EV_ADD, NOTE_SECONDS, 1, 0);
@@ -273,6 +273,7 @@ namespace aegir {
     // when the state is reset
     if ( _old == ProcessState::States::Empty ) {
       c_prog = nullptr;
+      c_last_flow_volume = -1;
       setPIN("buzzer", PINState::Off);
       setPIN("rimsheat", PINState::Off);
       setPIN("rimspump", PINState::Off);
@@ -492,7 +493,7 @@ namespace aegir {
     float dt_mt = dT_mtc_temptarget * 60.0; // heating with 1C/60s
 
     float hepwr = (1.0*c_cfg->getHEPower())/1000; // in kW
-    float pwr_rims=0; // declared here for debugging purposes
+    float pwr_rims=hepwr; // declared here for debugging purposes
     float pwr_mt;
     float dTadjust = 1.2f; // FIXME should be moved to a config variable
 
@@ -541,16 +542,22 @@ namespace aegir {
       if ( dT_mt > 0 ) {
 	// when the temperature of the MashTun is increasing
 
-	// linear approximation of the time it will take to
-	// heat it up with the current HERatio
-	float timetotarget = dT_mtc_temptarget / dT_mt;
+	// check whether we're over the target temperature
+	if ( dT_mtc_temptarget > 0 ) {
+	  // linear approximation of the time it will take to
+	  // heat it up with the current HERatio
+	  float timetotarget = dT_mtc_temptarget / dT_mt;
 
-	if ( timetotarget < 10 ) {
+	  if ( timetotarget < 10 ) {
+	    pwr_mt *= 0.3;
+	    nextcontrol = 5;
+	  } else if ( timetotarget < 30 ) {
+	    pwr_mt *= 0.6;
+	    nextcontrol = 10;
+	  }
+	} else {
+	  // if we're over the MT target temp, then stop heating
 	  pwr_mt = 0;
-	  nextcontrol = 5;
-	} else if ( timetotarget < 30 ) {
-	  pwr_mt *= 0.15;
-	  nextcontrol = 10;
 	}
       } else {			// dT_mt < 0
 	// when the MT is cooling, check whether we need to heat at all
@@ -592,11 +599,10 @@ namespace aegir {
 
       // first calculate the water flow
       float volume = (1.0*dt * hepwr * last_ratio)/(4.2 * (curr_rims - last_mt));
+      c_last_flow_volume = volume/dt;
 
       // calculate the needed power
-      pwr_rims = (4.2 * volume * (target_rims - curr_mt))/dt;
-
-      her_rims = pwr_rims / hepwr;
+      pwr_rims = (4.2 * volume * (target_rims - curr_mt))/nextcontrol;
 
       // adjust the next control, to avoid rims temp overruns
       float dt_rims_target = target_rims / dT_rims;
@@ -605,16 +611,19 @@ namespace aegir {
       // if the RIMS tube is cooling, then check whether we're over the
       // temperature overhead
       float target_rims = c_temptarget + c_tempoverheat;
+      float dT_rims_target = target_rims - curr_rims;
 
-      if ( curr_rims > target_rims ) {
-	pwr_rims = pwr_mt/2;
-	her_rims = pwr_rims / hepwr;
+      printf("RIMS cooling LFV:%.4f\n", c_last_flow_volume);
+
+      if ( dT_rims_target > 3 ) {
+	pwr_rims = hepwr;
       } else {
-	// otherwise keep the old ratio
-	her_rims = last_ratio;
-	pwr_rims = hepwr * last_ratio;
+	// calculate the needed power based on the previous flow rate
+	pwr_rims = (4.2 * c_last_flow_volume*nextcontrol * (target_rims - curr_mt))/nextcontrol;
+	pwr_rims *= 0.9; // and undercut it by 10%
       }
     }
+    her_rims = pwr_rims / hepwr;
 
     float heratio = std::min(her_mt, her_rims);
     printf("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.2f(MT:%.2f / RIMS:%.2f)\n",
