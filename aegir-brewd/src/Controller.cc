@@ -643,8 +643,13 @@ namespace aegir {
   bool Controller::getTemps(const ProcessState::ThermoDataPoints &_tdp, int _dt, float &_last, float &_curr, float &_dT) {
     int size = _tdp.size();
     if ( size < _dt ) return false;
-    _curr = _tdp.at(size-1);
-    _last = _tdp.at(size-1-_dt);
+    try {
+      _curr = _tdp.at(size-1);
+      _last = _tdp.at(size-1-_dt);
+    }
+    catch (...) {
+      return false;
+    }
     _dT = (_curr - _last)/(1.0*_dt);
     return true;
   }
