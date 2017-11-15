@@ -68,6 +68,7 @@ export class BrewComponent implements OnInit {
 	    data => {
 		this.updateTempHistory(data);
 	    });
+	this.onVolumeReset();
     }
 
     updateState(data) {
