@@ -152,33 +152,40 @@ namespace aegir {
 	printf("Exception: %s\n", e.what());
       }
 
-      // handle the state changes
-      {
-	std::lock_guard<std::mutex> g(c_mtx_stchqueue);
-	if ( c_stchqueue.size() ) {
-	  for ( auto &it: c_stchqueue ) {
-	    onStateChange(it.first, it.second);
+      // state changes and controlling goes hand-in-hand
+      ProcessState::States state, oldstate;
+      state = c_ps.getState();
+      do {
+	oldstate = state;
+	// handle the state changes
+	{
+	  std::lock_guard<std::mutex> g(c_mtx_stchqueue);
+	  if ( c_stchqueue.size() ) {
+	    for ( auto &it: c_stchqueue ) {
+	      onStateChange(it.first, it.second);
+	    }
+	    c_stchqueue.clear();
 	  }
-	  c_stchqueue.clear();
 	}
-      }
+
+	// the control event
+	// also run it after the tempcontrol
+	if ( events.find(kq_id_control) != events.end() ) {
+	  // handle the current state
+	  controlProcess(*this);
+	}
+	state = c_ps.getState();
+      } while ( state != oldstate );
 
       // the temp control event
-      if ( events.find(kq_id_temp) != events.end() ) {
+      if ( events.find(kq_id_temp) != events.end() ||
+	   (c_needcontrol && c_newtemptarget)) {
 	printf("Rnning tempcontrol...\n");
 	nexttempcontrol = tempControl();
 	printf("Tempcontrol said %i secs\n", nexttempcontrol);
 	if ( nexttempcontrol < 3 ) nexttempcontrol = 3;
 	else if ( nexttempcontrol > 30 ) nexttempcontrol = 30;
 	tc_installed = false;	// oneshot fired, needs reinstall
-      }
-
-      // the control event
-      // also run it after the tempcontrol
-      if ( events.find(kq_id_control) != events.end() ||
-	   (!tc_installed && c_needcontrol) ) {
-	// handle the changes
-	controlProcess(*this);
       }
 
       // if we need tempcontrols, then keep on
@@ -192,6 +199,11 @@ namespace aegir {
 	printf("Installed tempcontrol for %i secs\n", nexttempcontrol);
 	tc_installed = true;
       }
+
+      if ( c_stoprecirc ) {
+	setPIN("rimspump", PINState::Off);
+	setPIN("rimsheat", PINState::Off);
+      } // stop recirculation
 
       // end the GPIO change cycle
       endCycle();
@@ -230,18 +242,14 @@ namespace aegir {
       }
     } // pump&heat switch
 
-    // state function
+    // calling the state function
+    // if the state changes after, run the next state function as well
     auto it = c_stagehandlers.find(state);
     if ( it != c_stagehandlers.end() ) {
       it->second(this, _pt);
     } else {
       printf("No function found for state %hhu\n", state);
     }
-
-    if ( c_stoprecirc ) {
-      setPIN("rimspump", PINState::Off);
-      setPIN("rimsheat", PINState::Off);
-    } // stop recirc
 
   } // controlProcess
 
@@ -356,7 +364,7 @@ namespace aegir {
       // we'll go to sparging here, but first we go up to endtemp
       float endtemp = c_prog->getEndTemp();
 
-      setTempTarget(endtemp, c_cfg->getHeatOverhead());
+      setTempTarget(endtemp, c_cfg->getHeatOverhead()+6);
       if ( mttemp >= endtemp ) {
 	c_ps.setState(ProcessState::States::Sparging);
       }
@@ -441,11 +449,22 @@ namespace aegir {
 				    _pin.getNewOnratio()));
   }
 
+  void Controller::setTempTarget(float _target, float _maxoverheat) {
+    if ( c_temptarget != _target ||
+	 c_tempoverheat != _maxoverheat )
+      c_newtemptarget = true;
+
+    c_temptarget = _target;
+    c_tempoverheat = _maxoverheat;
+  };
+
   int Controller::tempControl() {
     float mttemp = c_ps.getSensorTemp("MashTun");
     float rimstemp = c_ps.getSensorTemp("RIMS");
+    std::vector<int> lines;
 
     c_ps.setTargetTemp(c_temptarget);
+    c_newtemptarget = false;
 
     if ( mttemp == 0.0f || rimstemp == 0.0f ) return 3;
 
@@ -623,6 +642,21 @@ namespace aegir {
 	pwr_rims *= 0.9; // and undercut it by 10%
       }
     }
+
+    // if the MT has reached the target, and
+    // the RIMS tube is cooling, try to keep it on temp
+    float pwr_rims_min = 0;
+    if ( curr_mt >= c_temptarget &&
+	 curr_rims <= c_temptarget - 0.2 ) {
+      pwr_rims_min = (4.2 * c_last_flow_volume*nextcontrol * (c_temptarget - curr_rims)) / nextcontrol;
+
+      // this can't be more than 10% of the total HE power
+      pwr_rims_min = std::min(pwr_rims_min, hepwr/10);
+    }
+
+    // calculate the HE ratio
+    if ( pwr_rims_min > 0 )
+      pwr_rims = std::max(pwr_rims, pwr_rims_min);
     her_rims = pwr_rims / hepwr;
 
     float heratio = std::min(her_mt, her_rims);

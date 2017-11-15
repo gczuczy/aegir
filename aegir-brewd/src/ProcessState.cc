@@ -111,8 +111,9 @@ namespace aegir {
       it(old, c_state);
     }
 #ifdef AEGIR_DEBUG
-    printf("State changed to %s\n", g_strstates[c_state].c_str());
+    printf("State changed to %s startedat:%i\n", g_strstates[c_state].c_str(), sa);
 #endif
+    int sa = c_startedat;
     return *this;
   }
 
