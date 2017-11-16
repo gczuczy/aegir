@@ -200,6 +200,17 @@ namespace aegir {
 	tc_installed = true;
       }
 
+      // if we don't need tempcontrol and the event is installed, removeit
+      if ( !c_needcontrol && tc_installed ) {
+	//EV_SET(kev, ident, filter, flags, fflags, data, udata);
+	EV_SET(&kevchanges[0], kq_id_temp, EVFILT_TIMER, EV_DELETE, 0, 0, 0);
+
+	// register the events
+	kqerr = kevent(kq, kevchanges, 1, 0, 0, 0);
+	printf("Removed tempcontrol\n");
+	tc_installed = false;
+      }
+
       if ( c_stoprecirc ) {
 	setPIN("rimspump", PINState::Off);
 	setPIN("rimsheat", PINState::Off);
@@ -655,6 +666,7 @@ namespace aegir {
     }
 
     // calculate the HE ratio
+    // FIXME: at the final heratio this needs to be applied conditionallyxs
     if ( pwr_rims_min > 0 )
       pwr_rims = std::max(pwr_rims, pwr_rims_min);
     her_rims = pwr_rims / hepwr;
