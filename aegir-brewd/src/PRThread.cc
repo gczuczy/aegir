@@ -453,6 +453,11 @@ namespace aegir {
       // Add the current target temperature
       data["targettemp"] = ps.getTargetTemp();
 
+      // If we have a loaded program, return its id
+      if ( ps.getState() >= ProcessState::States::Loaded ) {
+	data["programid"] = ps.getProgram()->getId();
+      }
+
       // Add the TC History
       if ( needhistory ) {
 	std::set<std::string> historytcs{"MashTun", "RIMS"};

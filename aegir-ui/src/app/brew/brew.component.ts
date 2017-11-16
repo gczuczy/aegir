@@ -10,7 +10,7 @@ import { ApiService } from '../api.service';
   styleUrls: ['./brew.component.css']
 })
 export class BrewComponent implements OnInit {
-    public program: Program;
+    public program: Program = null;
 
     public sensors = [];
 
@@ -72,12 +72,17 @@ export class BrewComponent implements OnInit {
     }
 
     updateState(data) {
-	//console.log(data);
+	//console.log('state', data);
 	this.sensors = [];
 	this.state = data['state'];
 	this.targettemp = data['targettemp'];
 	if ( 'mashstep' in data ) {
 	    this.mashstep = data['mashstep'];
+	    let mstime = this.mashstep.time;
+	    let secs = mstime % 60;
+	    mstime -= secs;
+	    let minutes = mstime / 60;
+	    this.mashstep['textual'] = minutes + 'm ' + secs + 's';
 	} else {
 	    this.mashstep = null;
 	}
@@ -85,6 +90,19 @@ export class BrewComponent implements OnInit {
 	    let temp = data['currtemp'][key];
 	    if ( temp > 1000 ) temp = 0.0;
 	    this.sensors.push({'sensor': key, 'temp': parseFloat(temp).toFixed(2)});
+	}
+
+	// if we have the programid, then load the program as well
+	if ( 'programid' in data && this.program == null) {
+	    this.api.getProgram(data['programid']).subscribe(
+		progdata => {
+		    this.program = progdata['data'];
+		    //console.log('program', this.program);
+		}
+	    );
+	}
+	if ( !('programid' in data) ) {
+	    this.program = null;
 	}
     }
 

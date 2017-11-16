@@ -40,10 +40,6 @@
 	      <th>Temp target</th>
 	      <td>{{targettemp}} C</td>
 	    </tr>
-	    <tr *ngIf="state == 'Mashing'">
-	      <th>Mash step</th>
-	      <td>{{mashstep.orderno}}</td>
-	    </tr>
 	    <ng-template ngFor let-step [ngForOf]="sensors">
 	      <tr>
 		<th>{{step.sensor}}</th>
@@ -53,6 +49,36 @@
 	  </table>
 	</div>
       </div>
+
+      <!-- mash steps -->
+      <div class="row card" *ngIf="state == 'Mashing'">
+	<div class="card-header bg-light">Mash Steps</div>
+	<div class="card-body">
+	  <table class="table table-striped table-pad-2px">
+	    <tr>
+	      <th>&nbsp;</th>
+	      <th>Time</th>
+	      <th>Temp[C]</th>
+	    </tr>
+	    <ng-template ngFor let-step [ngForOf]="program.mashsteps">
+	      <tr>
+		<td>
+		  <i class="fa fa-check" *ngIf="step.orderno < mashstep.orderno || step.orderno == mashstep.orderno && mashstep.time > step.holdtime*60"></i>
+		  <i class="fa fa-hourglass" *ngIf="step.orderno == mashstep.orderno && mashstep.time < step.holdtime*60"></i>
+		  <i class="fa fa-ellipsis-h" *ngIf="step.orderno > mashstep.orderno"></i>
+		</td>
+		<td>
+		  <i *ngIf="step.orderno == mashstep.orderno && mashstep.time < step.holdtime*60">
+		    {{mashstep.textual}} / 
+		  </i>
+		  {{step.holdtime}}m</td>
+		<td>{{step.temperature}}</td>
+	      </tr>
+	    </ng-template>
+	  </table>
+	</div>
+      </div>
+
     </div>
     <!-- right side the graph -->
     <div class="col-10 card">
