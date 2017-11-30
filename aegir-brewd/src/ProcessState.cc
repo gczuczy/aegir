@@ -74,7 +74,7 @@ namespace aegir {
     if ( isActive() )
       throw Exception("Cannot load program: brew process active");
 
-    std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
+    Guard g(*this);
     c_program = std::make_shared<Program>(_prog);
     c_startat = _startat;
     c_volume  = _volume;
@@ -87,12 +87,12 @@ namespace aegir {
   }
 
   std::shared_ptr<Program> ProcessState::getProgram() {
-    std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
+    Guard g(*this);
     return c_program;
   }
 
   ProcessState &ProcessState::setState(ProcessState::States _st) {
-    std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
+    Guard g(*this);
 
     // state can't decrease
     // except when resetting to Empty
@@ -111,14 +111,14 @@ namespace aegir {
       it(old, c_state);
     }
 #ifdef AEGIR_DEBUG
+    int sa = c_startedat;
     printf("State changed to %s startedat:%i\n", g_strstates[c_state].c_str(), sa);
 #endif
-    int sa = c_startedat;
     return *this;
   }
 
   ProcessState &ProcessState::reset() {
-    std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
+    Guard g(*this);
 
     c_program = nullptr;
     c_startat = 0;
@@ -143,7 +143,7 @@ namespace aegir {
   }
 
   void ProcessState::registerStateChange(statechange_t _stch) {
-    std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
+    Guard g(*this);
     c_stcbs.push_back(_stch);
   }
 
@@ -151,7 +151,7 @@ namespace aegir {
     c_lasttemps[_sensor] = _temp;
     if ( c_state == States::Empty ||
 	 c_state == States::Finished ) return *this;
-    std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
+    Guard g(*this);
     auto it = c_thermoreadings.find(_sensor);
 
     // see whether we indeed have that TC
@@ -160,10 +160,10 @@ namespace aegir {
 
     // add the reading
     if ( c_state >= States::Mashing ) {
-      
-      it->second[_time - c_startedat] = _temp;
+      uint32_t reltime = _time - c_startedat;
+      it->second[reltime] = _temp;
 #ifdef AEGIR_DEBUG
-      printf("ProcessState::addThemoReading(): added %s/%u/%.2f\n", _sensor.c_str(), _time, _temp);
+      printf("ProcessState::addThemoReading(): added %s/%u(%u)/%.2f\n", _sensor.c_str(), _time, reltime, _temp);
 #endif
     }
     return *this;
@@ -171,14 +171,14 @@ namespace aegir {
 
   ProcessState &ProcessState::getThermoCouples(std::set<std::string> &_tcs){
     _tcs.clear();
-    std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
+    Guard g(*this);
     for ( auto &it: c_thermoreadings )
       _tcs.insert(it.first);
     return *this;
   }
 
   ProcessState &ProcessState::getTCReadings(const std::string &_sensor, ThermoDataPoints &_tcvals){
-    std::lock_guard<std::recursive_mutex> guard(c_mtx_state);
+    Guard g(*this);
 
     auto it = c_thermoreadings.find(_sensor);
     if ( it == c_thermoreadings.end() )

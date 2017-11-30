@@ -471,40 +471,41 @@ namespace aegir {
 
 	  tcvals[it] = ProcessState::ThermoDataPoints();
 	  ps.getTCReadings(it, tcvals[it]);
-	  if ( tcvals[it].rbegin() != tcvals[it].rend() ) {
-	    uint32_t lasttime = tcvals[it].rbegin()->first;
+	  if ( tcvals[it].size() > 5 ) {
+	    // workaround here. Sometimes the last key is returned
+	    // as maxint, if that is the case, we go back one
+	    auto tcit = tcvals[it].rbegin();
+	    uint32_t maxint = std::numeric_limits<uint32_t>::max();
+	    if ( tcit->first == maxint ) ++tcit;
+	    uint32_t lasttime = tcit->first;
 	    if ( lasttime < maxtime ) maxtime = lasttime;
+	    //printf("key:%u maxint:%u maxtime:%u lasttime:%u\n", tcit->first, maxint, maxtime, lasttime);
 	  } else {
 	    maxtime = 0;
 	  }
 	}
 
-	if ( maxtime > 14400 ) {
-	  // FIXME should be removed later
-	  printf("Aborting history, maxtime too high: %u\n", maxtime);
-	} else {
-	  // create the structure
-	  // one for the timestamps, and under .readings one for each TC
-	  Json::Value th;
-	  th["timestamps"] = Json::Value(Json::ValueType::arrayValue);
-	  th["readings"] = Json::Value(Json::ValueType::objectValue);
+	// create the structure
+	// one for the timestamps, and under .readings one for each TC
+	Json::Value th;
+	th["timestamps"] = Json::Value(Json::ValueType::arrayValue);
+	th["readings"] = Json::Value(Json::ValueType::objectValue);
 
-	  // create the array JSON object type for each returnd TC
-	  for ( auto &it: tcvals ) th["readings"][it.first] = Json::Value(Json::ValueType::arrayValue);
+	// create the array JSON object type for each returnd TC
+	for ( auto &it: tcvals ) th["readings"][it.first] = Json::Value(Json::ValueType::arrayValue);
 
-	  // add the timestamps, and the readings to the respective arrays
-	  for ( uint32_t i=0; i<maxtime; ++i ) {
-	    th["timestamps"].append(i);
-	    for ( auto &it: tcvals ) {
-	      if ( it.second.find(i) != it.second.end() ) {
-		th["readings"][it.first].append(it.second[i]);
-	      } else {
-		th["readings"][it.first].append(Json::Value(Json::ValueType::nullValue));
-	      }
+	// add the timestamps, and the readings to the respective arrays
+	for ( uint32_t i=0; i<maxtime; ++i ) {
+	  th["timestamps"].append(i);
+	  for ( auto &it: tcvals ) {
+	    if ( it.second.find(i) != it.second.end() ) {
+	      th["readings"][it.first].append(it.second[i]);
+	    } else {
+	      th["readings"][it.first].append(Json::Value(Json::ValueType::nullValue));
 	    }
 	  }
-	  data["temphistory"] = th;
-	} // maxtime > 14400 .. else
+	}
+	data["temphistory"] = th;
       }	// if ( needhistory )
 
       // If we're mashing, then display the current step
