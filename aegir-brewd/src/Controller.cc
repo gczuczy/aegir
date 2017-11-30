@@ -293,6 +293,7 @@ namespace aegir {
     if ( _old == ProcessState::States::Empty ) {
       c_prog = nullptr;
       c_last_flow_volume = -1;
+      c_temptarget = 0;
       setPIN("buzzer", PINState::Off);
       setPIN("rimsheat", PINState::Off);
       setPIN("rimspump", PINState::Off);
@@ -402,6 +403,7 @@ namespace aegir {
       // the previous one, hence the -1 previously, heating up to the 0th step
       time_t start = c_ps.getMashStepStart();
       float target = ms.temp;
+      float overhead = 0.8f;
       time_t held = now - start;
 
       // we held it for long enough, now we're aiming for the next step
@@ -411,17 +413,22 @@ namespace aegir {
 	if ( mttemp + c_cfg->getTempAccuracy() > target) {
 	  c_ps.setMashStep(msno+1);
 	  c_ps.setMashStepStart(now);
+	  overhead = c_cfg->getHeatOverhead();
+#if 0
 	  printf("Controller::stageMashing(): step %i->%i\n", msno, msno+1);
+#endif
 	}
       }
 
       static time_t lastreport;
+#if 0
       if ( lastreport != now && now % 5 == 0 ) {
 	printf("Controller::stageMashing(): S:%hhi HT:%li/%i MT:%.2f T:%.2f\n",
 	       msno, held, ms.holdtime, mttemp, target);
 	lastreport = now;
       }
-      setTempTarget(target, c_cfg->getHeatOverhead());
+#endif
+      setTempTarget(target, overhead);
     }
   }
 
@@ -470,17 +477,11 @@ namespace aegir {
   };
 
   int Controller::tempControl() {
-    float mttemp = c_ps.getSensorTemp("MashTun");
-    float rimstemp = c_ps.getSensorTemp("RIMS");
     std::vector<int> lines;
 
     c_ps.setTargetTemp(c_temptarget);
     c_newtemptarget = false;
 
-    if ( mttemp == 0.0f || rimstemp == 0.0f ) return 3;
-
-    float tgtdiff = c_temptarget - mttemp;
-    float rimsdiff = rimstemp - c_temptarget;
     int nextcontrol = 30;
 
     time_t now = time(0);
@@ -508,9 +509,19 @@ namespace aegir {
       curr_mt = c_ps.getSensorTemp("MashTun");
       nodata = true;
     }
-    printf("Controller::tempControl(): %li RIMS: dt:%.2f last:%.2f curr:%.2f dT:%.2f\n",
-	   now, dt, last_rims, curr_rims, dT_rims);
-    printf("Controller::tempControl(): %li MT: dt:%.2f last:%.2f curr:%.2f dT:%.2f\n",
+    if ( curr_mt == 0.0f || curr_rims == 0.0f ) return 3;
+
+    // set the RIMS tube target temperature
+    float T_target_rims;
+    if ( curr_mt >= c_temptarget ) {
+      T_target_rims = c_temptarget * 1.01;
+    } else {
+      T_target_rims = c_temptarget + std::min(c_tempoverheat, 0.2f+(c_temptarget - curr_mt)*5);
+    }
+
+    printf("Controller::tempControl(): %li RIMS: dt:%.2f last:%.2f curr:%.2f dT:%.4f target:%.2f\n",
+	   now, dt, last_rims, curr_rims, dT_rims, T_target_rims);
+    printf("Controller::tempControl(): %li MT: dt:%.2f last:%.2f curr:%.2f dT:%.4f\n",
 	   now, dt, last_mt, curr_mt, dT_mt);
 
     float last_ratio = getPIN("rimsheat")->getOldOnratio();
@@ -523,8 +534,9 @@ namespace aegir {
     float dt_mt = dT_mtc_temptarget * 60.0; // heating with 1C/60s
 
     float hepwr = (1.0*c_cfg->getHEPower())/1000; // in kW
-    float pwr_rims=hepwr; // declared here for debugging purposes
     float pwr_mt;
+    float pwr_dissipation = 0;
+    float pwr_abs_min = 0;
     float dTadjust = 1.2f; // FIXME should be moved to a config variable
 
     // when we're getting close to the target, but we don't have
@@ -535,7 +547,7 @@ namespace aegir {
       float coeff_rt = 1;
 
       float halfpi = std::atan(INFINITY);
-      float tgtdiff = c_temptarget - curr_mt;
+      float tgtdiff = c_temptarget*1.01 - curr_mt;
       float rimsdiff = curr_rims - c_temptarget;
 
       if ( tgtdiff > 0 ) {
@@ -598,9 +610,9 @@ namespace aegir {
 	  // pwr_mt's default should be good here, we're just decreasing the
 	  // control time, if we're close to the target temp
 	  if ( dT_mtc_temptarget < 1 ) {
-	    nextcontrol = 5;
-	  } else if ( dT_mtc_temptarget < 2 ) {
 	    nextcontrol = 10;
+	  } else if ( dT_mtc_temptarget < 2 ) {
+	    nextcontrol = 15;
 	  }
 	}
       }	// if ( dT_mt > 0 ) else
@@ -612,70 +624,81 @@ namespace aegir {
 
     // adjust the next control time
     if ( dt_mt < 60 ) {
-      nextcontrol = dt/3;
+      nextcontrol = std::max(10, int(dt/3));
     }
 
-    // heating element on-rations
-    float her_mt = pwr_mt / hepwr;
-    float her_rims = 1; // this will be capped down by min() with her_mt
+    // calculate the dissipation during the last cycle
+    if ( !nodata ) {
+      float pwr_last_effective = (4.2 * c_ps.getVolume() * (dT_mt*dt))/dt;
+      float pwr_last = hepwr * last_ratio;
+      float diff = pwr_last - pwr_last_effective;
+      if ( diff > 0 ) pwr_dissipation = std::min(diff, hepwr*0.2f);
+      if ( pwr_last_effective < 0 ) pwr_abs_min = std::fabs(pwr_last_effective);
+      printf("Controller::tempControl(): pwr last:%.2f eff:%.2f diff:%.5f\n",
+	     pwr_last, pwr_last_effective, diff);
+      printf("Controller::tempControl(): dissipation: %.3f pwr_abs_min:%.2f\n",
+	     pwr_dissipation, pwr_abs_min);
+    }
 
-    // if the rimstube wasn't cooling, then
-    // we can calculate the flowrate from the heating
-    // and how much do we need to heat it up
-    if ( dT_rims > 0 && !nodata ) {
-      // when we're not reaching the mashtun target within a minute,
-      // then it's sufficient to keep the tube at c_temptarget+c_tempoverheat
-      float target_rims = c_temptarget + c_tempoverheat;
+    /* The RIMS tube has a min a max value limiting its power,
+     * and in between an actual calculated value
+     * defaults are here, later we are limiting them
+     */
+    float pwr_rims_max = hepwr;
+    float pwr_rims_min = hepwr * 0.02;
+    float pwr_rims = hepwr;
+    float pwr_rims_final;
 
-      // first calculate the water flow
-      float volume = (1.0*dt * hepwr * last_ratio)/(4.2 * (curr_rims - last_mt));
-      c_last_flow_volume = volume/dt;
+    // without data, the RIMS tube is practically not adjustable
+    if ( !nodata ) {
+      float flowrate = c_last_flow_volume;
 
-      // calculate the needed power
-      pwr_rims = (4.2 * volume * (target_rims - curr_mt))/nextcontrol;
+      // if the rims tube is heating, then we can calculate and update
+      // the flow rate, which we can use later
+      if ( dT_rims > 0 ) {
+      // if the change is not big enough, then we're assuming it was just noise
+	if ( dT_rims > 0.007f ) {
+	  // flowrate is L/sec, so dt is out of the equation
+	  flowrate = (1.0 * hepwr * last_ratio)/(4.2 * (curr_rims - last_mt));
+	  c_last_flow_volume = flowrate;
+	} else {
+	  flowrate = c_last_flow_volume;
+	}
+      } // dT_rims>0
+      printf("Flowrate: %.6f\n", flowrate);
 
-      // adjust the next control, to avoid rims temp overruns
-      float dt_rims_target = target_rims / dT_rims;
-      nextcontrol = std::min(nextcontrol, int (dt_rims_target / 3));
-    } else if ( dT_rims < 0 ) {
-      // if the RIMS tube is cooling, then check whether we're over the
-      // temperature overhead
-      float target_rims = c_temptarget + c_tempoverheat;
-      float dT_rims_target = target_rims - curr_rims;
+      // again, time would be on both sides of the equation
+      // V=flowrate*dt
+      if ( flowrate > 0 )
+	pwr_rims = (4.2 * flowrate * (T_target_rims - curr_mt))/1;
 
-      printf("RIMS cooling LFV:%.4f\n", c_last_flow_volume);
-
-      if ( dT_rims_target > 3 ) {
-	pwr_rims = hepwr;
-      } else {
-	// calculate the needed power based on the previous flow rate
-	pwr_rims = (4.2 * c_last_flow_volume*nextcontrol * (target_rims - curr_mt))/nextcontrol;
-	pwr_rims *= 0.9; // and undercut it by 10%
+      // set the max boundary
+      if ( curr_mt >= c_temptarget ) {
+	// we are only compensating for the heat loss here
+	pwr_rims_max = pwr_rims_min;
       }
+      // if ( !nodata )
+    } else {
+      if ( curr_mt+2 < T_target_rims ) pwr_rims = pwr_rims_max;
     }
 
-    // if the MT has reached the target, and
-    // the RIMS tube is cooling, try to keep it on temp
-    float pwr_rims_min = 0;
-    if ( curr_mt >= c_temptarget &&
-	 curr_rims <= c_temptarget - 0.2 ) {
-      pwr_rims_min = (4.2 * c_last_flow_volume*nextcontrol * (c_temptarget - curr_rims)) / nextcontrol;
+    // apply min/max boundaries
+    pwr_rims_final = std::min(std::max(pwr_rims_min, pwr_rims)+ pwr_dissipation, pwr_rims_max);
+    printf("Controller::tempControl(): RIMS pwr: final:%.2f min:%.2f max:%.2f calc:%.2f\n",
+	   pwr_rims_final, pwr_rims_min, pwr_rims_max, pwr_rims);
+    float her_rims = pwr_rims_final / hepwr;
 
-      // this can't be more than 10% of the total HE power
-      pwr_rims_min = std::min(pwr_rims_min, hepwr/10);
-    }
+    // MashTun heating element on-ratio
+    float her_mt = pwr_mt / hepwr;
 
-    // calculate the HE ratio
-    // FIXME: at the final heratio this needs to be applied conditionallyxs
-    if ( pwr_rims_min > 0 )
-      pwr_rims = std::max(pwr_rims, pwr_rims_min);
-    her_rims = pwr_rims / hepwr;
-
-    float heratio = std::min(her_mt, her_rims);
+    // here we also define a minimum power, because there's heat
+    // dissipation around the tubing
+    float pwr_final = std::max(pwr_abs_min, std::min(pwr_mt + pwr_dissipation, pwr_rims_final));
+    float heratio = pwr_final / hepwr;
     printf("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.2f(MT:%.2f / RIMS:%.2f)\n",
 	   c_temptarget, c_tempoverheat,
 	   dT_rims, dT_mtc_temptarget,
-	   hepwr, pwr_mt, pwr_rims,
+	   hepwr, pwr_mt, pwr_rims_final,
 	   heratio, her_mt, her_rims);
 
     setPIN("rimsheat", PINState::Pulsate, c_hecycletime, heratio);
@@ -686,14 +709,28 @@ namespace aegir {
     return (4.2 * _vol * _tempdiff)/_pkw;
   }
 
-  bool Controller::getTemps(const ProcessState::ThermoDataPoints &_tdp, int _dt, float &_last, float &_curr, float &_dT) {
-    int size = _tdp.size();
+  bool Controller::getTemps(const ProcessState::ThermoDataPoints &_tdp, uint32_t _dt, float &_last, float &_curr, float &_dT) {
+    uint32_t size = _tdp.size();
+#if 0
+    printf("tdp size:%u dt:%i\n", size, _dt);
+#endif
     if ( size < _dt ) return false;
     try {
-      _curr = _tdp.at(size-1);
+      auto it = _tdp.rbegin();
+      auto it2 = --_tdp.end();
+      if ( it->first == std::numeric_limits<uint32_t>::max() ) ++it;
+      _curr = it->second;
       _last = _tdp.at(size-1-_dt);
+#if 0
+      printf("size:%u _dt:%i curr:%.2f(%u)/%.2f(%u) last:%.2f\n", size, _dt,
+	     _curr, it->first,
+	     it2->second, it2->first,
+	     _last
+	     );
+#endif
     }
-    catch (...) {
+    catch (std::exception &e) {
+      printf("getTemps() failed %s\n", e.what());
       return false;
     }
     _dT = (_curr - _last)/(1.0*_dt);
