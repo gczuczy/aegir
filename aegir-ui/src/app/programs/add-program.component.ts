@@ -83,6 +83,10 @@ export class AddProgramComponent implements OnInit {
 	});
     }
 
+    get formData(field: any): {
+	return <FormArray>this.addProgramForm.get(field);
+    }
+
     formValidator(form: FormGroup): {[key: string]: any} {
 	//console.log('formValidator called', form);
 	if ( !this.addProgramForm ) return null;
@@ -141,13 +145,13 @@ export class AddProgramComponent implements OnInit {
 	});
     }
 
-    addMashStep() {
+    public addMashStep() {
 	const control = <FormArray>this.addProgramForm.controls['mashsteps'];
 	let ms = this.initMashStep(control.length);
 	control.push(ms);
     }
 
-    removeMashStep(n: number) {
+    public removeMashStep(n: number) {
 	const control = <FormArray>this.addProgramForm.controls['mashsteps'];
 	control.removeAt(n)
 
@@ -170,17 +174,17 @@ export class AddProgramComponent implements OnInit {
 	});
     }
 
-    addHop() {
+    public addHop() {
 	const control = <FormArray>this.addProgramForm.controls['hops'];
 	control.push(this.initHop());
     }
 
-    removeHop(i: number) {
+    public removeHop(i: number) {
 	const control = <FormArray>this.addProgramForm.controls['hops'];
 	control.removeAt(i)
     }
 
-    save(model: FormGroup) {
+    public save(model: FormGroup) {
 	/*
 	console.log('save ', model);
 	console.log('save ', model.value);

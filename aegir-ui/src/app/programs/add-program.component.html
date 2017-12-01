@@ -63,7 +63,11 @@
 	</div>
       </div>
       <div formArrayName="mashsteps" class="container">
+	<!--
 	<div *ngFor="let mashtemp of addProgramForm.controls.mashsteps.controls; let i=index"
+	     class="row" [formGroupName]="i">
+	  -->
+	<div *ngFor="let mashtemp of formData('mashsteps').controls; let i=index"
 	     class="row" [formGroupName]="i">
 	  <div class="col-1">
 	    <span><strong>Temp {{i+1}}</strong></span>
