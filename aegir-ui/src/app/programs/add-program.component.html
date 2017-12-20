@@ -67,7 +67,7 @@
 	<div *ngFor="let mashtemp of addProgramForm.controls.mashsteps.controls; let i=index"
 	     class="row" [formGroupName]="i">
 	  -->
-	<div *ngFor="let mashtemp of formData('mashsteps').controls; let i=index"
+	<div *ngFor="let mashtemp of addProgramForm.get('mashsteps')['controls']; let i=index"
 	     class="row" [formGroupName]="i">
 	  <div class="col-1">
 	    <span><strong>Temp {{i+1}}</strong></span>
@@ -118,7 +118,7 @@
 	</div>
       </div>
       <div formArrayName="hops" class="container">
-	<div *ngFor="let hop of addProgramForm.controls.hops.controls; let i=index"
+	<div *ngFor="let hop of addProgramForm.get('hops')['controls']; let i=index"
 	     class="row" [formGroupName]="i">
 	  <!-- Hop name -->
 	  <div class="col-4 form-group">
