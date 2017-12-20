@@ -62,6 +62,8 @@ namespace aegir {
     void setTempTarget(float _target, float _maxoverheat);
     int tempControl();
     bool getTemps(const ProcessState::ThermoDataPoints &_tdp, uint32_t _dt, float &_last, float &_curr, float &_dT);
+    void setHERatio(float _cycletime, float _ratio);
+    float calcFlowRate();
 
   private:
     static Controller *c_instance;
@@ -80,6 +82,7 @@ namespace aegir {
     float c_temptarget;
     bool c_newtemptarget;
     float c_tempoverheat;
+    std::map<uint32_t, float> c_heratiohistory;
   };
 }
 

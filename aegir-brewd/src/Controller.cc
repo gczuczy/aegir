@@ -294,6 +294,7 @@ namespace aegir {
       c_prog = nullptr;
       c_last_flow_volume = -1;
       c_temptarget = 0;
+      c_heratiohistory.clear();
       setPIN("buzzer", PINState::Off);
       setPIN("rimsheat", PINState::Off);
       setPIN("rimspump", PINState::Off);
@@ -413,10 +414,11 @@ namespace aegir {
 	if ( mttemp + c_cfg->getTempAccuracy() > target) {
 	  c_ps.setMashStep(msno+1);
 	  c_ps.setMashStepStart(now);
-	  overhead = c_cfg->getHeatOverhead();
 #if 0
 	  printf("Controller::stageMashing(): step %i->%i\n", msno, msno+1);
 #endif
+	} else {
+	  overhead = c_cfg->getHeatOverhead();
 	}
       }
 
@@ -503,7 +505,7 @@ namespace aegir {
     // if we don't have enough data, then wait
     if ( !getTemps(temps_rims, dt, last_rims, curr_rims, dT_rims) ||
 	 !getTemps(temps_mt, dt, last_mt, curr_mt, dT_mt) ) {
-      setPIN("rimsheat", PINState::Off);
+      setHERatio(c_hecycletime, 0);
       // if we don't have historical data, then simply use the last one
       curr_rims = c_ps.getSensorTemp("RIMS");
       curr_mt = c_ps.getSensorTemp("MashTun");
@@ -536,6 +538,7 @@ namespace aegir {
     float hepwr = (1.0*c_cfg->getHEPower())/1000; // in kW
     float pwr_mt;
     float pwr_dissipation = 0;
+    float pwr_dissipation_rims = 0;
     float pwr_abs_min = 0;
     float dTadjust = 1.2f; // FIXME should be moved to a config variable
 
@@ -561,7 +564,7 @@ namespace aegir {
       float heratio = std::pow(coeff_tgt * coeff_rt, 0.71);
 
       printf("Controller::tempControl(): nodata heratio:%.2f\n", heratio);
-      setPIN("rimsheat", PINState::Pulsate, c_hecycletime, heratio);
+      setHERatio(c_hecycletime, heratio);
       return 3;
     }
 
@@ -632,7 +635,13 @@ namespace aegir {
       float pwr_last_effective = (4.2 * c_ps.getVolume() * (dT_mt*dt))/dt;
       float pwr_last = hepwr * last_ratio;
       float diff = pwr_last - pwr_last_effective;
-      if ( diff > 0 ) pwr_dissipation = std::min(diff, hepwr*0.2f);
+
+      // we only apply dissipation if it's positive, and
+      // it's value is less than 5% of the heating element
+      // otherwise we're probably measuring lag.
+      if ( diff > 0 && curr_rims > 50.0)
+	pwr_dissipation = diff * ((curr_rims - 50)/40);
+
       if ( pwr_last_effective < 0 ) pwr_abs_min = std::fabs(pwr_last_effective);
       printf("Controller::tempControl(): pwr last:%.2f eff:%.2f diff:%.5f\n",
 	     pwr_last, pwr_last_effective, diff);
@@ -649,28 +658,25 @@ namespace aegir {
     float pwr_rims = hepwr;
     float pwr_rims_final;
 
+    /*   ***********
+     *   * R I M S *
+     *   ***********/
+
     // without data, the RIMS tube is practically not adjustable
     if ( !nodata ) {
-      float flowrate = c_last_flow_volume;
-
-      // if the rims tube is heating, then we can calculate and update
-      // the flow rate, which we can use later
-      if ( dT_rims > 0 ) {
-      // if the change is not big enough, then we're assuming it was just noise
-	if ( dT_rims > 0.007f ) {
-	  // flowrate is L/sec, so dt is out of the equation
-	  flowrate = (1.0 * hepwr * last_ratio)/(4.2 * (curr_rims - last_mt));
-	  c_last_flow_volume = flowrate;
-	} else {
-	  flowrate = c_last_flow_volume;
-	}
-      } // dT_rims>0
+      float flowrate = calcFlowRate();
       printf("Flowrate: %.6f\n", flowrate);
 
-      // again, time would be on both sides of the equation
-      // V=flowrate*dt
-      if ( flowrate > 0 )
+      if ( flowrate > 0  ) {
+	// again, time would be on both sides of the equation
+	// V=flowrate*dt
 	pwr_rims = (4.2 * flowrate * (T_target_rims - curr_mt))/1;
+	if ( curr_rims < (T_target_rims - 1.5f) )
+	  pwr_rims = (pwr_rims + hepwr)/2;
+
+	printf("pwr_rms(%.2f) = (4.2 * flowrate(%.5f) * (T_target_rims(%.2f) - curr_mt(%.2f)))/1\n",
+	       pwr_rims, flowrate, T_target_rims, curr_mt);
+      }
 
       // set the max boundary
       if ( curr_mt >= c_temptarget ) {
@@ -683,7 +689,7 @@ namespace aegir {
     }
 
     // apply min/max boundaries
-    pwr_rims_final = std::min(std::max(pwr_rims_min, pwr_rims)+ pwr_dissipation, pwr_rims_max);
+    pwr_rims_final = std::min(std::max(pwr_rims_min, pwr_rims)+ pwr_dissipation_rims, pwr_rims_max);
     printf("Controller::tempControl(): RIMS pwr: final:%.2f min:%.2f max:%.2f calc:%.2f\n",
 	   pwr_rims_final, pwr_rims_min, pwr_rims_max, pwr_rims);
     float her_rims = pwr_rims_final / hepwr;
@@ -701,7 +707,7 @@ namespace aegir {
 	   hepwr, pwr_mt, pwr_rims_final,
 	   heratio, her_mt, her_rims);
 
-    setPIN("rimsheat", PINState::Pulsate, c_hecycletime, heratio);
+    setHERatio(c_hecycletime, heratio);
     return nextcontrol;
   }
 
@@ -711,10 +717,10 @@ namespace aegir {
 
   bool Controller::getTemps(const ProcessState::ThermoDataPoints &_tdp, uint32_t _dt, float &_last, float &_curr, float &_dT) {
     uint32_t size = _tdp.size();
-#if 0
+#if 1
     printf("tdp size:%u dt:%i\n", size, _dt);
 #endif
-    if ( size < _dt ) return false;
+    if ( size <= _dt || _dt < 3 ) return false;
     try {
       auto it = _tdp.rbegin();
       auto it2 = --_tdp.end();
@@ -733,7 +739,122 @@ namespace aegir {
       printf("getTemps() failed %s\n", e.what());
       return false;
     }
+    catch ( ... ) {
+      printf("getTemps() failed with unknown exception\n");
+      return false;
+    }
     _dT = (_curr - _last)/(1.0*_dt);
     return true;
+  }
+
+  void Controller::setHERatio(float _cycletime, float _ratio) {
+    setPIN("rimsheat", PINState::Pulsate, _cycletime, _ratio);
+    c_heratiohistory[(uint32_t)time(0)] = _ratio;
+  }
+
+  /* Flow rate calculation
+   * Formula: V = (P * dt) /(4.2 * dT)
+   * V = volume
+   * dt = time delta
+   * P = power [kW]
+   * dT = temperature delta
+   */
+  float Controller::calcFlowRate() {
+    ProcessState::ThermoDataPoints temps_rims, temps_mt;
+
+    c_ps.getTCReadings("RIMS", temps_rims);
+    c_ps.getTCReadings("MashTun", temps_mt);
+
+    if ( temps_rims.size() < 30 || temps_mt.size() < 30 ) return -1;
+
+    uint32_t t_min_rims, t_min_mt;
+    uint32_t startedat(0);
+
+    startedat= c_ps.getStartat();
+
+    printf("startedat: %u\n", startedat);
+
+    uint32_t now = time(0);
+    if ( startedat == 0 ) {
+      auto it=temps_rims.rbegin();
+      uint32_t itf = it->first;
+      startedat = now - it->first;
+#if 0
+      printf("Adjusted startedat to %u now:%u itf:%u\n", startedat, now, itf);
+#endif
+    }
+
+    uint32_t t_total(0);
+    float V_total(0);
+    uint32_t last_end = now - startedat;
+    float hepwr = (1.0*c_cfg->getHEPower())/1000; // in kW
+
+#if 0
+    printf("now:%u startedat:%u last_end:%u\n", now, startedat, last_end);
+#endif
+
+    // loop on the heratio history backwards
+    auto tempsit = temps_mt.begin();
+    for (auto it=c_heratiohistory.rbegin(); it!=c_heratiohistory.rend() && t_total < 180; ++it) {
+#if 0
+      printf("heratio it: f:%u s:%.2f\n", it->first, it->second);
+#endif
+      float heratio = it->second;
+      uint32_t t_start = it->first - startedat;
+      uint32_t t_end = last_end;
+      float T_start;
+      float T_end;
+
+#if 0
+      printf("t start:%u end:%u\n", t_start, t_end);
+#endif
+
+      tempsit = temps_mt.find(t_start);
+      if ( tempsit == temps_mt.end() ) {
+	last_end = t_start;
+#if 0
+	printf("temps_mt[%u] not found\n", t_start);
+#endif
+	continue;
+      }
+      T_start = tempsit->second;
+
+      tempsit = temps_rims.find(t_end);
+      if ( tempsit == temps_rims.end() ) {
+	last_end = t_start;
+#if 0
+	printf("temps_rims[%u] not found\b", t_end);
+#endif
+	continue;
+      }
+      T_end = tempsit->second;
+      if ( T_end == std::numeric_limits<uint32_t>::max() )
+	T_end = c_ps.getSensorTemp("RIMS");
+
+      float dt = t_end - t_start;
+      float pwr = hepwr * heratio;
+      float dT = T_end - T_start;
+
+      last_end = t_start;
+      // if the current cycle cooled down, skip it
+      if ( dT < 0 ) continue;
+
+      float V = (pwr * dt) / (4.2 * dT);
+
+#if 0
+      printf("Controller::calcFlowRate(): %u: %.4f = (%.2f * %.2f) / (4.2 * %.2f) (t_total:%u)\n",
+	     it->first, V, pwr, dt, dT, t_total);
+#endif
+
+      if ( V <= 0 ) continue;
+
+      V_total += V;
+      t_total += dt;
+    }
+
+    float flowrate = V_total / t_total;
+    printf("Controller::calcFlowRate(): flowrate: %.4f = %.2f / %u\n",
+	   flowrate, V_total, t_total);
+    return flowrate;
   }
 }

@@ -9,9 +9,21 @@
 #include <functional>
 #include <chrono>
 
+#include "GPIO.hh"
+
 namespace aegir {
 
-  static void sighandler(int) {
+  static void sighandler(int _sig) {
+    if ( _sig == SIGSEGV ) {
+      printf("Got a SIGSEGV\n");
+      GPIO &gpio = *GPIO::getInstance();
+      try {
+	gpio["rimsheat"].low();
+	gpio["rimspump"].low();
+      }
+      catch (...) {
+      }
+    }
   }
 
   /*
@@ -57,6 +69,7 @@ namespace aegir {
     struct sigaction sa;
     sigemptyset(&sa.sa_mask);
     sigemptyset(&sa.sa_mask);
+    //sigaddset(&sa.sa_mask, SIGSEGV);
     sigaddset(&sa.sa_mask, SIGINT);
     sigaddset(&sa.sa_mask, SIGHUP);
     sigaddset(&sa.sa_mask, SIGKILL);
@@ -67,6 +80,7 @@ namespace aegir {
     sigaddset(&sa.sa_mask, SIGUSR2);
     sa.sa_handler = sighandler;
     sa.sa_flags = SA_RESTART;
+    //sigaction(SIGSEGV, &sa, 0);
     sigaction(SIGINT, &sa, 0);
     sigaction(SIGHUP, &sa, 0);
     sigaction(SIGKILL, &sa, 0);

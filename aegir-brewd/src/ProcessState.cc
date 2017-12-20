@@ -189,4 +189,9 @@ namespace aegir {
     return *this;
   }
 
+  uint32_t ProcessState::getStartedAt() const {
+    uint32_t x = c_startedat;
+    printf("ProcessState::getStartedAt(): %u\n", x);
+    return c_startedat;
+  }
 }

@@ -80,7 +80,8 @@ namespace aegir {
     ProcessState &getThermoCouples(std::set<std::string> &_tcs);
     ProcessState &getTCReadings(const std::string &_sensor, ThermoDataPoints &_tcvals);
     inline float getSensorTemp(const std::string &_sensor) const {return c_lasttemps.find(_sensor)->second;};
-    inline time_t getStartedAt() const {return c_startedat;};
+    //inline time_t getStartedAt() const {return c_startedat;};
+    uint32_t getStartedAt() const;
     // mash steps
     inline ProcessState &setMashStep(int8_t _ms) {c_mashstep=_ms; return *this;};
     inline int8_t getMashStep() const {return c_mashstep;};
