@@ -83,10 +83,6 @@ export class AddProgramComponent implements OnInit {
 	});
     }
 
-    get formData(field: any): {
-	return <FormArray>this.addProgramForm.get(field);
-    }
-
     formValidator(form: FormGroup): {[key: string]: any} {
 	//console.log('formValidator called', form);
 	if ( !this.addProgramForm ) return null;
@@ -167,6 +163,7 @@ export class AddProgramComponent implements OnInit {
 
     initHop() {
 	const boiltime = this.addProgramForm.controls['boiltime']
+	console.log('inithop');
 	return this._fb.group({
 	    attime: [0, [Validators.required, IntValidator.minValue(0), IntValidator.maxValue(boiltime.value)]],
 	    name: ['', [Validators.required, Validators.minLength(3)]],
@@ -176,7 +173,9 @@ export class AddProgramComponent implements OnInit {
 
     public addHop() {
 	const control = <FormArray>this.addProgramForm.controls['hops'];
+	console.log('addhop');
 	control.push(this.initHop());
+	console.log('addhop');
     }
 
     public removeHop(i: number) {
