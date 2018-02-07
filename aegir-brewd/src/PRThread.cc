@@ -13,6 +13,7 @@
 #include "Config.hh"
 #include "JSONMessage.hh"
 #include "ProcessState.hh"
+#include "ElapsedTime.hh"
 
 namespace aegir {
 
@@ -212,6 +213,7 @@ namespace aegir {
     }
 
     try {
+      ElapsedTime t("PRThread handle "+cmdstr);
       return cmdit->second(_msg["data"]);
     }
     catch (Exception &e) {
