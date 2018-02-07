@@ -617,6 +617,7 @@ namespace aegir {
 	  } else if ( dT_mtc_temptarget < 2 ) {
 	    nextcontrol = 15;
 	  }
+	  pwr_mt = (4.2 * c_ps.getVolume() * dT_mtc_temptarget) / nextcontrol;
 	}
       }	// if ( dT_mt > 0 ) else
     }	// if ( nodata ) else
@@ -642,7 +643,8 @@ namespace aegir {
       if ( diff > 0 && curr_rims > 50.0)
 	pwr_dissipation = diff * ((curr_rims - 50)/40);
 
-      if ( pwr_last_effective < 0 ) pwr_abs_min = std::fabs(pwr_last_effective);
+      if ( pwr_last_effective < 0 && (curr_mt + dt*30)<c_temptarget)
+	pwr_abs_min = std::fabs(pwr_last_effective);
       printf("Controller::tempControl(): pwr last:%.2f eff:%.2f diff:%.5f\n",
 	     pwr_last, pwr_last_effective, diff);
       printf("Controller::tempControl(): dissipation: %.3f pwr_abs_min:%.2f\n",
