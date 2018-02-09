@@ -10,6 +10,7 @@
 #include <chrono>
 
 #include "GPIO.hh"
+#include "ZMQ.hh"
 
 namespace aegir {
 
@@ -47,7 +48,7 @@ namespace aegir {
 
   ThreadManager *ThreadManager::c_instance = 0;
 
-  ThreadManager::ThreadManager() {
+  ThreadManager::ThreadManager(): c_started(false) {
   }
 
   ThreadManager::~ThreadManager() {
@@ -60,6 +61,14 @@ namespace aegir {
 
   ThreadManager &ThreadManager::addThread(const std::string &_name, ThreadBase &_thread) {
     c_threads.emplace(std::make_pair(_name, thread(_name, _thread)));
+
+    // if threads are already started, then late-start it
+    if ( c_started ) {
+      auto it = c_threads.find(_name);
+      printf("Late-starting thread named %s\n", it->first.c_str());
+      std::function<void()> f = std::bind(&ThreadManager::wrapper, this, &it->second.base);
+      it->second.thr = std::thread(f);
+    }
     return *this;
   }
 
@@ -96,6 +105,7 @@ namespace aegir {
       std::function<void()> f = std::bind(&ThreadManager::wrapper, this, &it.second.base);
       it.second.thr = std::thread(f);
     }
+    c_started = true;
 
     // start our main loop, handling signals, etc
     bool run(true);
@@ -123,9 +133,16 @@ namespace aegir {
       } // evlist check
     }
 
+    // close the ZMQ context
+    ZMQ::getInstance().close();
     // waiting for thread executions to finish
     for ( auto &it: c_threads ) {
+      printf("Stopping thread %s\n", it.second.name.c_str());
       it.second.base.stop();
+    }
+
+    // wait for the threads to finish
+    for ( auto &it: c_threads ) {
       it.second.thr.join();
     }
 

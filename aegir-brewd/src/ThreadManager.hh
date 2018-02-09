@@ -23,7 +23,7 @@ namespace aegir {
     std::atomic<bool> c_run;
 
   protected:
-    void stop() noexcept;
+    virtual void stop() noexcept;
     virtual void run() = 0;
   };
 
@@ -43,6 +43,7 @@ namespace aegir {
     };
 
   private:
+    std::atomic<bool> c_started;
     std::map<std::string, thread> c_threads;
 
   private:

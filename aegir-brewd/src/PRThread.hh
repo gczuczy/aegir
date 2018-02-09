@@ -6,16 +6,15 @@
 #ifndef AEGIR_PRTHREAD_H
 #define AEGIR_PRTHREAD_H
 
-#include <jsoncpp/json/json.h>
-#include <memory>
-#include <functional>
-#include <map>
+#include <set>
 #include <string>
 
 #include "ThreadManager.hh"
 #include "ZMQ.hh"
 
 namespace aegir {
+
+  class PRWorkerThread;
 
   class PRThread: public ThreadBase {
     //    PRThread(PRThread &&) = delete;
@@ -28,21 +27,11 @@ namespace aegir {
 
   public:
     virtual void run();
+    virtual void stop() noexcept;
 
   private:
-    ZMQ::Socket c_mq_pr, c_mq_iocmd;
-    std::map<std::string, std::function<std::shared_ptr<Json::Value> (const Json::Value&) > > c_handlers;
-
-  private:
-    std::shared_ptr<Json::Value> handleJSONMessage(const Json::Value &_msg);
-    std::shared_ptr<Json::Value> handleLoadProgram(const Json::Value &_data);
-    std::shared_ptr<Json::Value> handleGetLoadedProgram(const Json::Value &_data);
-    std::shared_ptr<Json::Value> handleGetState(const Json::Value &_data);
-    std::shared_ptr<Json::Value> handleBuzzer(const Json::Value &_data);
-    std::shared_ptr<Json::Value> handleHasMalt(const Json::Value &_data);
-    std::shared_ptr<Json::Value> handleResetProcess(const Json::Value &_data);
-    std::shared_ptr<Json::Value> handleGetVolume(const Json::Value &_data);
-    std::shared_ptr<Json::Value> handleSetVolume(const Json::Value &_data);
+    ZMQ::Socket c_mq_pr, c_mq_prw, c_mq_prctrl, c_mq_prdbg;
+    std::set<PRWorkerThread*> c_workers;
   };
 }
 

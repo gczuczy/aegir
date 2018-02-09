@@ -5,8 +5,9 @@
 #ifndef AEGIR_ZMQ_H
 #define AEGIR_ZMQ_H
 
-#include "zmq.hpp"
-#include <boost/any.hpp>
+extern "C" {
+#include <zmq.h>
+}
 
 #include "Message.hh"
 
@@ -30,6 +31,7 @@ namespace aegir {
       INTERNAL,
 	JSON
 	};
+
     class Socket {
       friend class ZMQ;
       Socket() = delete;
@@ -40,12 +42,14 @@ namespace aegir {
       Socket &bind(const std::string &_addr);
       Socket &connect(const std::string &_addr);
       Socket &subscribe(const std::string &_filter);
-      Socket &send(const Message &_msg);
+      Socket &send(const std::string &_msg, bool _more=false);
+      Socket &send(const Message &_msg, bool _more=false);
       std::shared_ptr<Message> recv(MessageFormat _mf = MessageFormat::INTERNAL);
+      Socket &setIdentity(const std::string &_id);
 
     private:
       SocketType c_type;
-      zmq::socket_t c_sock;
+      void *c_sock;
     };
 
   private:
@@ -57,13 +61,17 @@ namespace aegir {
   protected:
     ZMQ();
     ~ZMQ();
-    zmq::context_t &getContext();
+    void *getContext();
 
   private:
-    zmq::context_t c_ctx;
+    //zmq::context_t c_ctx;
+    void *c_ctx;
 
   public:
     static ZMQ &getInstance();
+    int proxy(Socket &_frontend, Socket &_backend, Socket &_ctrl);
+    int proxy(Socket &_frontend, Socket &_backend, Socket &_capture, Socket &_ctrl);
+    void close();
   };
 }
 

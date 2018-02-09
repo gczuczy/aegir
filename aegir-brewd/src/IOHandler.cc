@@ -101,7 +101,12 @@ namespace aegir {
       printf("Sensor %s/%i temp: %f C Time: %li CJ:%.2f CJTO:%.4f\n", it.first.c_str(), it.second, temp,
 	     tv.tv_sec, cjtemp, cjto);
 #endif
-      c_mq_pub.send(ThermoReadingMessage(it.first, temp, tv.tv_sec));
+      try {
+	c_mq_pub.send(ThermoReadingMessage(it.first, temp, tv.tv_sec));
+      }
+      catch (Exception &e) {
+	printf("IOHandler::readTCs zmq send failed: %s\n", e.what());
+      }
     }
 #ifdef AEGIR_DEBUG
     auto end = std::chrono::high_resolution_clock::now();
@@ -124,7 +129,12 @@ namespace aegir {
 #endif
 	it.second = newval;
 	auto msg = PinStateMessage(it.first, newval);
-	c_mq_pub.send(msg);
+	try {
+	  c_mq_pub.send(msg);
+	}
+	catch (Exception &e) {
+	  printf("IOHandler::handlePins() zmq send failure: %s\n", e.what());
+	}
       }
     }
 

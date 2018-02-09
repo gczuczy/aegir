@@ -87,20 +87,22 @@ class BrewState(flask_restful.Resource):
         history = flask.request.args.get('history', None)
         # handle the defaults
         needhistory = history == 'yes'
+        #pprint(['got getstate request'])
 
         zresp = None
         try:
             zresp = aegir.zmq.prmessage("getState", {"history": needhistory})
         except Exception as e:
+            #pprint(e)
             return {"status": "error", "errors": [str(e)]}, 422
 
+        #pprint(zresp)
         if not 'status' in zresp:
             return {"status": "error", "errors": ['Malformed response']}, 422
 
         if zresp['status'] != 'success':
             return {"status": "error", "errors": ['Error in response']}, 422
 
-        #pprint(zresp)
         return {'status': 'success', 'data': zresp['data']}
 
     def post(this):
