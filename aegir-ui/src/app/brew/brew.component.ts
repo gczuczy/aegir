@@ -107,43 +107,39 @@ export class BrewComponent implements OnInit {
     }
 
     swissCheese(a) {
+	//console.log('swissCheese input', a);
+	let ret:Array<number> = [];
 	let size:number = a.length;
 	let skiplog:Array<number> = [];
+	let rate:number = Math.sqrt(Math.log10(a.length));
+	let maxstep:number = Math.ceil(Math.log(a.length));
+	let next:number;
+	const add = (x,y) => x+y;
+	//let avg:number = skiplog.reduce(add);
+	//console.log('rate', rate, maxstep);
 	for ( let i in a ) {
-	    let ni:number = +i;
-	    let age:number = size-ni;
-	    if ( ni == 0 ) continue;
-	    if ( age > 3600 ) {
-		if ( ni%180 != 0 ) {
-		    skiplog.push(a[i]);
-		    a[i] = null;
-		} else if ( skiplog.length > 0 ) {
-		    let avg = skiplog.reduce((a,b)=> a+b,0) / skiplog.length;
-		    //console.log(skiplog, avg);
-		    skiplog.length = 0;
-		    a[i] = avg;
-		}
-	    } else if ( age > 600 ) {
-		if ( ni%60 != 0 ) {
-		    skiplog.push(a[i]);
-		    a[i] = null;
-		} else if ( skiplog.length > 0 ) {
-		    let avg = skiplog.reduce((a,b)=> a+b,0) / skiplog.length;
-		    skiplog.length = 0;
-		    a[i] = avg;
-		}
-	    } else if ( age > 180 ) {
-		if ( ni%10 != 0 ) {
-		    skiplog.push(a[i]);
-		    a[i] = null;
-		} else if ( skiplog.length > 0 ) {
-		    let avg = skiplog.reduce((a,b)=> a+b,0) / skiplog.length;
-		    skiplog.length = 0;
-		    a[i] = avg;
-		}
+	    let idx:number = a.length - Number(i) -1;
+	    if ( Number(i) == 0 ) {
+		ret.push(a[i]);
+		next = Math.trunc(idx - Math.log(idx));
+		//console.log('init next', next, idx, rate, (idx/rate));
+		continue;
+	    }
+	    if ( idx == next || idx == 0) {
+		skiplog.push(a[i]);
+		let avg:number = skiplog.reduce(add);
+		avg /= skiplog.length;
+		skiplog.length = 0;
+		ret.push(avg);
+		next = Math.max(Math.ceil(idx - Math.pow(Math.log(idx), rate)), maxstep);
+		//console.log('next next', next, idx, rate, (idx/rate));
+	    } else {
+		skiplog.push(a[i]);
+		ret.push(null);
 	    }
 	}
-	return a;
+	//console.log('swissCheese out', ret);
+	return ret;
     }
 
     updateTempHistory(data) {
