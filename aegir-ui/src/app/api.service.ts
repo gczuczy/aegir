@@ -27,15 +27,21 @@ export class ApiService {
     updateAnnounce$ = this.updateSource.asObservable();
     // state timer
     private timer_state;
+    private timer_temphistory;
     // state observable
     private state = new Subject();
+    private state_data = 'Empty';
     private temphistory = new Subject();
+    private temphistory_data = null;
 
     constructor(private http: Http) {
 	if ( ApiService.instance != null ) return ApiService.instance;
 	ApiService.instance = this;
-	this.timer_state = Observable.timer(2000,1000);
+	this.timer_state = Observable.timer(1000,1000);
 	this.timer_state.subscribe(t => {this.updateState(t)});
+
+	this.timer_temphistory = Observable.timer(1000,5000);
+	this.timer_temphistory.subscribe(t => {this.updateTempHistory(t)});
     }
 
     getState(): Observable<{}> {
@@ -48,16 +54,52 @@ export class ApiService {
 
     updateState(t) {
 	let params: URLSearchParams = new URLSearchParams();
-	let needhistory = t%5==0;
-	params.set('history', needhistory?'yes':'no');
 
 	this.http.get(`/api/brewd/state`, {search: params})
 	    .subscribe(res => {
 		let rjson = res.json()['data'];
-		this.state.next(rjson);
-		if ( rjson['temphistory'] ) {
-		    this.temphistory.next(rjson['temphistory']);
+		//console.log('status', rjson);
+		let state = rjson['state'];
+		this.state_data = state;
+		let newstates = new Set(['Empty', 'Loaded', 'PreWait', 'PreHeat', 'NeedMalt']);
+		if ( newstates.has(state) ) {
+		    this.temphistory_data = null;
 		}
+		this.state.next(rjson);
+	    });
+    }
+
+    updateTempHistory(t) {
+	let newstates = new Set(['Empty', 'Loaded', 'PreWait', 'PreHeat', 'NeedMalt']);
+	if ( newstates.has(this.state_data) ) return;
+
+	let params: URLSearchParams = new URLSearchParams();
+	let frm = 0;
+	if ( this.temphistory_data != null ) {
+	    frm = this.temphistory_data['timestamps'][this.temphistory_data['timestamps'].length-1]+1;
+	}
+	params.set('from', frm.toString());
+
+	this.http.get(`/api/brewd/state/temphistory`, {search: params})
+	    .subscribe(res => {
+		let rjson = res.json()['data'];
+		//console.log('got temphistory', rjson, this.temphistory_data);
+		if ( this.temphistory_data == null ) {
+		    this.temphistory_data = rjson;
+		} else {
+		    // merge it to the temphistory_data
+		    // timestamps
+		    for ( let i of rjson['timestamps'] ) {
+			this.temphistory_data['timestamps'].push(i);
+		    }
+		    // sensors
+		    for ( let sensor in rjson['readings'] ) {
+			for ( let value of rjson['readings'][sensor] ) {
+			    this.temphistory_data['readings'][sensor].push(value);
+			}
+		    }
+		}
+		this.temphistory.next(this.temphistory_data);
 	    });
     }
 

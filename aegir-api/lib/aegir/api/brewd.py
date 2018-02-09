@@ -15,6 +15,7 @@ def init(app, api):
     api.add_resource(BrewProgram, '/api/brewd/program')
     api.add_resource(BrewState, '/api/brewd/state')
     api.add_resource(BrewStateVolume, '/api/brewd/state/volume')
+    api.add_resource(BrewStateTempHistory, '/api/brewd/state/temphistory')
     pass
 
 class BrewProgram(flask_restful.Resource):
@@ -180,3 +181,36 @@ class BrewStateVolume(flask_restful.Resource):
 
         return {'status': 'success'}
 
+class BrewStateTempHistory(flask_restful.Resource):
+    '''
+    Fetches the temperature history
+    '''
+    def get(self):
+        '''
+        Retrieves and returns the current volume set
+        '''
+
+        zcmd = 'getTempHistory'
+        frm = flask.request.args.get('from', None)
+        data = {}
+        if not frm is None:
+            try:
+                data['from'] = int(frm)
+            except Exception as e:
+                return {"status": "error", "errors": [str(e)]}, 422
+            pass
+
+        zresp = None
+        try:
+            zresp = aegir.zmq.prmessage(zcmd, data)
+        except Exception as e:
+            #pprint(['error', zresp, e]);
+            return {"status": "error", "errors": [str(e)]}, 422
+
+        if 'status' not in zresp:
+            return {"status": "error", "errors": ['Malformed zmq message']}, 422
+
+        if zresp['status'] == 'error':
+            return {"status": "error", "errors": [zresp['message']]}, 422
+
+        return {'status': 'success', 'data': zresp['data']}

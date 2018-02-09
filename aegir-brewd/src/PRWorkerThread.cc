@@ -71,6 +71,7 @@ namespace aegir {
     c_handlers["resetProcess"] = std::bind(&PRWorkerThread::handleResetProcess, this, std::placeholders::_1);
     c_handlers["getVolume"] = std::bind(&PRWorkerThread::handleGetVolume, this, std::placeholders::_1);
     c_handlers["setVolume"] = std::bind(&PRWorkerThread::handleSetVolume, this, std::placeholders::_1);
+    c_handlers["getTempHistory"] = std::bind(&PRWorkerThread::handleGetTempHistory, this, std::placeholders::_1);
 
     // connect the IO socket
     c_mq_iocmd.connect("inproc://iocmd");
@@ -419,20 +420,6 @@ namespace aegir {
     ProcessState::ThermoDataPoints tcvals;
 
     ProcessState &ps(ProcessState::getInstance());
-    // first check, whether we have to provide the history
-    bool needhistory = false;
-    if ( ps.getState() == ProcessState::States::Mashing && _data.isMember("history") ) {
-      Json::Value history = _data["history"];
-
-      if ( !history.isBool() ) {
-	Json::Value resp;
-	resp["status"] = "error";
-	resp["message"] = "history is not a bool";
-	return std::make_shared<Json::Value>(resp);
-      }
-
-      needhistory = history.asBool();
-    }
 
     ProcessState::Guard guard_ps(ps);
 
@@ -454,56 +441,6 @@ namespace aegir {
       if ( ps.getState() >= ProcessState::States::Loaded ) {
 	data["programid"] = ps.getProgram()->getId();
       }
-
-      // Add the TC History
-      if ( needhistory ) {
-	std::set<std::string> historytcs{"MashTun", "RIMS"};
-
-	uint32_t maxtime = std::numeric_limits<uint32_t>::max();
-	// first, get all our TC readings, and calculate the max time we have currently
-	std::map<std::string, ProcessState::ThermoDataPoints> tcvals;
-	for ( auto &it: tcs ) {
-	  // we only return the graphed TCs here
-	  if ( historytcs.find(it) == historytcs.end() ) continue;
-
-	  tcvals[it] = ProcessState::ThermoDataPoints();
-	  ps.getTCReadings(it, tcvals[it]);
-	  if ( tcvals[it].size() > 5 ) {
-	    // workaround here. Sometimes the last key is returned
-	    // as maxint, if that is the case, we go back one
-	    auto tcit = tcvals[it].rbegin();
-	    uint32_t maxint = std::numeric_limits<uint32_t>::max();
-	    if ( tcit->first == maxint ) ++tcit;
-	    uint32_t lasttime = tcit->first;
-	    if ( lasttime < maxtime ) maxtime = lasttime;
-	    //printf("key:%u maxint:%u maxtime:%u lasttime:%u\n", tcit->first, maxint, maxtime, lasttime);
-	  } else {
-	    maxtime = 0;
-	  }
-	}
-
-	// create the structure
-	// one for the timestamps, and under .readings one for each TC
-	Json::Value th;
-	th["timestamps"] = Json::Value(Json::ValueType::arrayValue);
-	th["readings"] = Json::Value(Json::ValueType::objectValue);
-
-	// create the array JSON object type for each returnd TC
-	for ( auto &it: tcvals ) th["readings"][it.first] = Json::Value(Json::ValueType::arrayValue);
-
-	// add the timestamps, and the readings to the respective arrays
-	for ( uint32_t i=0; i<maxtime; ++i ) {
-	  th["timestamps"].append(i);
-	  for ( auto &it: tcvals ) {
-	    if ( it.second.find(i) != it.second.end() ) {
-	      th["readings"][it.first].append(it.second[i]);
-	    } else {
-	      th["readings"][it.first].append(Json::Value(Json::ValueType::nullValue));
-	    }
-	  }
-	}
-	data["temphistory"] = th;
-      }	// if ( needhistory )
 
       // If we're mashing, then display the current step
       if ( ps.getState() == ProcessState::States::Mashing ) {
@@ -681,6 +618,100 @@ namespace aegir {
     Json::Value retval;
     retval["status"] = "success";
     retval["data"] = Json::Value(Json::ValueType::nullValue);
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRWorkerThread::handleGetTempHistory(const Json::Value &_data) {
+    ProcessState &ps(ProcessState::getInstance());
+
+    // only valid from mashing
+    if ( ps.getState() < ProcessState::States::Mashing ) {
+      throw Exception("Cannot be used before Mashing");
+    }
+
+    // verify the input
+    uint32_t from = 0;
+    if ( _data.isMember("from") ) {
+      Json::Value jsonvalue = _data["from"];
+      if ( !jsonvalue.isNumeric() ) {
+	throw Exception("field 'from' must be numeric");
+      }
+
+      from = jsonvalue.asUInt();
+    }
+
+    Json::Value retval;
+
+    std::set<std::string> historytcs{"MashTun", "RIMS"};
+
+    uint32_t maxtime = std::numeric_limits<uint32_t>::max();
+    // first, get all our TC readings, and calculate the max time we have currently
+    std::map<std::string, ProcessState::ThermoDataPoints> tcvals;
+
+    // fetch the values
+    // ProcesState is only locked during this
+    {
+      std::set<std::string> tcs;
+
+      ProcessState::Guard guard_ps(ps);
+      ps.getThermoCouples(tcs);
+      for ( auto &it: tcs ) {
+	// we only return the graphed TCs here
+	if ( historytcs.find(it) == historytcs.end() ) continue;
+	tcvals[it] = ProcessState::ThermoDataPoints();
+	ps.getTCReadings(it, tcvals[it]);
+      }
+    }
+
+    // now build up the indexes
+    std::set<uint32_t> indexes;
+    for (auto &tcit: tcvals) {
+      for (auto &valit: tcit.second) {
+	indexes.insert(valit.first);
+      }
+    }
+
+    // create the structure
+    // one for the timestamps, and under .readings one for each TC
+    Json::Value th;
+    th["timestamps"] = Json::Value(Json::ValueType::arrayValue);
+    th["readings"] = Json::Value(Json::ValueType::objectValue);
+
+    // create the array JSON object type for each returnd TC
+    for ( auto &it: tcvals )
+      th["readings"][it.first] = Json::Value(Json::ValueType::arrayValue);
+
+
+    int maxcnt(100); // max ammount we return in a single call
+    auto it = indexes.begin();
+    if ( from > 0 ) {
+      // start at the point
+      it = indexes.find(from);
+      // if not found, then start at the next available one
+      if ( it == indexes.end() ) {
+	for (it = indexes.begin(); *it <= from; ++it);
+      }
+    }
+    // the index iterator is positioned for the start of the batch
+    ProcessState::ThermoDataPoints::iterator tdit;
+    for (int i=0; it != indexes.end() && i < maxcnt; ++it, ++i) {
+      // add the timestamp to the vector
+      th["timestamps"].append(*it);
+
+      // look up each TC's data
+      for (auto &tcit: tcvals) {
+	if ( (tdit = tcit.second.find(*it)) != tcit.second.end() ) {
+	  th["readings"][tcit.first].append(tdit->second);
+	} else {
+	  th["readings"][tcit.first].append(Json::Value(Json::ValueType::nullValue));
+	}
+      }
+    }
+
+    // return success
+    retval["status"] = "success";
+    retval["data"] = th;
 
     return std::make_shared<Json::Value>(retval);
   }
