@@ -683,7 +683,7 @@ namespace aegir {
       th["readings"][it.first] = Json::Value(Json::ValueType::arrayValue);
 
 
-    int maxcnt(100); // max ammount we return in a single call
+    int maxcnt(512); // max ammount we return in a single call
     auto it = indexes.begin();
     if ( from > 0 ) {
       // start at the point
