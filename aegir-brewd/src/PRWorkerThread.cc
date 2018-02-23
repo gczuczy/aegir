@@ -68,6 +68,8 @@ namespace aegir {
     c_handlers["getState"] = std::bind(&PRWorkerThread::handleGetState, this, std::placeholders::_1);
     c_handlers["buzzer"] = std::bind(&PRWorkerThread::handleBuzzer, this, std::placeholders::_1);
     c_handlers["hasMalt"] = std::bind(&PRWorkerThread::handleHasMalt, this, std::placeholders::_1);
+    c_handlers["spargeDone"] = std::bind(&PRWorkerThread::handleSpargeDone, this, std::placeholders::_1);
+    c_handlers["startHopping"] = std::bind(&PRWorkerThread::handleStartHopping, this, std::placeholders::_1);
     c_handlers["resetProcess"] = std::bind(&PRWorkerThread::handleResetProcess, this, std::placeholders::_1);
     c_handlers["getVolume"] = std::bind(&PRWorkerThread::handleGetVolume, this, std::placeholders::_1);
     c_handlers["setVolume"] = std::bind(&PRWorkerThread::handleSetVolume, this, std::placeholders::_1);
@@ -547,12 +549,49 @@ namespace aegir {
     retval["data"] = Json::Value();
 
     ProcessState &ps(ProcessState::getInstance());
-    ProcessState::Guard guard_ps(ps);
     if ( ps.getState() != ProcessState::States::NeedMalt ) {
       throw Exception("Only valid at state NeedMalt");
     }
 
     ps.setState(ProcessState::States::Mashing);
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRWorkerThread::handleSpargeDone(const Json::Value &_data) {
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value();
+
+    ProcessState &ps(ProcessState::getInstance());
+    if ( ps.getState() != ProcessState::States::Sparging ) {
+      throw Exception("Only valid at state Sparging");
+    }
+
+    ps.setState(ProcessState::States::PreBoil);
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRWorkerThread::handleStartHopping(const Json::Value &_data) {
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value();
+
+    ProcessState &ps(ProcessState::getInstance());
+    // check the state
+    if ( ps.getState() != ProcessState::States::PreBoil ) {
+      throw Exception("Only valid at state Sparging");
+    }
+
+    ProcessState::ThermoDataPoints bk;
+    ps.getTCReadings("BK", bk);
+    // check the last BoilKettle temperature, must be above 100C
+    if ( bk.rbegin()->second < 100.0 ) {
+      throw Exception("BoilKettle must be above boiling point");
+    }
+
+    ps.setState(ProcessState::States::Hopping);
 
     return std::make_shared<Json::Value>(retval);
   }
@@ -563,7 +602,6 @@ namespace aegir {
     retval["data"] = Json::Value();
 
     ProcessState &ps(ProcessState::getInstance());
-    ProcessState::Guard guard_ps(ps);
     if ( ps.getState() == ProcessState::States::Empty) {
       throw Exception("Not valid when Empty");
     }
@@ -645,7 +683,6 @@ namespace aegir {
 
     std::set<std::string> historytcs{"MashTun", "RIMS"};
 
-    uint32_t maxtime = std::numeric_limits<uint32_t>::max();
     // first, get all our TC readings, and calculate the max time we have currently
     std::map<std::string, ProcessState::ThermoDataPoints> tcvals;
 
@@ -684,6 +721,7 @@ namespace aegir {
 
 
     int maxcnt(512); // max ammount we return in a single call
+    th["maxcount"] = maxcnt;
     auto it = indexes.begin();
     if ( from > 0 ) {
       // start at the point
@@ -694,10 +732,16 @@ namespace aegir {
       }
     }
     // the index iterator is positioned for the start of the batch
+    uint32_t prevtime(from);
     ProcessState::ThermoDataPoints::iterator tdit;
     for (int i=0; it != indexes.end() && i < maxcnt; ++it, ++i) {
       // add the timestamp to the vector
-      th["timestamps"].append(*it);
+      uint32_t currtime(*it);
+      if ( currtime == std::numeric_limits<uint32_t>::max() ) {
+	currtime = prevtime +1;
+      }
+      prevtime = currtime;
+      th["timestamps"].append(currtime);
 
       // look up each TC's data
       for (auto &tcit: tcvals) {

@@ -122,6 +122,20 @@ export class ApiService {
 	    });
     }
 
+    spargeDone(): Observable<{}> {
+	let body = JSON.stringify({'command': 'spargeDone'});
+	let headers = new Headers({'Content-Type': 'application/json'});
+	let options = new RequestOptions({headers: headers});
+
+	console.log('calling /api/brewd/state', body, options);
+
+	return this.http.post('/api/brewd/state', body, options)
+	    .map((res:Response) => {
+		console.log('Catching result, ', res.status);
+		return res.json();
+	    });
+    }
+
     getVolume(): Observable<{}> {
 	return this.http.get('/api/brewd/state/volume')
 	    .map(this.extractData)
@@ -141,6 +155,20 @@ export class ApiService {
 		return res.json();
 	    })
 	    .catch(this.handleError);
+    }
+
+    startBoil(): Observable<{}> {
+	let body = JSON.stringify({'command': 'startBoil'});
+	let headers = new Headers({'Content-Type': 'application/json'});
+	let options = new RequestOptions({headers: headers});
+
+	console.log('calling /api/brewd/state', body, options);
+
+	return this.http.post('/api/brewd/state', body, options)
+	    .map((res:Response) => {
+		console.log('Catching result, ', res.status);
+		return res.json();
+	    });
     }
 
     abortBrew(): Observable<{}> {

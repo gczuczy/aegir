@@ -1,0 +1,4 @@
+Controller::tempcontrol:
+ - Temperature overrun by 1C during mash steps with malts.
+   Probably too intensive heating near the step's temperature - fix needs testing
+ - During mashing MT temp underrun is causing a too intensive HE spike - fix in place, needs testing with malts

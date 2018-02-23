@@ -18,6 +18,7 @@ export class BrewComponent implements OnInit {
     public needmalt = false;
     public targettemp = 0;
     public mashstep = null;
+    public bktemp:number = null;
 
     // volume
     public volume: number = 42;
@@ -90,6 +91,9 @@ export class BrewComponent implements OnInit {
 	    let temp = data['currtemp'][key];
 	    if ( temp > 1000 ) temp = 0.0;
 	    this.sensors.push({'sensor': key, 'temp': parseFloat(temp).toFixed(2)});
+	    if ( key == "BK" ) {
+		this.bktemp = parseFloat(temp);
+	    }
 	}
 
 	// if we have the programid, then load the program as well
@@ -173,6 +177,10 @@ export class BrewComponent implements OnInit {
 	this.api.hasMalt().subscribe();
     }
 
+    onSpargeDone() {
+	this.api.spargeDone().subscribe();
+    }
+
     onAbortBrew() {
 	if ( confirm("This will cancel the brew process, are you sure?") ) {
 	    this.api.abortBrew().subscribe();
@@ -192,5 +200,10 @@ export class BrewComponent implements OnInit {
 
 	// and finally display the newly active volume
 	this.onVolumeReset();
+    }
+
+    onStartBoil() {
+	this.api.startBoil()
+	    .subscribe(data => console.log(data));
     }
 }

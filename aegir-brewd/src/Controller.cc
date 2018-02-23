@@ -435,19 +435,19 @@ namespace aegir {
   }
 
   void Controller::stageSparging(PINTracker &_pt) {
-    printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    //printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
     float endtemp = c_prog->getEndTemp();
     setTempTarget(endtemp, c_cfg->getHeatOverhead());
     c_needcontrol = true;
   }
 
   void Controller::stagePreBoil(PINTracker &_pt) {
-    printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    //printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
     c_needcontrol = false;
   }
 
   void Controller::stageHopping(PINTracker &_pt) {
-    printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    //printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
     c_needcontrol = false;
   }
 
@@ -518,7 +518,7 @@ namespace aegir {
     if ( curr_mt >= c_temptarget ) {
       T_target_rims = c_temptarget * 1.01;
     } else {
-      T_target_rims = c_temptarget + std::min(c_tempoverheat, 0.2f+(c_temptarget - curr_mt)*5);
+      T_target_rims = c_temptarget + std::min(c_tempoverheat, 0.2f+(c_temptarget - curr_mt)*2.3f);
     }
 
     printf("Controller::tempControl(): %li RIMS: dt:%.2f last:%.2f curr:%.2f dT:%.4f target:%.2f\n",
@@ -536,6 +536,7 @@ namespace aegir {
     float dt_mt = dT_mtc_temptarget * 60.0; // heating with 1C/60s
 
     float hepwr = (1.0*c_cfg->getHEPower())/1000; // in kW
+    float pwr_max = hepwr;
     float pwr_mt;
     float pwr_dissipation = 0;
     float pwr_dissipation_rims = 0;
@@ -593,10 +594,10 @@ namespace aegir {
 	  // heat it up with the current HERatio
 	  float timetotarget = dT_mtc_temptarget / dT_mt;
 
-	  if ( timetotarget < 10 ) {
+	  if ( timetotarget < 45 ) {
 	    pwr_mt *= 0.3;
 	    nextcontrol = 5;
-	  } else if ( timetotarget < 30 ) {
+	  } else if ( timetotarget < 120 ) {
 	    pwr_mt *= 0.6;
 	    nextcontrol = 10;
 	  }
@@ -618,6 +619,22 @@ namespace aegir {
 	    nextcontrol = 15;
 	  }
 	  pwr_mt = (4.2 * c_ps.getVolume() * dT_mtc_temptarget) / nextcontrol;
+
+	  // adjust the max power. let's see how intensively we're cooling
+	  {
+	    auto it = temps_mt.find(temps_mt.rbegin()->first - 300);
+	    if ( it == temps_mt.end() || it->second < curr_mt) {
+	      printf("!! RIMS cooling, can't find t-300 or it's cooler than current temp\n");
+	      pwr_max = hepwr * 0.35;
+	      printf("Limiting max power to 35%%: %.2f\n", pwr_max);
+	    } else {
+	      float diff_temp = it->second - curr_mt;
+	      uint32_t diff_time = now - it->first;
+	      float pwr_cooling = (4.2 * c_ps.getVolume() * diff_temp) / diff_time;
+	      pwr_max = pwr_cooling * 1.5;
+	      printf("Cooling (%.2f C / %i sec) limiting pwr to %.2f\n", diff_temp, diff_time, pwr_max);
+	    }
+	  }
 	}
       }	// if ( dT_mt > 0 ) else
     }	// if ( nodata ) else
@@ -680,8 +697,18 @@ namespace aegir {
 	       pwr_rims, flowrate, T_target_rims, curr_mt);
       }
 
+      if ( dT_mtc_temptarget < 0.5 ) {
+	pwr_rims *= 0.83;
+      } else if ( dT_mtc_temptarget < 1.0 ) {
+	pwr_rims *= 0.89;
+      } else if ( dT_mtc_temptarget < 2.0 ) {
+	pwr_rims *= 0.95;
+      }
+
       // set the max boundary
-      if ( curr_mt >= c_temptarget ) {
+      if ( curr_mt > (c_temptarget + 0.5) ) {
+	pwr_rims_max = 0;
+      } else if ( curr_mt >= c_temptarget ) {
 	// we are only compensating for the heat loss here
 	pwr_rims_max = pwr_rims_min;
       }
@@ -691,9 +718,9 @@ namespace aegir {
     }
 
     // apply min/max boundaries
-    pwr_rims_final = std::min(std::max(pwr_rims_min, pwr_rims)+ pwr_dissipation_rims, pwr_rims_max);
-    printf("Controller::tempControl(): RIMS pwr: final:%.2f min:%.2f max:%.2f calc:%.2f\n",
-	   pwr_rims_final, pwr_rims_min, pwr_rims_max, pwr_rims);
+    pwr_rims_final = std::min({std::max(pwr_rims_min, pwr_rims)+ pwr_dissipation_rims, pwr_rims_max, pwr_max});
+    printf("Controller::tempControl(): RIMS pwr: final:%.2f min:%.2f max:%.2f calc:%.2f max:%.2f\n",
+	   pwr_rims_final, pwr_rims_min, pwr_rims_max, pwr_rims, pwr_max);
     float her_rims = pwr_rims_final / hepwr;
 
     // MashTun heating element on-ratio
@@ -701,7 +728,7 @@ namespace aegir {
 
     // here we also define a minimum power, because there's heat
     // dissipation around the tubing
-    float pwr_final = std::max(pwr_abs_min, std::min(pwr_mt + pwr_dissipation, pwr_rims_final));
+    float pwr_final = std::max(pwr_abs_min, std::min({pwr_mt + pwr_dissipation, pwr_rims_final}));
     float heratio = pwr_final / hepwr;
     printf("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.2f(MT:%.2f / RIMS:%.2f)\n",
 	   c_temptarget, c_tempoverheat,
@@ -781,7 +808,7 @@ namespace aegir {
       auto it=temps_rims.rbegin();
       uint32_t itf = it->first;
       startedat = now - it->first;
-#if 0
+#if 1
       printf("Adjusted startedat to %u now:%u itf:%u\n", startedat, now, itf);
 #endif
     }
@@ -791,7 +818,7 @@ namespace aegir {
     uint32_t last_end = now - startedat;
     float hepwr = (1.0*c_cfg->getHEPower())/1000; // in kW
 
-#if 0
+#if 1
     printf("now:%u startedat:%u last_end:%u\n", now, startedat, last_end);
 #endif
 
@@ -843,7 +870,7 @@ namespace aegir {
 
       float V = (pwr * dt) / (4.2 * dT);
 
-#if 0
+#if 1
       printf("Controller::calcFlowRate(): %u: %.4f = (%.2f * %.2f) / (4.2 * %.2f) (t_total:%u)\n",
 	     it->first, V, pwr, dt, dT, t_total);
 #endif
