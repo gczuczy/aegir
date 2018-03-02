@@ -82,6 +82,7 @@ namespace aegir {
     inline float getSensorTemp(const std::string &_sensor) const {return c_lasttemps.find(_sensor)->second;};
     //inline time_t getStartedAt() const {return c_startedat;};
     uint32_t getStartedAt() const;
+    uint32_t getEndSparge() const {uint32_t x=c_t_endsparge; return x;};
     // mash steps
     inline ProcessState &setMashStep(int8_t _ms) {c_mashstep=_ms; return *this;};
     inline int8_t getMashStep() const {return c_mashstep;};
@@ -101,6 +102,7 @@ namespace aegir {
     uint32_t c_startat;
     std::atomic<uint32_t> c_volume; //liters
     std::atomic<uint32_t> c_startedat; //when we went from !isactive->isactive
+    std::atomic<uint32_t> c_t_endsparge; // when sparging is done
     // cache the last readings
     std::map<std::string, float> c_lasttemps;
     // states

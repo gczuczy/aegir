@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include <map>
+#include <limits>
 
 namespace aegir {
 
@@ -104,6 +105,9 @@ namespace aegir {
     if ( c_state < States::Mashing && _st >= States::Mashing )
       c_startedat = time(0);
 
+    if ( c_state <= States::Sparging && _st > States::Sparging )
+      c_t_endsparge = time(0);
+
     // and finally set the state
     States old(c_state);
     c_state = _st;
@@ -124,6 +128,7 @@ namespace aegir {
     c_startat = 0;
     c_volume = 0;
     c_startedat = 0;
+    c_t_endsparge = std::numeric_limits<uint32_t>::max();
 
     for (auto &it: c_lasttemps) it.second = 0;
 

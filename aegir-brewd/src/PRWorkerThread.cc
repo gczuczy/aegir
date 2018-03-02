@@ -733,8 +733,9 @@ namespace aegir {
     }
     // the index iterator is positioned for the start of the batch
     uint32_t prevtime(from);
+    uint32_t until(ps.getEndSparge());
     ProcessState::ThermoDataPoints::iterator tdit;
-    for (int i=0; it != indexes.end() && i < maxcnt; ++it, ++i) {
+    for (int i=0; it != indexes.end() && i < maxcnt && *it <= until; ++it, ++i) {
       // add the timestamp to the vector
       uint32_t currtime(*it);
       if ( currtime == std::numeric_limits<uint32_t>::max() ) {
