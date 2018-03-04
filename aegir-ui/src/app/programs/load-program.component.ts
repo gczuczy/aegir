@@ -40,7 +40,7 @@ export class LoadProgramComponent implements OnInit {
 		    id: [this.program['id']],
 		    startmode: ["now"],
 		    startat: [(new Date()).toISOString().slice(0,16), [Validators.required]],
-		    volume: [35, [Validators.required, IntValidator.minValue(5), IntValidator.maxValue(45)]],
+		    volume: [35, [Validators.required, IntValidator.minValue(5), IntValidator.maxValue(80)]],
 		});
 	    });
     }
