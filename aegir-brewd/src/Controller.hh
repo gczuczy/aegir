@@ -45,6 +45,7 @@ namespace aegir {
     typedef std::function<void(Controller*, PINTracker&)> stagefunc_t;
     std::map<ProcessState::States, stagefunc_t> c_stagehandlers;
     void onStateChange(ProcessState::States _old, ProcessState::States _new);
+    void maintenanceMode(PINTracker &_pt);
     void stageEmpty(PINTracker &_pt);
     void stageLoaded(PINTracker &_pt);
     void stagePreWait(PINTracker &_pt);

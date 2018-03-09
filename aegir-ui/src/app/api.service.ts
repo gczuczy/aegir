@@ -70,7 +70,8 @@ export class ApiService {
     }
 
     updateTempHistory(t) {
-	let newstates = new Set(['Empty', 'Loaded', 'PreWait', 'PreHeat', 'NeedMalt']);
+	let newstates = new Set(['Maintenance', 'Empty', 'Loaded', 'PreWait', 'PreHeat', 'NeedMalt',
+				 'PreBoil', 'Hopping', 'Cooling', 'Finished']);
 	if ( newstates.has(this.state_data) ) return;
 
 	let params: URLSearchParams = new URLSearchParams();
@@ -263,4 +264,44 @@ export class ApiService {
 	return Observable.throw(errMsg);
     }
 
+    startMaintenance(): Observable<{}> {
+	let body = JSON.stringify({'mode': 'start'});
+	let headers = new Headers({'Content-Type': 'application/json'});
+	let options = new RequestOptions({headers: headers});
+
+	return this.http.put('/api/brewd/maintenance', body, options)
+	    .map((res:Response) => {
+		//console.log('Catching result, ', res.status);
+		return res.json();
+	    });
+    }
+
+    stopMaintenance(): Observable<{}> {
+	let body = JSON.stringify({'mode': 'stop'});
+	let headers = new Headers({'Content-Type': 'application/json'});
+	let options = new RequestOptions({headers: headers});
+
+	return this.http.put('/api/brewd/maintenance', body, options)
+	    .map((res:Response) => {
+		//console.log('Catching result, ', res.status);
+		return res.json();
+	    });
+    }
+
+    setMaintenance(pump, heat, temp): Observable<{}> {
+	let body = JSON.stringify({'pump': pump,
+				   'heat': heat,
+				   'temp': temp});
+	let headers = new Headers({'Content-Type': 'application/json'});
+	let options = new RequestOptions({headers: headers});
+
+	//console.log("Setting maint to ", pump, heat, temp, body, headers, options);
+
+	return this.http.post('/api/brewd/maintenance', body, options)
+	    .map((res:Response) => {
+		console.log('Catching result, ', res.status);
+		return res.json();
+	    })
+	    .catch(this.handleError);
+    }
 }

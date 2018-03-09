@@ -42,6 +42,8 @@ namespace aegir {
     c_ps.registerStateChange(std::bind(&Controller::onStateChange, this, std::placeholders::_1, std::placeholders::_2));
 
     // the stage handlers
+    c_stagehandlers[ProcessState::States::Maintenance] = std::bind(&Controller::maintenanceMode,
+							     std::placeholders::_1, std::placeholders::_2);
     c_stagehandlers[ProcessState::States::Empty] = std::bind(&Controller::stageEmpty,
 							     std::placeholders::_1, std::placeholders::_2);
     c_stagehandlers[ProcessState::States::Loaded] = std::bind(&Controller::stageLoaded
@@ -211,10 +213,13 @@ namespace aegir {
 	tc_installed = false;
       }
 
-      if ( c_stoprecirc ) {
-	setPIN("rimspump", PINState::Off);
+      // if the recirc button is pushed, or we don't need tempcontrol anymore
+      // stop the pump and the heating element
+      if ( c_stoprecirc || !c_needcontrol ) {
+	if ( c_ps.getState() != ProcessState::States::Maintenance )
+	  setPIN("rimspump", PINState::Off);
 	setPIN("rimsheat", PINState::Off);
-      } // stop recirculation
+      } // stop recirculation or we don't need control anymore
 
       // end the GPIO change cycle
       endCycle();
@@ -290,7 +295,8 @@ namespace aegir {
     }
 
     // when the state is reset
-    if ( _old == ProcessState::States::Empty ) {
+    if ( _old == ProcessState::States::Empty ||
+	 _old == ProcessState::States::Maintenance ) {
       c_prog = nullptr;
       c_last_flow_volume = -1;
       c_temptarget = 0;
@@ -299,6 +305,25 @@ namespace aegir {
       setPIN("rimsheat", PINState::Off);
       setPIN("rimspump", PINState::Off);
     }
+  }
+
+  void Controller::maintenanceMode(PINTracker &_pt) {
+    bool pump = c_ps.getMaintPump();
+    bool heat = c_ps.getMaintHeat();
+    float temp = c_ps.getMaintTemp();
+
+#if 0
+    printf("Controller::maintenanceMode P:%c H:%c T:%2.f\n",
+	   pump?'t':'f',
+	   heat?'t':'f',
+	   temp);
+#endif
+
+    setPIN("rimspump", ((pump || heat) ? PINState::On : PINState::Off));
+
+    setTempTarget(temp, 6.0f);
+    c_needcontrol = heat;
+
   }
 
   void Controller::stageEmpty(PINTracker &_pt) {
@@ -443,21 +468,29 @@ namespace aegir {
 
   void Controller::stagePreBoil(PINTracker &_pt) {
     //printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    setPIN("rimspump", PINState::Off);
+    setPIN("rimsheat", PINState::Off);
     c_needcontrol = false;
   }
 
   void Controller::stageHopping(PINTracker &_pt) {
     //printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    setPIN("rimspump", PINState::Off);
+    setPIN("rimsheat", PINState::Off);
     c_needcontrol = false;
   }
 
   void Controller::stageCooling(PINTracker &_pt) {
     printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    setPIN("rimspump", PINState::Off);
+    setPIN("rimsheat", PINState::Off);
     c_needcontrol = false;
   }
 
   void Controller::stageFinished(PINTracker &_pt) {
     printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+    setPIN("rimspump", PINState::Off);
+    setPIN("rimsheat", PINState::Off);
     c_needcontrol = false;
   }
 
@@ -572,7 +605,8 @@ namespace aegir {
     // now calculate the MT heating requirements
     if ( nodata ) {
       // during preheat we don't have to care for 1C/60s
-      if ( c_ps.getState() == ProcessState::States::PreHeat ) {
+      if ( c_ps.getState() == ProcessState::States::PreHeat ||
+	   c_ps.getState() == ProcessState::States::Maintenance ) {
 	pwr_mt = hepwr;
       } else {
 	// dT_mtc_temptarget is present on both sides of the division, that's why it's

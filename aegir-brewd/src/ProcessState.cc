@@ -11,6 +11,7 @@
 namespace aegir {
 
   static std::map<ProcessState::States, std::string> g_strstates{
+    {ProcessState::States::Maintenance, "Maintenance"},
     {ProcessState::States::Empty, "Empty"},
       {ProcessState::States::Loaded, "Loaded"},
       {ProcessState::States::PreWait, "PreWait"},
@@ -75,6 +76,9 @@ namespace aegir {
     if ( isActive() )
       throw Exception("Cannot load program: brew process active");
 
+    if ( c_state == States::Maintenance )
+      throw Exception("Program loading is not allowed during maintenance");
+
     Guard g(*this);
     c_program = std::make_shared<Program>(_prog);
     c_startat = _startat;
@@ -97,7 +101,7 @@ namespace aegir {
 
     // state can't decrease
     // except when resetting to Empty
-    if ( _st != States::Empty && _st <= c_state )
+    if ( (_st != States::Empty && _st != States::Maintenance)&& _st <= c_state )
       throw Exception("ProcessState::setSate(%s): can't decrease the state", g_strstates[_st].c_str());
 
     // once we need to start keeping track of the time,
@@ -137,6 +141,7 @@ namespace aegir {
     c_mashstep = -1;
     c_mashstepstart = 0;
     c_targettemp = 0;
+    c_maint_temp = 37;
 
     setState(States::Empty);
 

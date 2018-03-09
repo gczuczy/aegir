@@ -1,0 +1,48 @@
+<div *ngIf="!canmaint" class="alert alert-danger" role=alert>
+  Maintenance is not allowed during an active brew. Brew state has to be either Empty or Finished.
+</div>
+<div *ngIf="canmaint && !inmaint" class="container-fluid">
+  <button class="btn btn-warning btn-sm" (click)="startMaintenance()">Enter Maintenance Mode</button>
+</div>
+<div *ngIf="inmaint" class="container-fluid">
+  <div class="row">
+    <!-- left side will be the controls and short stuff-->
+    <div class="col-sm2">
+      <button class="btn btn-warning btn-sm" (click)="stopMaintenance()">Leave Maintenance Mode</button>
+    </div>
+  </div>
+  <!-- The maint control panel -->
+  <div class="row">
+    <!-- temperatures -->
+    <div class="col-sm2">
+      <table class="table table-striped table-pad-2px">
+	<ng-template ngFor let-step [ngForOf]="sensors">
+	  <tr>
+	    <th>{{step.sensor}}</th>
+	    <td>{{step.temp}} C</td>
+	  </tr>
+	</ng-template>
+      </table>
+    </div>
+    <!-- Controls -->
+    <div class="col-sm2">
+      <table class="table table-pad-2px">
+	<tr>
+	  <th>Pump</th>
+	 <td><ui-switch [(ngModel)]="pumpon" (change)="onPumpChange($event)"></ui-switch></td>
+	</tr>
+	<tr>
+	  <th>Heat</th>
+	 <td><ui-switch [(ngModel)]="heaton" (change)="onHeatChange($event)"></ui-switch></td>
+	</tr>
+	<tr>
+	  <th>Temperature</th>
+	  <td>
+	    <input id="volume" class="form-control" type="number" value="{{heattemp}}" [(ngModel)]="heattemp">
+	    <button class="btn btn-primary" type="submit" (click)="onTempSet()">Set</button>
+	  </td>
+	</tr>
+      </table>
+    </div>
+  </div>
+</div>

@@ -39,7 +39,8 @@ namespace aegir {
     };
     friend Guard;
     enum class States: uint8_t {
-      Empty=0, // initialized, no program loadad
+      Maintenance=0, // Maintenance mode
+      Empty, // initialized, no program loadad
 	Loaded, // program loaded, but not started
 	PreWait, // timed mode, waiting for pre-heat start
 	PreHeat, // pre-heating to starttemp
@@ -91,6 +92,13 @@ namespace aegir {
     // target temperatures
     inline ProcessState &setTargetTemp(float _tt) { c_targettemp = _tt; return *this; };
     inline float getTargetTemp() const { return c_targettemp;};
+    // maintenance mode
+    inline ProcessState &setMaintPump(bool _val) {c_maint_pump = _val; return *this; };
+    inline bool getMaintPump() {return c_maint_pump; };
+    inline ProcessState &setMaintHeat(bool _val) {c_maint_heat = _val; return *this; };
+    inline bool getMaintHeat() {return c_maint_heat; };
+    inline ProcessState &setMaintTemp(float _val) {c_maint_temp = _val; return *this; };
+    inline float getMaintTemp() {return c_maint_temp; };
 
   protected:
     std::recursive_mutex c_mtx_state;
@@ -113,6 +121,10 @@ namespace aegir {
     std::atomic<time_t> c_mashstepstart;
     // the current target temp
     std::atomic<float> c_targettemp;
+    // maintmode variables
+    std::atomic<bool> c_maint_pump;
+    std::atomic<bool> c_maint_heat;
+    std::atomic<float> c_maint_temp;
   };
 }
 

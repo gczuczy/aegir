@@ -16,6 +16,7 @@ def init(app, api):
     api.add_resource(BrewState, '/api/brewd/state')
     api.add_resource(BrewStateVolume, '/api/brewd/state/volume')
     api.add_resource(BrewStateTempHistory, '/api/brewd/state/temphistory')
+    api.add_resource(BrewMaintenance, '/api/brewd/maintenance')
     pass
 
 class BrewProgram(flask_restful.Resource):
@@ -218,3 +219,73 @@ class BrewStateTempHistory(flask_restful.Resource):
             return {"status": "error", "errors": [zresp['message']]}, 422
 
         return {'status': 'success', 'data': zresp['data']}
+
+    pass
+
+class BrewMaintenance(flask_restful.Resource):
+    '''
+    Maintenance-mode related calls
+    '''
+    def put(self):
+        '''
+        Putting into maintmode, and finishing it
+        '''
+        data = flask.request.get_json();
+
+        if not 'mode' in data:
+            return {"status": "error", "errors": ['Missing mode parameter']}, 422
+
+        setmode = data['mode']
+        if not setmode in ['start', 'stop']:
+            return {"status": "error", "errors": ['Invalid maintmode: {m}'.format(m=setmode)]}, 422
+
+        zcmd = None
+        if setmode == 'start':
+            zcmd = 'startMaintenance'
+        elif setmode == 'stop':
+            zcmd = 'stopMaintenance'
+        else:
+            return {'status': 'error', 'errors': ['Invalid maintmode']}, 422
+
+        zresp = None
+        try:
+            zresp = aegir.zmq.prmessage(zcmd, None)
+        except Exception as e:
+            return {"status": "error", "errors": [str(e)]}, 422
+
+        if zresp['status'] != 'success':
+            return {'status': 'error', 'errors': [zresp['message']]}, 422
+
+        return {"status": "success", "data": zresp['data']}, 200
+
+    def post(self):
+        data = flask.request.get_json();
+
+        zdata = {}
+        if 'pump' in data:
+            zdata['pump'] = (data['pump'] == True)
+            pass
+        if 'heat' in data:
+            zdata['heat'] = (data['heat'] == True)
+            pass
+        if 'temp' in data:
+            zdata['temp'] = float(data['temp'])
+            pass
+
+        if len(zdata)==0:
+            return {'status': 'error', 'errors': ['No fields set']}, 422
+
+        pprint(zdata)
+
+        zresp = None
+        try:
+            zresp = aegir.zmq.prmessage('setMaintenance', zdata)
+        except Exception as e:
+            return {"status": "error", "errors": [str(e)]}, 422
+
+        if zresp['status'] != 'success':
+            return {'status': 'error', 'errors': [zresp['message']]}, 422
+
+        return {"status": "success", "data": zresp['data']}, 200
+        pass
+    pass

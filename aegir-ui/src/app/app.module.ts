@@ -8,6 +8,7 @@ import { Angular2FontawesomeModule } from 'angular2-fontawesome/angular2-fontawe
 import { BrewModule } from './brew/brew.module';
 import { ProgramsModule } from './programs/programs.module';
 import { SettingsModule } from './settings/settings.module';
+import { MaintenanceModule } from './maintenance/maintenance.module';
 
 import { AppComponent } from './app.component';
 
@@ -26,6 +27,7 @@ import { APP_ROUTES } from './app.routes';
 	BrewModule,
 	SettingsModule,
 	ProgramsModule,
+	MaintenanceModule,
 	RouterModule.forRoot(APP_ROUTES),
     ],
     providers: [

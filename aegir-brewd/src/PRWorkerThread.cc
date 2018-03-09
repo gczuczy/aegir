@@ -74,6 +74,9 @@ namespace aegir {
     c_handlers["getVolume"] = std::bind(&PRWorkerThread::handleGetVolume, this, std::placeholders::_1);
     c_handlers["setVolume"] = std::bind(&PRWorkerThread::handleSetVolume, this, std::placeholders::_1);
     c_handlers["getTempHistory"] = std::bind(&PRWorkerThread::handleGetTempHistory, this, std::placeholders::_1);
+    c_handlers["startMaintenance"] = std::bind(&PRWorkerThread::handleStartMaintenance, this, std::placeholders::_1);
+    c_handlers["stopMaintenance"] = std::bind(&PRWorkerThread::handleStopMaintenance, this, std::placeholders::_1);
+    c_handlers["setMaintenance"] = std::bind(&PRWorkerThread::handleSetMaintenance, this, std::placeholders::_1);
 
     // connect the IO socket
     c_mq_iocmd.connect("inproc://iocmd");
@@ -240,6 +243,11 @@ namespace aegir {
   'volume': 35}
    */
   std::shared_ptr<Json::Value> PRWorkerThread::handleLoadProgram(const Json::Value &_data) {
+    ProcessState &ps(ProcessState::getInstance());
+
+    // during maintenance program loading is disabled
+    if ( ps.getState() == ProcessState::States::Maintenance )
+      throw Exception("Program loading is not allowed during maintenance");
 
     if ( _data.type() != Json::ValueType::objectValue )
       throw Exception("Data type should be an objectvalue");
@@ -760,4 +768,95 @@ namespace aegir {
 
     return std::make_shared<Json::Value>(retval);
   }
+
+  std::shared_ptr<Json::Value> PRWorkerThread::handleStartMaintenance(const Json::Value &_data) {
+    ProcessState &ps(ProcessState::getInstance());
+
+    // to start maintenance, we need to be in empty or finised state
+    auto state = ps.getState();
+    if ( state != ProcessState::States::Empty &&
+	 state != ProcessState::States::Finished ) {
+      throw Exception("Cannot start maintenance in the current state");
+    }
+
+    ps.setState(ProcessState::States::Maintenance);
+
+    // return success
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value(Json::ValueType::nullValue);
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRWorkerThread::handleStopMaintenance(const Json::Value &_data) {
+    ProcessState &ps(ProcessState::getInstance());
+
+    // we cannot stop maintenance if we're not in maintmode
+    if ( ps.getState() != ProcessState::States::Maintenance ) {
+      throw Exception("Cannot stop maintenance in the current state");
+    }
+
+    ps.setState(ProcessState::States::Empty);
+
+    // return success
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value(Json::ValueType::nullValue);
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRWorkerThread::handleSetMaintenance(const Json::Value &_data) {
+    ProcessState &ps(ProcessState::getInstance());
+
+    // we cannot set maintenance options if we're not in maintmode
+    if ( ps.getState() != ProcessState::States::Maintenance ) {
+      throw Exception("Cannot set maintenance options in the current state");
+    }
+
+    bool pump(false), heat(false);
+    float temp(37);
+    bool haspump(false), hasheat(false), hastemp(false);
+    Json::Value jsonvalue;
+
+    // verify the input
+    if ( _data.isMember("pump") ) {
+      haspump = true;
+      jsonvalue = _data["pump"];
+      if ( !jsonvalue.isBool() )
+	throw Exception("pump must be of the type bool");
+      pump = jsonvalue.asBool();
+    }
+    if ( _data.isMember("heat") ) {
+      hasheat = true;
+      jsonvalue = _data["heat"];
+      if ( !jsonvalue.isBool() )
+	throw Exception("heat must be of the type bool");
+      heat = jsonvalue.asBool();
+    }
+    if ( _data.isMember("temp") ) {
+      hastemp = true;
+      jsonvalue = _data["temp"];
+      if ( !jsonvalue.isNumeric() )
+	throw Exception("temp must be a numeric type");
+      temp = jsonvalue.asFloat();
+    }
+
+    if ( !haspump && !hasheat && !hastemp )
+      throw Exception("At least one of the fields must be supplied");
+
+    // we're defensive. Do not turn on the heat without the pump
+    if ( heat && !pump ) heat = false;
+
+    ps.setMaintPump(pump).setMaintTemp(temp).setMaintHeat(heat);
+
+    // return success
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value(Json::ValueType::nullValue);
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
 }
