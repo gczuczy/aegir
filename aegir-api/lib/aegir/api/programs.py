@@ -40,34 +40,38 @@ def validateProgram(prog):
         pass
 
     # check the mash steps
-    for i in range(len(prog['mashsteps'])):
-        mintemp = prog['starttemp']
-        if i != 0:
-            mintemp = prog['mashsteps'][i-1]['temp']
-            pass
-        maxtemp = prog['endtemp']
-        if i != len(prog['mashsteps'])-1:
-            maxtemp = prog['mashsteps'][i+1]['temp']
-            pass
-        if prog['mashsteps'][i]['temp'] < mintemp or prog['mashsteps'][i]['temp'] > maxtemp:
-            errors.append("Mash steps temperatures are out of line {temp}".format(temp=prog['mashsteps'][i]['temp']))
-            pass
-        if not prog['mashsteps'][i]['order'] == i:
-            errors.append('Mash Step order out of place: {order}!={i}'.format(order=prog['mashsteps'][i]['order'],
-                                                                              i=i))
+    if not prog['nomash']:
+        for i in range(len(prog['mashsteps'])):
+            mintemp = prog['starttemp']
+            if i != 0:
+                mintemp = prog['mashsteps'][i-1]['temp']
+                pass
+            maxtemp = prog['endtemp']
+            if i != len(prog['mashsteps'])-1:
+                maxtemp = prog['mashsteps'][i+1]['temp']
+                pass
+            if prog['mashsteps'][i]['temp'] < mintemp or prog['mashsteps'][i]['temp'] > maxtemp:
+                errors.append("Mash steps temperatures are out of line {temp}".format(temp=prog['mashsteps'][i]['temp']))
+                pass
+            if not prog['mashsteps'][i]['order'] == i:
+                errors.append('Mash Step order out of place: {order}!={i}'.format(order=prog['mashsteps'][i]['order'],
+                                                                                  i=i))
+                pass
             pass
         pass
 
     # validate the hops
-    for hop in prog['hops']:
-        if hop['attime'] < 0 or hop['attime'] > prog['boiltime']:
-            errors.append('Hop timing must be greater than 0 and less than boiltime')
-            pass
-        if hop['quantity'] < 0:
-            errors.append('Hop quantity must be positive')
-            pass
-        if len(hop['name']) < 3 or len(hop['name'])>32:
-            errors.append('Hop names must be between 3 and 32 characters')
+    if not prog['noboil']:
+        for hop in prog['hops']:
+            if hop['attime'] < 0 or hop['attime'] > prog['boiltime']:
+                errors.append('Hop timing must be greater than 0 and less than boiltime')
+                pass
+            if hop['quantity'] < 0:
+                errors.append('Hop quantity must be positive')
+                pass
+            if len(hop['name']) < 3 or len(hop['name'])>32:
+                errors.append('Hop names must be between 3 and 32 characters')
+                pass
             pass
         pass
 
@@ -81,7 +85,19 @@ class Programs(flask_restful.Resource):
                 'data': aegir.db.getprograms()}
 
     def post(self):
+        '''
+        Adds a program. Input is a json data.
+        '''
         data = flask.request.get_json();
+
+        # force-sanitize some input
+        if data['nomash']:
+            data['mashsteps'] = None
+            pass
+        if data['noboil']:
+            data['hops'] = None
+            pass
+
         errors = validateProgram(data)
         if errors:
             return {'status': 'error', 'errors': errors}, 422
@@ -126,6 +142,7 @@ class Program(flask_restful.Resource):
 
     def post(self, progid):
         data = flask.request.get_json();
+        #pprint(data)
         errors = validateProgram(data)
         if errors:
             return {'status': 'error', 'errors': errors}, 422

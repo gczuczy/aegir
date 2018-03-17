@@ -193,6 +193,9 @@ export class ApiService {
     }
 
     addProgram(data: Object): Observable<ApiResponse> {
+	data['nomash'] = !data['hasmash'];
+	data['noboil'] = !data['hasboil'];
+
 	let body = JSON.stringify(data);
 	let headers = new Headers({'Content-Type': 'application/json'});
 	let options = new RequestOptions({headers: headers});
@@ -206,6 +209,9 @@ export class ApiService {
     }
 
     saveProgram(data: Object): Observable<ApiResponse> {
+	data['nomash'] = !data['hasmash'];
+	data['noboil'] = !data['hasboil'];
+
 	let body = JSON.stringify(data);
 	let headers = new Headers({'Content-Type': 'application/json'});
 	let options = new RequestOptions({headers: headers});

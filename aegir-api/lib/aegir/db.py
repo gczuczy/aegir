@@ -47,10 +47,14 @@ def getprogram(progid):
     global _conn
 
     curs = _conn.cursor()
-    pres = curs.execute('SELECT id,name,starttemp,endtemp,boiltime FROM programs WHERE id=?', (progid,))
+    pres = curs.execute('SELECT id,name,starttemp,endtemp,boiltime,nomash,noboil FROM programs WHERE id=?', (progid,))
     prog = pres.fetchone()
     if prog == None:
         raise Exception('No program with ID {id}'.format(id = progid))
+
+    for field in ['noboil', 'nomash']:
+        prog[field] = prog[field] == 1
+        pass
 
     msres = curs.execute('''
     SELECT id,orderno,temperature,holdtime
@@ -91,9 +95,18 @@ def checkprogramname(name, progid):
 def addprogram(prog):
     global _conn
 
+    pprint(prog)
+
     curs = _conn.cursor()
-    curs.execute('INSERT INTO programs (name, starttemp, endtemp, boiltime) VALUES (?,?,?,?)',
-                 (prog['name'], prog['starttemp'], prog['endtemp'], prog['boiltime']))
+    curs.execute('''
+    INSERT INTO programs (name, starttemp, endtemp, boiltime, nomash, noboil)
+    VALUES (:name,:starttemp,:endtemp,:boiltime,:nomash, :noboil)''',
+                 {'name': prog['name'],
+                  'starttemp': prog['starttemp'],
+                  'endtemp': prog['endtemp'],
+                  'boiltime': prog['boiltime'] or 60,
+                  'nomash': prog['nomash'],
+                  'noboil': prog['noboil']})
     progid = curs.lastrowid
 
     # now add the mashsteps
@@ -120,8 +133,18 @@ def saveprogram(prog):
 
     progid = prog['id']
     curs = _conn.cursor()
-    curs.execute('UPDATE programs SET name=?, starttemp=?, endtemp=?, boiltime=? WHERE id = ?',
-                 (prog['name'], prog['starttemp'], prog['endtemp'], prog['boiltime'], progid))
+    curs.execute('''
+    UPDATE programs
+    SET name=:name, starttemp=:starttemp, endtemp=:endtemp, boiltime=:boiltime,
+        nomash=:nomash, noboil=:noboil
+    WHERE id = :id''',
+                 {'id': progid,
+                  'name': prog['name'],
+                  'starttemp': prog['starttemp'],
+                  'endtemp': prog['endtemp'],
+                  'boiltime': prog['boiltime'] or 60,
+                  'nomash': prog['nomash'],
+                  'noboil': prog['noboil']})
 
     # delete the associated mash steps and hops
     curs.execute('DELETE FROM programs_mashsteps WHERE progid = ?', (progid,))

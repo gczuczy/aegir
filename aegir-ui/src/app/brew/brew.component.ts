@@ -19,6 +19,7 @@ export class BrewComponent implements OnInit {
     public targettemp = 0;
     public mashstep = null;
     public bktemp:number = null;
+    public hopping = null;
 
     // volume
     public volume: number = 42;
@@ -77,6 +78,8 @@ export class BrewComponent implements OnInit {
 	this.sensors = [];
 	this.state = data['state'];
 	this.targettemp = data['targettemp'];
+
+	// mashing data
 	if ( 'mashstep' in data ) {
 	    this.mashstep = data['mashstep'];
 	    let mstime = this.mashstep.time;
@@ -87,6 +90,7 @@ export class BrewComponent implements OnInit {
 	} else {
 	    this.mashstep = null;
 	}
+
 	for (let key in data['currtemp']) {
 	    let temp = data['currtemp'][key];
 	    if ( temp > 1000 ) temp = 0.0;
@@ -107,6 +111,31 @@ export class BrewComponent implements OnInit {
 	}
 	if ( !('programid' in data) ) {
 	    this.program = null;
+	}
+
+	// hopping data
+	if ( 'hopping' in data && this.program != null) {
+	    let hoptime = data['hopping']['hoptime']
+	    this.hopping = {'schedule': [],
+			    'hoptime': hoptime};
+	    for (let hop of this.program.hops ) {
+		let tth = hoptime - (hop['attime']*60);
+		let hopdone = false;
+		if ( tth < 0 ) hopdone = true;
+		console.log('hop', hop, tth, hopdone);
+		let second = tth % 60;
+		let minute = (tth-second) / 60;
+		let tthstr =  minute + 'm' + second + 's';
+		this.hopping['schedule'].push({'id': hop['id'],
+					       'name': hop['hopname'],
+					       'qty': hop['hopqty'],
+					       'done': hopdone,
+					       'tth': tthstr})
+	    }
+	    console.log(this.hopping, this.program);
+	} else {
+	    console.log('No hopping', data, this.program);
+	    this.hopping = null;
 	}
     }
 

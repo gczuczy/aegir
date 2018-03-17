@@ -18,3 +18,11 @@
 .table-pad-2px>tbody>tr>td, .table-pad-2px>tbody>tr>th, .table-pad-2px>tfoot>tr>td, .table-pad-2px>tfoot>tr>th, .table-pad-2px>thead>tr>td, .table-pad-2px>thead>tr>th {
     padding: 2px;
 }
+
+.input-editprogram {
+    width: 60px;
+}
+
+.table-editprogram>tbody>tr>td {
+    width: 60px;
+}

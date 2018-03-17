@@ -81,7 +81,33 @@
 	</div>
       </div>
 
-    </div>
+      <!-- hopping -->
+      <div class="row card" *ngIf="state == 'Hopping'">
+	<div class="card-header bg-light">Hopping</div>
+	<div class="card-body">
+	  <table class="table table-striped table-pad-2px">
+	    <thead>
+	      <tr>
+		<th>Name</th>
+		<th>Qty</th>
+		<th>Time</th>
+	      </tr>
+	    </thead>
+	    <tbody>
+	      <ng-template ngFor let-hop [ngForOf]="hopping.schedule">
+		<tr>
+		  <td>{{hop.name}}</td>
+		  <td>{{hop.qty}}</td>
+		  <td *ngIf="hop.hopdone"><i class="fa fa-check"></i></td>
+		  <td *ngIf="!hop.hopdone">{{hop.tth}}</td>
+		</tr>
+	      </ng-template>
+	    </tbody>
+	  </table>
+	</div>
+      </div>
+
+    </div> <!-- end of left plance  -->
     <!-- right side the graph -->
     <div class="col-10 card">
       <div class="card-header bg-light">Graph</div>

@@ -21,6 +21,8 @@ export class EditProgramComponent implements OnInit {
     public errors: string[];
 
     public program: Program;
+    public hasmash:boolean;
+    public hasboil:boolean;
 
     constructor(private _fb: FormBuilder,
 		private api: ApiService,
@@ -34,6 +36,8 @@ export class EditProgramComponent implements OnInit {
 	    .switchMap((params: Params) => this.api.getProgram(params['id']))
 	    .subscribe(prog => {
 		this.program = prog['data'];
+		this.hasmash = !prog['nomash'];
+		this.hasboil = !prog['noboil'];
 		this.editProgramForm = this._fb.group({
 		    id: [this.program['id']],
 		    name: [this.program['name'], [Validators.required, Validators.minLength(3), Validators.maxLength(32)]],
@@ -41,6 +45,8 @@ export class EditProgramComponent implements OnInit {
 		    endtemp: [this.program['endtemp'], [Validators.required, IntValidator.minValue(37), IntValidator.maxValue(90)]],
 		    boiltime: [this.program['boiltime'], [Validators.required, IntValidator.minValue(30), IntValidator.maxValue(300)]],
 		    mashsteps: this._fb.array(this.initMashSteps(this.program['mashsteps'])),
+		    hasmash: [!this.program['nomash']],
+		    hasboil: [!this.program['noboil']],
 		    hops: this._fb.array(this.initHops(this.program['hops']))
 		}, {
 		    validator: this.formValidator.bind(this)
@@ -139,6 +145,11 @@ export class EditProgramComponent implements OnInit {
 	    }
 	    i += 1;
 	}
+
+	let hasboil = <FormArray>this.editProgramForm.controls['hasboil'].value;
+	let hasmash = <FormArray>this.editProgramForm.controls['hasmash'].value;
+	if ( !hasboil && !hasmash ) return {'mashboil': 'Either mash or boil is needed'};
+
 	return null;
     }
 
@@ -223,6 +234,14 @@ export class EditProgramComponent implements OnInit {
     removeHop(i: number) {
 	const control = <FormArray>this.editProgramForm.controls['hops'];
 	control.removeAt(i)
+    }
+
+    onHasmashChange(event) {
+	this.hasmash = event;
+    }
+
+    onHasboilChange(event) {
+	this.hasboil = event;
     }
 
     save(model: FormGroup) {

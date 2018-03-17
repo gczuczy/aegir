@@ -11,8 +11,14 @@
       </div>
 
       <!-- Form errors -->
-      <div class="container" [hidden]="!addProgramForm.errors">
-	<div class="alert alert-danger" role="alert">Foobar</div>
+      <div *ngIf="addProgramForm.errors && addProgramForm.errors['mashboil']" class="container">
+	<div class="alert alert-danger" role="alert">At least mash or boil is required</div>
+      </div>
+      <div *ngIf="addProgramForm.errors && addProgramForm.errors['needhops']" class="container">
+	<div class="alert alert-danger" role="alert">At least a single hop is required when boiling</div>
+      </div>
+      <div *ngIf="addProgramForm.errors && addProgramForm.errors['needmashsteps']" class="container">
+	<div class="alert alert-danger" role="alert">At least a single step is required when mashing</div>
       </div>
 
       <!-- program name  and boil time-->
@@ -57,12 +63,16 @@
 
       <!-- Mash temperature steps -->
       <div class="row">
-	<div class="col-9"><h2>Mash temperature steps</h2></div>
-	<div class="col-3">
+	<div class="col-9">
+	  <h2>
+	  <ui-switch formControlName="hasmash" (change)="onHasmashChange($event)"></ui-switch>
+	  Mashing
+	</h2></div>
+	<div *ngIf="hasmash" class="col-3">
 	  <button type="button" class="btn btn-primary" (click)="addMashStep()">Add step</button>
 	</div>
       </div>
-      <div formArrayName="mashsteps" class="container">
+      <div *ngIf="hasmash" formArrayName="mashsteps" class="container">
 	<!--
 	<div *ngFor="let mashtemp of addProgramForm.controls.mashsteps.controls; let i=index"
 	     class="row" [formGroupName]="i">
@@ -112,12 +122,16 @@
 
       <!-- Hop schedule -->
       <div class="row">
-	<div class="col-9"><h2>Hop schedule</h2></div>
-	<div class="col-3">
+	<div class="col-9">
+	  <h2>
+	    <ui-switch formControlName="hasboil" (change)="onHasboilChange($event)"></ui-switch>
+	    Boil
+	</h2></div>
+	<div *ngIf="hasboil" class="col-3">
 	  <button type="button" class="btn btn-primary" (click)="addHop()">Add hop</button>
 	</div>
       </div>
-      <div formArrayName="hops" class="container">
+      <div *ngIf="hasboil" formArrayName="hops" class="container">
 	<div *ngFor="let hop of addProgramForm.get('hops')['controls']; let i=index"
 	     class="row" [formGroupName]="i">
 	  <!-- Hop name -->

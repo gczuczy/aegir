@@ -238,10 +238,6 @@ namespace aegir {
     // clang nicely realizes that we won't reach this point, ever
   }
 
-  /*
-  'startat': 1492616760.0,
-  'volume': 35}
-   */
   std::shared_ptr<Json::Value> PRWorkerThread::handleLoadProgram(const Json::Value &_data) {
     ProcessState &ps(ProcessState::getInstance());
 
@@ -293,27 +289,16 @@ namespace aegir {
       throw Exception("volume is too large");
 
     // now check the program
-    /*
-     {'program': {'boiltime': 60,
-              'endtemp': 80,
-              'hops': [{'attime': 60, 'hopname': 'Hop 2', 'hopqty': 2},
-                       {'attime': 1, 'hopname': 'Hop 1', 'hopqty': 1},
-                       {'attime': 0, 'hopname': 'Hop 3 ', 'hopqty': 3}],
-              'id': 4,
-              'mashsteps': [{'holdtime': 15, 'orderno': 0, 'temperature': 42},
-                            {'holdtime': 15, 'orderno': 1, 'temperature': 63},
-                            {'holdtime': 15, 'orderno': 2, 'temperature': 69}],
-              'name': 'Test 1',
-              'starttemp': 37},
-     */
     float prog_starttemp, prog_endtemp;
+    bool prog_nomash, prog_noboil;
     uint16_t prog_boiltime;
     uint32_t prog_id;
     Program::Hops prog_hops;
     Program::MashSteps prog_mashsteps;
     Json::Value jprog = _data["program"];
     {
-      for (auto &it: std::set<std::string>({"boiltime", "endtemp", "starttemp", "id", "hops", "mashsteps"}) ) {
+      for (auto &it: std::set<std::string>({"boiltime", "endtemp", "starttemp", "id",
+					    "hops", "mashsteps", "noboil", "nomash"}) ) {
 	if ( !jprog.isMember(it) )
 	  throw Exception("Program missing member: %s", it.c_str());
       }
@@ -331,52 +316,76 @@ namespace aegir {
       jsonvalue = jprog["endtemp"];
       prog_endtemp = jsonvalue.asFloat();
 
+      // get the nomash/noboil flags
+      jsonvalue = jprog["nomash"];
+      prog_nomash = jsonvalue.asBool();
+      jsonvalue = jprog["noboil"];
+      prog_noboil = jsonvalue.asBool();
+
+      printf("loadprogram nomash:%c noboil:%c\n", prog_nomash?'t':'f',
+	     prog_noboil?'t':'f');
+
+      if ( prog_nomash && prog_noboil )
+	throw Exception("Either mash or boil is required");
+
       // now get the hoppings
-      Json::Value jarray = jprog["hops"];
-      if ( jarray.type() != Json::ValueType::arrayValue )
-	throw Exception("data.program.hops must be an array");
+      if ( !prog_noboil ) {
+	Json::Value jarray = jprog["hops"];
+	if ( jarray.type() != Json::ValueType::arrayValue )
+	  throw Exception("data.program.hops must be an array");
 
-      for (auto &it: jarray ) {
-	if ( it.type() != Json::ValueType::objectValue )
-	  throw Exception("data.program.hops members must be of an object type");
-	Program::Hop hop;
-	// attime
-	hop.attime = it["attime"].asUInt();
-	// hop's id
-	hop.id = it["id"].asUInt();
+	uint32_t last_attime(std::numeric_limits<uint32_t>::max());
+	for (auto &it: jarray ) {
+	  if ( it.type() != Json::ValueType::objectValue )
+	    throw Exception("data.program.hops members must be of an object type");
+	  Program::Hop hop;
+	  // attime
+	  hop.attime = it["attime"].asUInt();
+	  // hop's id
+	  hop.id = it["id"].asUInt();
 
-	if ( hop.attime > prog_boiltime )
-	  throw Exception("Hop's time cannot be larger than the boiltime");
+	  if ( hop.attime > last_attime )
+	    throw Exception("Hop times must be in a decreasing order");
 
-	// and finally add it
-	prog_hops.push_back(hop);
-      } // it: jarray
+	  last_attime = hop.attime;
+
+	  if ( hop.attime > prog_boiltime*60 )
+	    throw Exception("Hop's time cannot be larger than the boiltime");
+
+	  // and finally add it
+	  prog_hops.push_back(hop);
+	} // it: jarray
+      } // !noboil
 
       // and the mash steps
-      jarray = jprog["mashsteps"];
-      if ( jarray.type() != Json::ValueType::arrayValue )
-	throw Exception("data.program.mashsteps must be an array");
+      if ( !prog_nomash ) {
+	Json::Value jarray = jprog["mashsteps"];
+	if ( jarray.type() != Json::ValueType::arrayValue )
+	  throw Exception("data.program.mashsteps must be an array");
 
-      prog_mashsteps.resize(jarray.size());
-      for ( auto &it: jarray ) {
-	if ( it.type() != Json::ValueType::objectValue )
-	  throw Exception("data.program.hops members must be of an object type");
+	prog_mashsteps.resize(jarray.size());
+	for ( auto &it: jarray ) {
+	  if ( it.type() != Json::ValueType::objectValue )
+	    throw Exception("data.program.hops members must be of an object type");
 
-	uint32_t orderno = it["orderno"].asUInt();
-	if ( orderno >= jarray.size() )
-	  throw Exception("data.program.mashsteps orderno out of bounds");
+	  uint32_t orderno = it["orderno"].asUInt();
+	  if ( orderno >= jarray.size() )
+	    throw Exception("data.program.mashsteps orderno out of bounds");
 
-	float temp = it["temperature"].asFloat();
-	prog_mashsteps[orderno].orderno  = orderno;
-	prog_mashsteps[orderno].temp     = temp;
-	prog_mashsteps[orderno].holdtime = it["holdtime"].asUInt();
-	if ( temp < prog_starttemp || temp > prog_endtemp )
-	  throw Exception("Mashstep temperature out of bounds");
-      } // it: jarray
-    }
+	  float temp = it["temperature"].asFloat();
+	  prog_mashsteps[orderno].orderno  = orderno;
+	  prog_mashsteps[orderno].temp     = temp;
+	  prog_mashsteps[orderno].holdtime = it["holdtime"].asUInt();
+	  if ( temp < prog_starttemp || temp > prog_endtemp )
+	    throw Exception("Mashstep temperature out of bounds");
+	} // it: jarray
+      } // nomash
+    } // data[program]
     //printf("id:%u boiltime:%u ST:%f ET:%f\n", prog_id, prog_boiltime, prog_starttemp, prog_endtemp);
 
-    Program prog(prog_id, prog_starttemp, prog_endtemp, prog_boiltime, prog_mashsteps, prog_hops);
+    Program prog(prog_id, prog_starttemp, prog_endtemp, prog_boiltime*60,
+		 prog_nomash, prog_noboil,
+		 prog_mashsteps, prog_hops);
     ProcessState::getInstance().loadProgram(prog, startat, volume);
 
     // the success reply
@@ -463,6 +472,15 @@ namespace aegir {
 	jms["orderno"] = step;
 	jms["time"] = diff<0 ? 0 : diff;
 	data["mashstep"] = jms;
+      }
+
+      // During hopping, we publicate the hoptime for the UI
+      if ( ps.getState() == ProcessState::States::Hopping ) {
+	Json::Value hopdata;
+
+	hopdata["hoptime"] = ps.getHopTime();
+
+	data["hopping"] = hopdata;
       }
     }
     catch (Exception &e) {
@@ -576,7 +594,12 @@ namespace aegir {
       throw Exception("Only valid at state Sparging");
     }
 
-    ps.setState(ProcessState::States::PreBoil);
+    auto prog = ps.getProgram();
+    if ( prog->getNoBoil() ) {
+      ps.setState(ProcessState::States::Cooling);
+    } else {
+      ps.setState(ProcessState::States::PreBoil);
+    }
 
     return std::make_shared<Json::Value>(retval);
   }

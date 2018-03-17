@@ -10,11 +10,11 @@
       </div>
 
       <!-- Form errors -->
-      <div class="container" [hidden]="!editProgramForm.errors">
-	<div class="alert alert-danger" role="alert">Foobar</div>
+      <div *ngIf="editProgramForm.errors && editProgramForm.errors['mashboil']" class="container">
+	<div class="alert alert-danger" role="alert">At least mash or boil is required</div>
       </div>
 
-      <!-- program name  and boil time-->
+      <!-- program name and boil time-->
       <div class="row">
 	<!-- program name -->
 	<div class="col form-group">
@@ -56,12 +56,15 @@
 
       <!-- Mash temperature steps -->
       <div class="row">
-	<div class="col-9"><h2>Mash temperature steps</h2></div>
-	<div class="col-3">
+	<div class="col-9">
+	  <h2>
+	  <ui-switch formControlName="hasmash" (change)="onHasmashChange($event)"></ui-switch>
+	  Mashing</h2></div>
+	<div *ngIf="hasmash" class="col-3">
 	  <button type="button" class="btn btn-primary" (click)="addMashStep()">Add step</button>
 	</div>
       </div>
-      <div formArrayName="mashsteps" class="container">
+      <div *ngIf="hasmash" formArrayName="mashsteps" class="container">
 	<div *ngFor="let mashtemp of editProgramForm.controls.mashsteps.controls; let i=index"
 	     class="row" [formGroupName]="i">
 	  <div class="col-1">
@@ -107,12 +110,15 @@
 
       <!-- Hop schedule -->
       <div class="row">
-	<div class="col-9"><h2>Hop schedule</h2></div>
-	<div class="col-3">
+	<div class="col-9">
+	  <h2>
+	  <ui-switch formControlName="hasboil" (change)="onHasboilChange($event)"></ui-switch>
+	    Hop schedule</h2></div>
+	<div *ngIf="hasboil" class="col-3">
 	  <button type="button" class="btn btn-primary" (click)="addHop()">Add hop</button>
 	</div>
       </div>
-      <div formArrayName="hops" class="container">
+      <div *ngIf="hasboil" formArrayName="hops" class="container">
 	<div *ngFor="let hop of editProgramForm.controls.hops.controls; let i=index"
 	     class="row" [formGroupName]="i">
 	  <!-- Hop name -->

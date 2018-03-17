@@ -99,9 +99,13 @@ namespace aegir {
   ProcessState &ProcessState::setState(ProcessState::States _st) {
     Guard g(*this);
 
+#if 0
+    printf("ProcessState::setState(%s): from %s\n", g_strstates[_st].c_str(),
+	   g_strstates[c_state].c_str());
+#endif
     // state can't decrease
     // except when resetting to Empty
-    if ( (_st != States::Empty && _st != States::Maintenance)&& _st <= c_state )
+    if ( (_st != States::Empty && _st != States::Maintenance) && _st <= c_state )
       throw Exception("ProcessState::setSate(%s): can't decrease the state", g_strstates[_st].c_str());
 
     // once we need to start keeping track of the time,
@@ -142,6 +146,8 @@ namespace aegir {
     c_mashstepstart = 0;
     c_targettemp = 0;
     c_maint_temp = 37;
+    c_t_hopstart = 0;
+    c_hopid = 0;
 
     setState(States::Empty);
 

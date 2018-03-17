@@ -270,7 +270,6 @@ namespace aegir {
   } // controlProcess
 
   void Controller::onStateChange(ProcessState::States _old, ProcessState::States _new) {
-
     // if it's not in our thread, then queue the call and return
     if ( std::this_thread::get_id() != c_mythread ) {
       std::lock_guard<std::mutex> g(c_mtx_stchqueue);
@@ -279,6 +278,7 @@ namespace aegir {
     }
 
     c_lastcontrol = 0;
+    uint32_t now = time(0);
 
     if ( _new == ProcessState::States::NeedMalt ) {
 	setPIN("buzzer", PINState::Pulsate, 2.1f, 0.4f);
@@ -292,6 +292,18 @@ namespace aegir {
       setPIN("buzzer", PINState::Off);
       c_ps.setMashStep(-1);
       c_ps.setMashStepStart(0);
+    }
+
+    if ( _new == ProcessState::States::Hopping) {
+      c_ps.setHoppingStart(now);
+    }
+
+    if ( _new == ProcessState::States::Empty ) {
+      c_prog = nullptr;
+      c_heratiohistory.clear();
+      setPIN("buzzer", PINState::Off);
+      setPIN("rimsheat", PINState::Off);
+      setPIN("rimspump", PINState::Off);
     }
 
     // when the state is reset
@@ -337,13 +349,24 @@ namespace aegir {
     // Loaded, so we should verify the timestamps
     uint32_t startat = c_ps.getStartat();
     c_hecycletime = c_cfg->getHECycleTime();
+
+#if 0
+    printf("Controller::stageLoaded(): state:%s\n", c_ps.getStringState().c_str());
+#endif
+    c_needcontrol = false;
+    // in case of nomash, we're jumping to preboil
+    if ( c_prog->getNoMash() ) {
+      c_ps.setState(ProcessState::States::PreBoil);
+      printf("Controller::stageLoaded(): nomash detected, jumping to preboil");
+      return;
+    }
+
     // if we start immediately then jump to PreHeat
     if ( startat == 0 ) {
       c_ps.setState(ProcessState::States::PreHeat);
     } else {
       c_ps.setState(ProcessState::States::PreWait);
     }
-    c_needcontrol = false;
     return;
   }
 
@@ -470,6 +493,7 @@ namespace aegir {
     //printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
     setPIN("rimspump", PINState::Off);
     setPIN("rimsheat", PINState::Off);
+    c_ps.setState(ProcessState::States::Hopping);
     c_needcontrol = false;
   }
 
@@ -478,6 +502,52 @@ namespace aegir {
     setPIN("rimspump", PINState::Off);
     setPIN("rimsheat", PINState::Off);
     c_needcontrol = false;
+
+    auto prog = c_ps.getProgram();
+    auto hops = prog->getHops();
+    uint32_t now = time(0);
+
+    int32_t hoptime = c_ps.getHoppingStart() + prog->getBoilTime() - now;
+    c_ps.setHopTime(hoptime);
+
+    for (auto &it: hops) {
+      // we don't care with the past
+      if ( it.attime >= hoptime ) {
+	setPIN("buzzer", PINState::Off);
+	continue;
+      }
+
+      int32_t tohop = hoptime - it.attime;
+      c_ps.setHopId(it.id);
+      if ( tohop > 180 ) {
+	setPIN("buzzer", PINState::Off);
+	break;
+      }
+      float onrate = 0.02f;
+      float ctime = 3.0f;
+      if ( tohop < 5 ) {
+	onrate = 0.5f;
+	ctime = 0.5f;
+      } else if ( tohop < 15 ) {
+	onrate = 0.4f;
+	ctime = 3.0f;
+      } else if ( tohop < 30 ) {
+	onrate = 0.3f;
+	ctime = 0.8f;
+      } else if ( tohop < 60 ) {
+	onrate = 0.1f;
+	ctime = 1.0f;
+      } else if ( tohop < 120 ) {
+	onrate = 0.05f;
+	ctime = 1.5f;
+      } else {
+	onrate = 0.025f;
+	ctime = 3.0f;
+      }
+
+      setPIN("buzzer", PINState::Pulsate, ctime, onrate);
+      break;
+    }
   }
 
   void Controller::stageCooling(PINTracker &_pt) {

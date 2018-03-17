@@ -99,6 +99,12 @@ namespace aegir {
     inline bool getMaintHeat() {return c_maint_heat; };
     inline ProcessState &setMaintTemp(float _val) {c_maint_temp = _val; return *this; };
     inline float getMaintTemp() {return c_maint_temp; };
+    inline ProcessState &setHoppingStart(uint32_t _val) {c_t_hopstart = _val; return *this; };
+    inline uint32_t getHoppingStart() { return c_t_hopstart; };
+    inline ProcessState &setHopId(uint32_t _val) { c_hopid = _val; return *this; };
+    inline uint32_t getHopId() { return c_hopid; };
+    inline ProcessState &setHopTime(uint32_t _val) { c_t_hoptime = _val; return *this; };
+    inline uint32_t getHopTime() const { return c_t_hoptime; };
 
   protected:
     std::recursive_mutex c_mtx_state;
@@ -121,6 +127,10 @@ namespace aegir {
     std::atomic<time_t> c_mashstepstart;
     // the current target temp
     std::atomic<float> c_targettemp;
+    // start of hopping
+    std::atomic<uint32_t> c_t_hopstart;
+    std::atomic<uint32_t> c_hopid; // for the UI
+    std::atomic<uint32_t> c_t_hoptime; // for the UI
     // maintmode variables
     std::atomic<bool> c_maint_pump;
     std::atomic<bool> c_maint_heat;

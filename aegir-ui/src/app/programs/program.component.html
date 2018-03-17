@@ -24,7 +24,7 @@
   </div></div>
   <div class="row"><div class="col"><p>&nbsp;</p></div></div>
   <div class="row">
-    <div class="col">
+    <div *ngIf="!program.nomash" class="col" >
       <h2>Mash steps</h2>
       <br/>
       <table class="table table-sm">
@@ -44,7 +44,7 @@
 	</tbody>
       </table>
     </div>
-    <div class="col">
+    <div *ngIf="!program.noboil" class="col">
       <h2>Hops</h2>
       <br/>
       <table class="table table-sm">

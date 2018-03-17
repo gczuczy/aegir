@@ -30,6 +30,10 @@ class BrewProgram(flask_restful.Resource):
             return {"status": "error",
                     "errors": [str(e)]}, 422
 
+        for hop in program['hops']:
+            hop['attime'] *= 60
+            pass
+
         zreq = {"program": program}
         try:
             for field in ['startat', 'startmode', 'volume']:
