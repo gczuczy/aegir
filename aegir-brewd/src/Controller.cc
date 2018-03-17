@@ -493,7 +493,6 @@ namespace aegir {
     //printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
     setPIN("rimspump", PINState::Off);
     setPIN("rimsheat", PINState::Off);
-    c_ps.setState(ProcessState::States::Hopping);
     c_needcontrol = false;
   }
 
