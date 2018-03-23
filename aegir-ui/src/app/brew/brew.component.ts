@@ -21,6 +21,8 @@ export class BrewComponent implements OnInit {
     public bktemp:number = null;
     public hopping = null;
 
+    public coolingdone = false;
+
     // volume
     public volume: number = 42;
 
@@ -74,7 +76,6 @@ export class BrewComponent implements OnInit {
     }
 
     updateState(data) {
-	//console.log('state', data);
 	this.sensors = [];
 	this.state = data['state'];
 	this.targettemp = data['targettemp'];
@@ -89,6 +90,12 @@ export class BrewComponent implements OnInit {
 	    this.mashstep['textual'] = minutes + 'm ' + secs + 's';
 	} else {
 	    this.mashstep = null;
+	}
+
+	if ( 'cooling' in data ) {
+	    this.coolingdone = data['cooling']['ready']
+	} else {
+	    this.coolingdone = false;
 	}
 
 	for (let key in data['currtemp']) {
@@ -122,7 +129,7 @@ export class BrewComponent implements OnInit {
 		let tth = hoptime - (hop['attime']*60);
 		let hopdone = false;
 		if ( tth < 0 ) hopdone = true;
-		console.log('hop', hop, tth, hopdone);
+		//console.log('hop', hop, tth, hopdone);
 		let second = tth % 60;
 		let minute = (tth-second) / 60;
 		let tthstr =  minute + 'm' + second + 's';
@@ -132,9 +139,9 @@ export class BrewComponent implements OnInit {
 					       'done': hopdone,
 					       'tth': tthstr})
 	    }
-	    console.log(this.hopping, this.program);
+	    //console.log(this.hopping, this.program);
 	} else {
-	    console.log('No hopping', data, this.program);
+	    //console.log('No hopping', data, this.program);
 	    this.hopping = null;
 	}
     }
@@ -208,6 +215,10 @@ export class BrewComponent implements OnInit {
 
     onSpargeDone() {
 	this.api.spargeDone().subscribe();
+    }
+
+    onCoolingDone() {
+	this.api.coolingDone().subscribe();
     }
 
     onAbortBrew() {

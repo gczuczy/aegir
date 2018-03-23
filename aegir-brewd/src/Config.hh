@@ -78,6 +78,8 @@ namespace aegir {
     float c_heatoverhead;
     // heating element cycle time
     float c_hecycletime;
+    // cooling temperature
+    float c_cooltemp;
 
   public:
     ~Config();
@@ -101,6 +103,7 @@ namespace aegir {
     inline const float getTempAccuracy() const { return c_tempaccuracy; };
     inline const float getHeatOverhead() const { return c_heatoverhead; };
     inline const float getHECycleTime() const { return c_hecycletime; };
+    inline const float getCoolTemp() const { return c_cooltemp; };
   };
 }
 

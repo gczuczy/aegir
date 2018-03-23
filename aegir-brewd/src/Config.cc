@@ -131,6 +131,9 @@ namespace aegir {
 
     // heating element cycle time
     c_hecycletime = 3.0;
+
+    // cooling temperature
+    c_cooltemp = 24.0f;
   }
 
   void Config::load() {
@@ -306,6 +309,14 @@ namespace aegir {
 	  throw Exception("Heating element cycle time is out of range");
       }
 
+      // cooling temperature
+      if ( config["cooltemp"] && config["cooltemp"].IsScalar() ) {
+	YAML::Node ct = config["cooltemp"];
+	c_cooltemp = ct.as<float>();
+	if ( c_cooltemp < 10.0f || c_cooltemp > 30.0 )
+	  throw Exception("Cooling temperature must be between 10C and 30C");
+      }
+
     }
     catch (std::exception &e) {
       throw Exception("Error during parsing config: %s", e.what());
@@ -384,6 +395,9 @@ namespace aegir {
 
     // max heating overhead
     yout << YAML::Key << "hecycletime" << YAML::Value << c_hecycletime;
+
+    // cooling temperature
+    yout << YAML::Key << "cooltemp" << YAML::Value << c_cooltemp;
 
     // End the config
     yout << YAML::EndMap;

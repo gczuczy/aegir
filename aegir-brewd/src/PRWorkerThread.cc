@@ -13,6 +13,7 @@
 #include "JSONMessage.hh"
 #include "ProcessState.hh"
 #include "ElapsedTime.hh"
+#include "Config.hh"
 
 namespace aegir {
 
@@ -69,6 +70,7 @@ namespace aegir {
     c_handlers["buzzer"] = std::bind(&PRWorkerThread::handleBuzzer, this, std::placeholders::_1);
     c_handlers["hasMalt"] = std::bind(&PRWorkerThread::handleHasMalt, this, std::placeholders::_1);
     c_handlers["spargeDone"] = std::bind(&PRWorkerThread::handleSpargeDone, this, std::placeholders::_1);
+    c_handlers["coolingDone"] = std::bind(&PRWorkerThread::handleCoolingDone, this, std::placeholders::_1);
     c_handlers["startHopping"] = std::bind(&PRWorkerThread::handleStartHopping, this, std::placeholders::_1);
     c_handlers["resetProcess"] = std::bind(&PRWorkerThread::handleResetProcess, this, std::placeholders::_1);
     c_handlers["getVolume"] = std::bind(&PRWorkerThread::handleGetVolume, this, std::placeholders::_1);
@@ -322,8 +324,10 @@ namespace aegir {
       jsonvalue = jprog["noboil"];
       prog_noboil = jsonvalue.asBool();
 
+#if 0
       printf("loadprogram nomash:%c noboil:%c\n", prog_nomash?'t':'f',
 	     prog_noboil?'t':'f');
+#endif
 
       if ( prog_nomash && prog_noboil )
 	throw Exception("Either mash or boil is required");
@@ -474,6 +478,18 @@ namespace aegir {
 	data["mashstep"] = jms;
       }
 
+      // during cooling let the UI know whether we're good to finish
+      if ( ps.getState() == ProcessState::States::Cooling ) {
+	Json::Value cooling;
+	Config *cfg = Config::getInstance();
+	float bktemp =  ps.getSensorTemp("BK");
+	float cooltemp = cfg->getCoolTemp();
+
+	cooling["ready"] = (bktemp < cooltemp);
+
+	data["cooling"] = cooling;
+      }
+
       // During hopping, we publicate the hoptime for the UI
       if ( ps.getState() == ProcessState::States::Hopping ) {
 	Json::Value hopdata;
@@ -600,6 +616,30 @@ namespace aegir {
     } else {
       ps.setState(ProcessState::States::PreBoil);
     }
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRWorkerThread::handleCoolingDone(const Json::Value &_data) {
+    ProcessState &ps(ProcessState::getInstance());
+
+    // only valid during cooling
+    if ( ps.getState() != ProcessState::States::Cooling ) {
+      throw Exception("Only valid during cooling");
+    }
+
+    float bktemp = ps.getSensorTemp("BK");
+    Config *cfg = Config::getInstance();
+
+    if ( bktemp >= cfg->getCoolTemp() )
+      throw Exception("BK has to be bellow CoolingTemp");
+
+    ps.setState(ProcessState::States::Finished);
+
+    // return success
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value(Json::ValueType::nullValue);
 
     return std::make_shared<Json::Value>(retval);
   }
@@ -881,5 +921,4 @@ namespace aegir {
 
     return std::make_shared<Json::Value>(retval);
   }
-
 }

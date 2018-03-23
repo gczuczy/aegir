@@ -294,8 +294,14 @@ namespace aegir {
       c_ps.setMashStepStart(0);
     }
 
-    if ( _new == ProcessState::States::Hopping) {
+    if ( _new == ProcessState::States::Hopping ) {
       c_ps.setHoppingStart(now);
+    }
+
+    if ( _new == ProcessState::States::Finished ) {
+      setPIN("buzzer", PINState::Off);
+      setPIN("rimsheat", PINState::Off);
+      setPIN("rimspump", PINState::Off);
     }
 
     if ( _new == ProcessState::States::Empty ) {
@@ -506,8 +512,17 @@ namespace aegir {
     auto hops = prog->getHops();
     uint32_t now = time(0);
 
-    int32_t hoptime = c_ps.getHoppingStart() + prog->getBoilTime() - now;
+    uint32_t hopstart = c_ps.getHoppingStart();
+    uint32_t boiltime = prog->getBoilTime();
+    int32_t hoptime = hopstart + boiltime - now;
     c_ps.setHopTime(hoptime);
+
+    // transition to the next stage when we're done
+    if ( (hopstart + boiltime) > now ) {
+      setPIN("buzzer", PINState::Off);
+      c_ps.setState(ProcessState::States::Cooling);
+      return;
+    }
 
     for (auto &it: hops) {
       // we don't care with the past
@@ -550,16 +565,23 @@ namespace aegir {
   }
 
   void Controller::stageCooling(PINTracker &_pt) {
-    printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
-    setPIN("rimspump", PINState::Off);
-    setPIN("rimsheat", PINState::Off);
+    float bktemp = c_ps.getSensorTemp("BK");
+
+    if ( bktemp <= c_cfg->getCoolTemp() ) {
+      //c_ps.setState(ProcessState::States::Finished);
+      setPIN("buzzer", PINState::Pulsate, 1.0f, 0.23f);
+    } else {
+      setPIN("buzzer", PINState::Off);
+    }
     c_needcontrol = false;
   }
 
   void Controller::stageFinished(PINTracker &_pt) {
-    printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
+#if 0
+    setPIN("buzzer", PINState::Off);
     setPIN("rimspump", PINState::Off);
     setPIN("rimsheat", PINState::Off);
+#endif
     c_needcontrol = false;
   }
 

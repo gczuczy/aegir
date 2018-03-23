@@ -10,6 +10,7 @@
 	<div class="card-body">
 	  <button *ngIf="state=='NeedMalt'" class="btn btn-warning btn-sm" (click)="onHasMalts()">I Can Has Malts</button>
 	  <button *ngIf="state=='Sparging'" class="btn btn-warning btn-sm" (click)="onSpargeDone()">Sparge Done</button>
+	  <button *ngIf="state=='Cooling' && coolingdone" class="btn btn-warning btn-sm" (click)="onCoolingDone()">Cooling Done</button>
 	  <button *ngIf="state=='PreBoil' && bktemp > 100" class="btn btn-warning btn-sm" (click)="onStartBoil()">Start Boil</button>
 	  <button *ngIf="state!='Empty'" class="btn btn-danger btn-sm" (click)="onAbortBrew()">It's a trap!</button>
 	</div>

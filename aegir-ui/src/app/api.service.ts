@@ -114,11 +114,11 @@ export class ApiService {
 	let headers = new Headers({'Content-Type': 'application/json'});
 	let options = new RequestOptions({headers: headers});
 
-	console.log('calling /api/brewd/state', body, options);
+	//console.log('calling /api/brewd/state', body, options);
 
 	return this.http.post('/api/brewd/state', body, options)
 	    .map((res:Response) => {
-		console.log('Catching result, ', res.status);
+		//console.log('Catching result, ', res.status);
 		return res.json();
 	    });
     }
@@ -128,11 +128,25 @@ export class ApiService {
 	let headers = new Headers({'Content-Type': 'application/json'});
 	let options = new RequestOptions({headers: headers});
 
-	console.log('calling /api/brewd/state', body, options);
+	//console.log('calling /api/brewd/state', body, options);
 
 	return this.http.post('/api/brewd/state', body, options)
 	    .map((res:Response) => {
-		console.log('Catching result, ', res.status);
+		//console.log('Catching result, ', res.status);
+		return res.json();
+	    });
+    }
+
+    coolingDone(): Observable<{}> {
+	let body = JSON.stringify({'command': 'coolingDone'});
+	let headers = new Headers({'Content-Type': 'application/json'});
+	let options = new RequestOptions({headers: headers});
+
+	//console.log('calling /api/brewd/state', body, options);
+
+	return this.http.post('/api/brewd/state', body, options)
+	    .map((res:Response) => {
+		//console.log('Catching result, ', res.status);
 		return res.json();
 	    });
     }
@@ -305,7 +319,7 @@ export class ApiService {
 
 	return this.http.post('/api/brewd/maintenance', body, options)
 	    .map((res:Response) => {
-		console.log('Catching result, ', res.status);
+		//console.log('Catching result, ', res.status);
 		return res.json();
 	    })
 	    .catch(this.handleError);

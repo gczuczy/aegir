@@ -130,6 +130,8 @@ class BrewState(flask_restful.Resource):
             zcmd = 'spargeDone'
         elif data['command'] == 'startBoil':
             zcmd = 'startHopping'
+        elif data['command'] == 'coolingDone':
+            zcmd = 'coolingDone'
         elif data['command'] == 'reset':
             zcmd = 'resetProcess'
         else:
