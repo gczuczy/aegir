@@ -79,6 +79,7 @@ namespace aegir {
     c_handlers["startMaintenance"] = std::bind(&PRWorkerThread::handleStartMaintenance, this, std::placeholders::_1);
     c_handlers["stopMaintenance"] = std::bind(&PRWorkerThread::handleStopMaintenance, this, std::placeholders::_1);
     c_handlers["setMaintenance"] = std::bind(&PRWorkerThread::handleSetMaintenance, this, std::placeholders::_1);
+    c_handlers["override"] = std::bind(&PRWorkerThread::handleOverride, this, std::placeholders::_1);
 
     // connect the IO socket
     c_mq_iocmd.connect("inproc://iocmd");
@@ -913,6 +914,35 @@ namespace aegir {
     if ( heat && !pump ) heat = false;
 
     ps.setMaintPump(pump).setMaintTemp(temp).setMaintHeat(heat);
+
+    // return success
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value(Json::ValueType::nullValue);
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRWorkerThread::handleOverride(const Json::Value &_data) {
+
+
+    ProcessState &ps(ProcessState::getInstance());
+
+    Json::Value jsonvalue;
+
+    if ( _data.isMember("forcepump") ) {
+      jsonvalue = _data["forcepump"];
+      if ( !jsonvalue.isBool() )
+	throw Exception("forcepump must be of the type bool");
+      ps.setForcePump(jsonvalue.asBool());
+    }
+
+    if ( _data.isMember("blockheat") ) {
+      jsonvalue = _data["blockheat"];
+      if ( !jsonvalue.isBool() )
+	throw Exception("blockheat must be of the type bool");
+      ps.setBlockHeat(jsonvalue.asBool());
+    }
 
     // return success
     Json::Value retval;

@@ -1,7 +1,9 @@
 import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
+import { UiSwitchModule } from 'ngx-ui-switch';
 import { ChartsModule } from 'ng2-charts';
 
 import { BrewComponent } from './brew.component';
@@ -10,7 +12,8 @@ import { BrewComponent } from './brew.component';
     imports: [
 	CommonModule,
 	ChartsModule,
-	FormsModule
+	FormsModule,
+	UiSwitchModule
     ],
     declarations: [BrewComponent]
 })

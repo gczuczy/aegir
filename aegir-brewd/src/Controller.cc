@@ -216,10 +216,17 @@ namespace aegir {
       // if the recirc button is pushed, or we don't need tempcontrol anymore
       // stop the pump and the heating element
       if ( c_stoprecirc || !c_needcontrol ) {
-	if ( c_ps.getState() != ProcessState::States::Maintenance )
-	  setPIN("rimspump", PINState::Off);
+	if ( c_ps.getState() != ProcessState::States::Maintenance  ) {
+	  if ( c_ps.getForcePump() ) {
+	    setPIN("rimspump", PINState::On);
+	  } else {
+	    setPIN("rimspump", PINState::Off);
+	  }
+	}
 	setPIN("rimsheat", PINState::Off);
       } // stop recirculation or we don't need control anymore
+      if ( c_needcontrol && c_ps.getBlockHeat() )
+	setPIN("rimsheat", PINState::Off);
 
       // end the GPIO change cycle
       endCycle();
@@ -497,14 +504,14 @@ namespace aegir {
 
   void Controller::stagePreBoil(PINTracker &_pt) {
     //printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
-    setPIN("rimspump", PINState::Off);
+    setPIN("rimspump", c_ps.getForcePump()?PINState::On : PINState::Off);
     setPIN("rimsheat", PINState::Off);
     c_needcontrol = false;
   }
 
   void Controller::stageHopping(PINTracker &_pt) {
     //printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
-    setPIN("rimspump", PINState::Off);
+    setPIN("rimspump", c_ps.getForcePump()?PINState::On : PINState::Off);
     setPIN("rimsheat", PINState::Off);
     c_needcontrol = false;
 
@@ -567,6 +574,7 @@ namespace aegir {
   void Controller::stageCooling(PINTracker &_pt) {
     float bktemp = c_ps.getSensorTemp("BK");
 
+    setPIN("rimspump", c_ps.getForcePump()?PINState::On : PINState::Off);
     if ( bktemp <= c_cfg->getCoolTemp() ) {
       //c_ps.setState(ProcessState::States::Finished);
       setPIN("buzzer", PINState::Pulsate, 1.0f, 0.23f);
@@ -607,6 +615,12 @@ namespace aegir {
 
     c_ps.setTargetTemp(c_temptarget);
     c_newtemptarget = false;
+
+    if ( c_ps.getBlockHeat() ) {
+      setPIN("rimsheat", PINState::Off);
+      setPIN("rimspump", PINState::On);
+      return 1;
+    }
 
     int nextcontrol = 30;
 

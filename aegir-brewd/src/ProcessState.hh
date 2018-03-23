@@ -105,6 +105,10 @@ namespace aegir {
     inline uint32_t getHopId() { return c_hopid; };
     inline ProcessState &setHopTime(uint32_t _val) { c_t_hoptime = _val; return *this; };
     inline uint32_t getHopTime() const { return c_t_hoptime; };
+    inline ProcessState &setForcePump(bool _val) { c_force_pump = _val; return *this; };
+    inline bool getForcePump() { return c_force_pump; };
+    inline ProcessState &setBlockHeat(bool _val) { c_block_heat = _val; return *this; };
+    inline bool getBlockHeat() { return c_block_heat; };
 
   protected:
     std::recursive_mutex c_mtx_state;
@@ -135,6 +139,9 @@ namespace aegir {
     std::atomic<bool> c_maint_pump;
     std::atomic<bool> c_maint_heat;
     std::atomic<float> c_maint_temp;
+    // sparge/boil/cool forcings
+    std::atomic<bool> c_force_pump;
+    std::atomic<bool> c_block_heat;
   };
 }
 

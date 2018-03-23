@@ -149,6 +149,9 @@ namespace aegir {
     c_t_hopstart = 0;
     c_hopid = 0;
 
+    c_force_pump = false;
+    c_block_heat = false;
+
     setState(States::Empty);
 
     return *this;

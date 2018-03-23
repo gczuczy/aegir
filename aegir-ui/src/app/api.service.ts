@@ -177,7 +177,7 @@ export class ApiService {
 	let headers = new Headers({'Content-Type': 'application/json'});
 	let options = new RequestOptions({headers: headers});
 
-	console.log('calling /api/brewd/state', body, options);
+	//console.log('calling /api/brewd/state', body, options);
 
 	return this.http.post('/api/brewd/state', body, options)
 	    .map((res:Response) => {
@@ -191,7 +191,7 @@ export class ApiService {
 	let headers = new Headers({'Content-Type': 'application/json'});
 	let options = new RequestOptions({headers: headers});
 
-	console.log('calling /api/brewd/state', body, options);
+	//console.log('calling /api/brewd/state', body, options);
 
 	return this.http.post('/api/brewd/state', body, options)
 	    .map((res:Response) => {
@@ -318,6 +318,20 @@ export class ApiService {
 	//console.log("Setting maint to ", pump, heat, temp, body, headers, options);
 
 	return this.http.post('/api/brewd/maintenance', body, options)
+	    .map((res:Response) => {
+		//console.log('Catching result, ', res.status);
+		return res.json();
+	    })
+	    .catch(this.handleError);
+    }
+
+    override(blockheat, forcepump): Observable<{}> {
+	let body = JSON.stringify({'blockheat': blockheat,
+				   'forcepump': forcepump});
+	let headers = new Headers({'Content-Type': 'application/json'});
+	let options = new RequestOptions({headers: headers});
+
+	return this.http.post('/api/brewd/override', body, options)
 	    .map((res:Response) => {
 		//console.log('Catching result, ', res.status);
 		return res.json();

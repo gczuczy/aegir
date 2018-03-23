@@ -51,7 +51,7 @@ export class MaintenanceComponent implements OnInit {
 
     onPumpChange(event) {
 	// event is the new value
-	console.log('onPumpChange', event);
+	//console.log('onPumpChange', event);
 	this.pumpon = event;
 	if ( !event ) {
 	    this.heaton = false;
@@ -61,7 +61,7 @@ export class MaintenanceComponent implements OnInit {
 
     onHeatChange(event) {
 	// event is the new value
-	console.log('onHeatChange', event);
+	//console.log('onHeatChange', event);
 	this.heaton = event;
 	if ( event ) {
 	    this.pumpon = true;

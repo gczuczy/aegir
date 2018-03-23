@@ -22,6 +22,8 @@ export class BrewComponent implements OnInit {
     public hopping = null;
 
     public coolingdone = false;
+    public forcepump = false;
+    public blockheat = false;
 
     // volume
     public volume: number = 42;
@@ -245,5 +247,17 @@ export class BrewComponent implements OnInit {
     onStartBoil() {
 	this.api.startBoil()
 	    .subscribe(data => console.log(data));
+    }
+
+    onBlockHeat(event) {
+	// event is the new value
+	this.blockheat = event;
+	this.api.override(this.blockheat, this.forcepump).subscribe();
+    }
+
+    onForcePump(event) {
+	// event is the new value
+	this.forcepump = event;
+	this.api.override(this.blockheat, this.forcepump).subscribe();
     }
 }

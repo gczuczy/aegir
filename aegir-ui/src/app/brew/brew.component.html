@@ -13,6 +13,16 @@
 	  <button *ngIf="state=='Cooling' && coolingdone" class="btn btn-warning btn-sm" (click)="onCoolingDone()">Cooling Done</button>
 	  <button *ngIf="state=='PreBoil' && bktemp > 100" class="btn btn-warning btn-sm" (click)="onStartBoil()">Start Boil</button>
 	  <button *ngIf="state!='Empty'" class="btn btn-danger btn-sm" (click)="onAbortBrew()">It's a trap!</button>
+	  <!-- Heat blocking during sparging -->
+	  <div *ngIf="state=='Sparging'" class="container">
+	    <ui-switch [(ngModel)]="blockheat" (change)="onBlockHeat($event)"></ui-switch>
+	    Block Heat
+	  </div>
+	  <!-- Forcing pump during hopping and cooling -->
+	  <div *ngIf="state=='PreBoil' || state=='Hopping' || state=='Cooling'" class="container">
+	    <ui-switch [(ngModel)]="forceheat" (change)="onForcePump($event)"></ui-switch>
+	    ForcePump
+	  </div>
 	</div>
       </div>
 

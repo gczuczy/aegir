@@ -17,6 +17,7 @@ def init(app, api):
     api.add_resource(BrewStateVolume, '/api/brewd/state/volume')
     api.add_resource(BrewStateTempHistory, '/api/brewd/state/temphistory')
     api.add_resource(BrewMaintenance, '/api/brewd/maintenance')
+    api.add_resource(BrewOverride, '/api/brewd/override')
     pass
 
 class BrewProgram(flask_restful.Resource):
@@ -73,14 +74,14 @@ class BrewProgram(flask_restful.Resource):
             return {"status": "error",
                     "errors": "Unknown start mode: {sm}".format(sm = zreq['startmode'])}, 422
 
-        pprint(['loading', zreq])
+        #pprint(['loading', zreq])
         zresp = None
         try:
             zresp = aegir.zmq.prmessage("loadProgram", zreq)
         except Exception as e:
             return {"status": "error",
                     "errors": [str(e)]}, 422
-        pprint(['zresp', zresp])
+        #pprint(['zresp', zresp])
 
         if zresp['status'] != 'success':
             return zresp, 422
@@ -293,5 +294,28 @@ class BrewMaintenance(flask_restful.Resource):
             return {'status': 'error', 'errors': [zresp['message']]}, 422
 
         return {"status": "success", "data": zresp['data']}, 200
-        pass
+    pass
+
+class BrewOverride(flask_restful.Resource):
+    def post(self):
+        data = flask.request.get_json();
+        zdata = {}
+
+        for field in ['blockheat', 'forcepump']:
+            if field in data:
+                zdata[field] = data[field]
+                pass
+            pass
+
+        zresp = None
+        #pprint([data, zdata])
+        try:
+            zresp = aegir.zmq.prmessage('override', zdata)
+        except Exception as e:
+            return {"status": "error", "errors": [str(e)]}, 422
+
+        if zresp['status'] != 'success':
+            return {'status': 'error', 'errors': [zresp['message']]}, 422
+
+        return {"status": "success", "data": zresp['data']}, 200
     pass
