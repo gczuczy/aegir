@@ -525,7 +525,7 @@ namespace aegir {
     c_ps.setHopTime(hoptime);
 
     // transition to the next stage when we're done
-    if ( (hopstart + boiltime) > now ) {
+    if ( (hopstart + boiltime) < now ) {
       setPIN("buzzer", PINState::Off);
       c_ps.setState(ProcessState::States::Cooling);
       return;
