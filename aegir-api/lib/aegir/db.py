@@ -110,17 +110,21 @@ def addprogram(prog):
     progid = curs.lastrowid
 
     # now add the mashsteps
-    for step in prog['mashsteps']:
-        curs.execute('''
-        INSERT INTO programs_mashsteps (progid, orderno, temperature, holdtime)
-        VALUES (?, ?, ?, ?)
-        ''', (progid, step['order'], step['temp'], step['holdtime']))
+    if not prog['nomash']:
+        for step in prog['mashsteps']:
+            curs.execute('''
+            INSERT INTO programs_mashsteps (progid, orderno, temperature, holdtime)
+            VALUES (?, ?, ?, ?)
+            ''', (progid, step['order'], step['temp'], step['holdtime']))
+            pass
         pass
 
     # and the hops
-    for hop in prog['hops']:
-        curs.execute('INSERT INTO programs_hops (progid, attime, hopname, hopqty) VALUES (?,?,?,?)',
-                 (progid, hop['attime'], hop['name'], hop['quantity']))
+    if not prog['noboil']:
+        for hop in prog['hops']:
+            curs.execute('INSERT INTO programs_hops (progid, attime, hopname, hopqty) VALUES (?,?,?,?)',
+                         (progid, hop['attime'], hop['name'], hop['quantity']))
+            pass
         pass
 
     return progid
