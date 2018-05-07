@@ -1,5 +1,11 @@
 Controller:
- - Stop serving the temp graph after sparge is done
- - Implement hopping schedule, use the beeper
- - Add some maintenance option, like turning the pump on-off,
-   keeping a specific temperature, etc.
+ - Add an override for the heration during the mashing stage - can help out
+   in case there's some unexpected event, and the algorithm is not able to
+   determine how to keep going
+ - Restrict the forcepump/blockheat overrides to the states where they are needed
+ - Implement the Settings on the UI
+ - Improve the temphistory fetching, it takes a long time now
+ - During ForcePump, set the temperature what to keep, like during maintenance
+ - Fix hopping display on the UI, currently it shows negative hops for past ones
+ - Add option for "eco" tempkeeping during maintenance
+ 
