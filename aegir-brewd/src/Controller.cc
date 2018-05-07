@@ -857,6 +857,7 @@ namespace aegir {
     }
 
     // apply min/max boundaries
+    // Controller::tempControl(): RIMS pwr: final:0.00 min:0.06 max:3.00 calc:1.93 max:0.00
     pwr_rims_final = std::min({std::max(pwr_rims_min, pwr_rims)+ pwr_dissipation_rims, pwr_rims_max, pwr_max});
     printf("Controller::tempControl(): RIMS pwr: final:%.2f min:%.2f max:%.2f calc:%.2f max:%.2f\n",
 	   pwr_rims_final, pwr_rims_min, pwr_rims_max, pwr_rims, pwr_max);
