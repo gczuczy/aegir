@@ -115,6 +115,10 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Error initializing GPIO interface: %s\n", e.what());
     return 2;
   }
+  catch (std::exception &e) {
+    fprintf(stderr, "Error initializing GPIO interface: %s\n", e.what());
+    return 2;
+  }
 
   // deallocating stuff here
   delete gpio;

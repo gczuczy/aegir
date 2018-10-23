@@ -1,5 +1,6 @@
 
 #include "SPI.hh"
+#include "Exception.hh"
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -7,8 +8,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/spigenio.h>
-
-#include <exception>
 
 namespace aegir {
 
@@ -64,7 +63,8 @@ namespace aegir {
 
   uint8_t &SPI::Data::operator[](const int _idx) {
     if ( _idx < 0 || _idx >= c_size ) {
-      throw std::exception();
+      throw Exception("SPI Data out of index");
+      //      throw std::exception();
     }
     return c_data[_idx];
   }
@@ -102,8 +102,8 @@ namespace aegir {
 
   SPI::SPI(ChipSelector &_cs, GPIO &_gpio, const std::string &_spidev): c_cs(_cs), c_gpio(_gpio), c_spifd(-1) {
     if ((c_spifd = open(_spidev.c_str(), O_RDWR)) < 0) {
-      printf("Unable to open spidev %s: %s\n", _spidev.c_str(), strerror(errno));
-      throw std::exception();
+      //printf("Unable to open spidev %s: %s\n", _spidev.c_str(), strerror(errno));
+      throw Exception("Unable to open spidev %s: %s", _spidev.c_str(), strerror(errno));
     }
   }
 
