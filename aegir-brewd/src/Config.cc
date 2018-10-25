@@ -96,7 +96,7 @@ namespace aegir {
     c_pinlayout["buzzer"] = 26;
 
     // SPI config
-    c_spidev = "/dev/spigen0";
+    c_spidev = "/dev/spigen0.0";
     c_spi_chipselector = ChipSelectors::DirectSelect;
     c_pinlayout["cs0"] = 7;
     c_pinlayout["cs1"] = 8;
