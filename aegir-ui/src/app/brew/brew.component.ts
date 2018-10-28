@@ -255,13 +255,13 @@ export class BrewComponent implements OnInit {
 
     onBlockHeat(event) {
 	// event is the new value
-	this.blockheat = event;
+	this.blockheat = event['checked'];
 	this.api.override(this.blockheat, this.forcepump).subscribe();
     }
 
     onForcePump(event) {
 	// event is the new value
-	this.forcepump = event;
+	this.forcepump = event['checked'];
 	this.api.override(this.blockheat, this.forcepump).subscribe();
     }
 }
