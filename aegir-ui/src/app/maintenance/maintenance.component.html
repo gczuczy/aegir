@@ -29,11 +29,27 @@
       <table class="table table-pad-2px">
 	<tr>
 	  <th>Pump</th>
-	 <td><ui-switch [(ngModel)]="pumpon" (change)="onPumpChange($event)"></ui-switch></td>
+	  <td>
+	    <!--<ui-switch [(ngModel)]="pumpon" (change)="onPumpChange($event)"></ui-switch>-->
+	    <mat-slide-toggle
+	      [checked]="pumpon"
+	      (change)="onPumpChange($event)"
+	      >
+	      Pump On
+	    </mat-slide-toggle>
+	  </td>
 	</tr>
 	<tr>
 	  <th>Heat</th>
-	 <td><ui-switch [(ngModel)]="heaton" (change)="onHeatChange($event)"></ui-switch></td>
+	  <td>
+	    <!--<ui-switch [(ngModel)]="heaton" (change)="onHeatChange($event)"></ui-switch>-->
+	    <mat-slide-toggle
+	      [checked]="heaton"
+	      (change)="onHeatChange($event)"
+	      >
+	      Heat On
+	    </mat-slide-toggle>
+	  </td>
 	</tr>
 	<tr>
 	  <th>Temperature</th>

@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Params, Router } from '@angular/router';
-import 'rxjs/add/operator/switchMap';
+import { switchMap } from 'rxjs/operators';
 
 import { Program } from './program';
 import { ApiService } from '../api.service';
@@ -19,7 +19,7 @@ export class ProgramComponent implements OnInit {
 
     ngOnInit() {
 	this.route.params
-	    .switchMap((params: Params) => this.api.getProgram(params['id']))
+	    .pipe(switchMap((params: Params) => this.api.getProgram(params['id'])))
 	    .subscribe(prog => {
 		this.program = prog['data'];
 		//console.log('Loaded prog: ', this.program);

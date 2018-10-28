@@ -16,8 +16,9 @@
       "es2016",
       "dom"
     ],
-      "types": [
-	  "jquery"
-      ]
+    "types": [
+      "jquery"
+    ],
+    "module": "es2015"
   }
 }

@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import 'rxjs/add/operator/switchMap';
+import { HttpErrorResponse } from '@angular/common/http';
 
 import { Program } from '../programs/program';
 import { ApiService } from '../api.service';
@@ -232,7 +232,10 @@ export class BrewComponent implements OnInit {
     onVolumeReset() {
 	this.api.getVolume().subscribe(data => {
 	    this.volume = data['volume'];
-	});
+	},
+				       error => {
+					   console.log('volume err', error);
+				       });
     }
 
     onVolumeSet() {

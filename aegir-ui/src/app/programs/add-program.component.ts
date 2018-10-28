@@ -135,6 +135,7 @@ export class AddProgramComponent implements OnInit {
 
 	let hasboil = <FormArray>this.addProgramForm.controls['hasboil'].value;
 	let hasmash = <FormArray>this.addProgramForm.controls['hasmash'].value;
+	//console.log('add-p::formvalidator', hasboil, hasmash);
 	if ( !hasboil && !hasmash ) return {'mashboil': 'Either mash or boil is needed'};
 
 	if ( hasboil ) {
@@ -204,11 +205,11 @@ export class AddProgramComponent implements OnInit {
     }
 
     onHasmashChange(event) {
-	this.hasmash = event;
+	this.hasmash = event['checked'];
     }
 
     onHasboilChange(event) {
-	this.hasboil = event;
+	this.hasboil = event['checked'];
     }
 
     public save(model: FormGroup) {

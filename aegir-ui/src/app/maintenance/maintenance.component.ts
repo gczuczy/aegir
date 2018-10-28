@@ -52,8 +52,8 @@ export class MaintenanceComponent implements OnInit {
     onPumpChange(event) {
 	// event is the new value
 	//console.log('onPumpChange', event);
-	this.pumpon = event;
-	if ( !event ) {
+	this.pumpon = event['checked'];
+	if ( !this.pumpon ) {
 	    this.heaton = false;
 	}
 	this.api.setMaintenance(this.pumpon, this.heaton, this.heattemp).subscribe();
@@ -62,8 +62,8 @@ export class MaintenanceComponent implements OnInit {
     onHeatChange(event) {
 	// event is the new value
 	//console.log('onHeatChange', event);
-	this.heaton = event;
-	if ( event ) {
+	this.heaton = event['checked'];
+	if ( this.heaton ) {
 	    this.pumpon = true;
 	}
 	this.api.setMaintenance(this.pumpon, this.heaton, this.heattemp).subscribe();

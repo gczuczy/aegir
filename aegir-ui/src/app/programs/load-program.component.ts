@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Params, Router } from '@angular/router';
-import 'rxjs/add/operator/switchMap';
+import { switchMap } from 'rxjs/operators';
+
 import { Validators, FormGroup, FormArray, FormBuilder,
 	 ValidatorFn, AbstractControl } from '@angular/forms';
 
@@ -32,10 +33,10 @@ export class LoadProgramComponent implements OnInit {
     ngOnInit() {
 	// TODO: setting the initial date is still buggy
 	this.route.params
-	    .switchMap((params: Params) => this.api.getProgram(params['id']))
+	    .pipe(switchMap((params: Params) => this.api.getProgram(params['id'])))
 	    .subscribe(prog => {
 		this.program = prog['data'];
-		console.log('Program to load: ', this.program);
+		//console.log('Program to load: ', this.program);
 		this.loadProgramForm = this._fb.group({
 		    id: [this.program['id']],
 		    startmode: ["now"],
@@ -46,16 +47,16 @@ export class LoadProgramComponent implements OnInit {
     }
 
     submit(model: FormGroup) {
-	console.log(model);
+	//console.log(model);
 	this.api.loadProgram(model.value).subscribe(
 	    resp => {
 		this.errors = null;
 		this.router.navigate(['brew']);
 	    },
-	    err => {
-		let errobj = err.json();
-		//console.log('Error obj: ', errobj);
-		this.errors = errobj['errors'];
+	    error => {
+		//console.log('load-p error', error);
+		this.errors = [];
+		this.errors.push(error['error']['message']);
 	    }
 	);
     }

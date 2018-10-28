@@ -15,13 +15,21 @@
 	  <button *ngIf="state!='Empty'" class="btn btn-danger btn-sm" (click)="onAbortBrew()">It's a trap!</button>
 	  <!-- Heat blocking during sparging -->
 	  <div *ngIf="state=='Sparging'" class="container">
-	    <ui-switch [(ngModel)]="blockheat" (change)="onBlockHeat($event)"></ui-switch>
-	    Block Heat
+	    <mat-slide-toggle
+	      [checked]="blockheat"
+	      (change)="onBlockHeat($event)"
+	      >
+	      Block Heat
+	    </mat-slide-toggle>
 	  </div>
 	  <!-- Forcing pump during hopping and cooling -->
 	  <div *ngIf="state=='PreBoil' || state=='Hopping' || state=='Cooling'" class="container">
-	    <ui-switch [(ngModel)]="forceheat" (change)="onForcePump($event)"></ui-switch>
-	    ForcePump
+	    <mat-slide-toggle
+	      [checked]="forceheat"
+	      (change)="onForcePump($event)"
+	      >
+	      Force Pump
+	    </mat-slide-toggle>
 	  </div>
 	</div>
       </div>

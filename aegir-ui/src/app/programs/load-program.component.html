@@ -2,6 +2,13 @@
   <p>Loading form ...</p>
 </div>
 <div class="container" *ngIf="loadProgramForm">
+  <!-- API errors -->
+  <div class="container" [hidden]="!errors">
+    <div *ngFor="let error of errors"
+	 class="alert alert-danger" role="alert">
+      <strong>API Error:</strong>&nbsp;{{error}}
+    </div>
+  </div>
   <div class="container">
     <form [formGroup]="loadProgramForm" novalidate (ngSubmit)="submit(loadProgramForm)">
       <div class="row">

@@ -1,6 +1,6 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
-import { HttpModule } from '@angular/http';
+import { HttpClientModule } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { APP_BASE_HREF } from '@angular/common';
 import { Angular2FontawesomeModule } from 'angular2-fontawesome/angular2-fontawesome';
@@ -23,7 +23,7 @@ import { APP_ROUTES } from './app.routes';
     imports: [
 	BrowserModule,
 	Angular2FontawesomeModule,
-	HttpModule,
+	HttpClientModule,
 	BrewModule,
 	SettingsModule,
 	ProgramsModule,

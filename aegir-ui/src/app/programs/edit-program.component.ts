@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Validators, FormGroup, FormArray, FormBuilder,
 	 ValidatorFn, AbstractControl } from '@angular/forms';
 import { ActivatedRoute, Params, Router } from '@angular/router';
-import 'rxjs/add/operator/switchMap';
+import { switchMap } from 'rxjs/operators';
 
 import { IntValidator } from '../int-validator';
 import { Program } from './program';
@@ -33,7 +33,7 @@ export class EditProgramComponent implements OnInit {
     ngOnInit() {
 	//debugger;
 	this.route.params
-	    .switchMap((params: Params) => this.api.getProgram(params['id']))
+	    .pipe(switchMap((params: Params) => this.api.getProgram(params['id'])))
 	    .subscribe(prog => {
 		this.program = prog['data'];
 		this.hasmash = !prog['nomash'];

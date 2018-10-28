@@ -3,7 +3,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { UiSwitchModule } from 'ngx-ui-switch';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 import { ProgramsComponent } from './programs.component';
 import { AddProgramComponent } from './add-program.component';
@@ -18,7 +18,7 @@ import { LoadProgramComponent } from './load-program.component';
 	CommonModule,
 	BrowserModule,
 	FormsModule,
-	UiSwitchModule,
+	MatSlideToggleModule,
 	ReactiveFormsModule,
 	RouterModule.forChild(PROGRAMS_ROUTES)
     ],

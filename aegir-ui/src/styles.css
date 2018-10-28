@@ -2,6 +2,7 @@
 /*
 //body { padding-top: 70px; }
 */
+@import '~@angular/material/prebuilt-themes/deeppurple-amber.css';
 .vfill {
     min-height: 100%;
     height: 100%;
