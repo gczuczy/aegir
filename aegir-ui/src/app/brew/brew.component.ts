@@ -81,6 +81,7 @@ export class BrewComponent implements OnInit {
 	this.sensors = [];
 	this.state = data['state'];
 	this.targettemp = data['targettemp'];
+	//console.log('brew::updateState', data);
 
 	// mashing data
 	if ( 'mashstep' in data ) {

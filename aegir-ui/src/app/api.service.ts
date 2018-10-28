@@ -33,6 +33,7 @@ export class ApiService {
     private state_data = 'Empty';
     private temphistory = new Subject();
     private temphistory_data = null;
+    private temphistory_running = false;
 
     constructor(private http: HttpClient) {
 	if ( ApiService.instance != null ) return ApiService.instance;
@@ -72,26 +73,19 @@ export class ApiService {
 	let newstates = new Set(['Maintenance', 'Empty', 'Loaded', 'PreWait', 'PreHeat', 'NeedMalt',
 				 'PreBoil', 'Hopping', 'Cooling', 'Finished']);
 	if ( newstates.has(this.state_data) ) return;
-	console.log('state data', this.state_data);
+	if ( this.temphistory_running && t == -1 ) return;
+	this.temphistory_running = true;
+	//console.log('state data', this.state_data);
 
-	/*
-	let params: URLSearchParams = new URLSearchParams();
 	let frm = 0;
 	if ( this.temphistory_data != null ) {
 	    frm = this.temphistory_data['timestamps'][this.temphistory_data['timestamps'].length-1]+1;
 	}
-	params.set('from', frm.toString());
-	*/
-	let params = new HttpParams();
-	let frm = 0;
-	if ( this.temphistory_data != null ) {
-	    frm = this.temphistory_data['timestamps'][this.temphistory_data['timestamps'].length-1]+1;
-	}
-	params.set('from', frm.toString());
+	let params = new HttpParams().set('from', frm.toString());
 
-	this.http.get(`/api/brewd/state/temphistory`, {params: params})
+	this.http.get(`/api/brewd/state/temphistory`, {'params': params})
 	    .subscribe(res => {
-		//let rjson = res.toJSON()['data'];
+		//console.log('temphistory result', res);
 		let rjson = res['data']
 		//console.log('got temphistory', rjson, this.temphistory_data);
 		if ( this.temphistory_data == null ) {
@@ -110,7 +104,14 @@ export class ApiService {
 		    }
 		}
 		this.temphistory.next(this.temphistory_data);
+
+		if ( rjson['maxcount'] == rjson['timestamps'].length ) {
+		    this.updateTempHistory(0);
+		}
 	    });
+	if ( t >= 0 ) {
+	    this.temphistory_running = false;
+	}
     }
 
     announceUpdate() {
