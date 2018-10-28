@@ -239,7 +239,7 @@ class BrewMaintenance(flask_restful.Resource):
         '''
         data = flask.request.get_json();
 
-        if not 'mode' in data:
+        if not isinstance(data, dict) or not 'mode' in data:
             return {"status": "error", "errors": ['Missing mode parameter']}, 422
 
         setmode = data['mode']
