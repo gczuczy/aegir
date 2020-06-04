@@ -9,7 +9,7 @@ DISTDIR=dist
 .MAIN: devserver
 
 devserver: $(NG)
-	$(NODE) --max_old_space_size=384 $(NG) serve --host 0.0.0.0 --disable-host-check
+	$(NODE) $(NG) serve --host 0.0.0.0 --disable-host-check
 
 build: $(NG)
 	$(NG) build --prod
