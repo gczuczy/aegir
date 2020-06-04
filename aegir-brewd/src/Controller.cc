@@ -997,8 +997,10 @@ namespace aegir {
 	continue;
       }
       T_end = tempsit->second;
+#ifdef BUG_MAP
       if ( T_end == std::numeric_limits<uint32_t>::max() )
 	T_end = c_ps.getSensorTemp("RIMS");
+#endif
 
       float dt = t_end - t_start;
       float pwr = hepwr * heratio;

@@ -5,7 +5,7 @@
 #ifndef AEGIR_JSONMESSAGE_H
 #define AEGIR_JSONMESSAGE_H
 
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 
 #include "Message.hh"
 

@@ -5,16 +5,20 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <sstream>
+
 namespace aegir {
   JSONMessage::JSONMessage(const msgstring &_msg) {
-    Json::Reader jsr;
-
+    //    if ( !jsr.parse(msg, c_json, false) )
+    Json::CharReaderBuilder crf;
     std::string msg;
     msg.resize(_msg.size());
     memcpy((void*)msg.data(), (void*)_msg.data(), msg.size());
 
-    if ( !jsr.parse(msg, c_json, false) )
-      throw Exception("Cannot parse message as JSON: %s", jsr.getFormattedErrorMessages().c_str());
+    std::istringstream iss(msg);
+    std::string errors;
+    if ( Json::parseFromStream(crf, iss, &c_json, &errors) )
+      throw Exception("Cannot parse message as JSON: %s", errors.c_str());
 
 #if 0
     std::string typestr("unknown");
@@ -54,9 +58,11 @@ namespace aegir {
   JSONMessage::~JSONMessage() = default;
 
   msgstring JSONMessage::serialize() const {
-    Json::FastWriter fwr;
-    std::string buff(fwr.write(c_json));
+    Json::StreamWriterBuilder swb;
+    std::string buff;
     msgstring msg;
+
+    buff = Json::writeString(swb, c_json);
 
     msg.resize(buff.size());
     memcpy((void*)msg.data(), (void*)buff.data(), msg.size());

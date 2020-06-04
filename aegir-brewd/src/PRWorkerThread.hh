@@ -6,7 +6,7 @@
 #ifndef AEGIR_PRWORKERTHREAD_H
 #define AEGIR_PRWORKERTHREAD_H
 
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 #include <memory>
 #include <functional>
 #include <map>
