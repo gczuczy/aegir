@@ -85,7 +85,7 @@ class Programs(flask_restful.Resource):
         dbc = aegir.db.Connection()
         progs = dbc.getPrograms()
         return {'status': 'success',
-                'data': [p.data() for p in progs]}
+                'data': [p.data for p in progs]}
 
     def post(self):
         '''
@@ -126,6 +126,7 @@ class Program(flask_restful.Resource):
     Deals with a single program
     '''
     def get(self, progid):
+        pprint(['Program', progid])
         res = None
         try:
             dbc = aegir.db.Connection()
@@ -135,7 +136,7 @@ class Program(flask_restful.Resource):
                     'errors': [str(e)]}, 400
 
         return {'status': 'success',
-                'data': res.data()}
+                'data': res.data}
 
     def delete(self, progid):
         try:

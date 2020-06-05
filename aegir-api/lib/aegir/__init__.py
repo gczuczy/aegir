@@ -27,5 +27,6 @@ def init(cfgfile):
 
 def run():
     _app.run(port=aegir.config.config['port'],
-             debug=aegir.config.config['debug'])
+             debug=aegir.config.config['debug'],
+             threaded=False)
     pass

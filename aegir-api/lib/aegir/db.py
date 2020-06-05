@@ -8,6 +8,8 @@ from pprint import pprint
 
 import aegir.config
 
+dbconn = None
+
 def init(app):
     #app.before_first_request(instance_init)
     app.after_request(after_request)
@@ -24,23 +26,19 @@ def instance_init():
     pass
 
 def after_request(resp):
-    conn = Connection()
-    conn.commit()
+    global dbconn
+    if dbconn is not None:
+        dbconn.commit()
+        pass
     #pprint(['after_request', threading.get_ident(), conn])
     return resp
 
 class Connection():
-    pool = {}
-
     def __init__(self):
-        threadid = threading.get_ident()
-        if not threadid in Connection.pool:
-            self._conn = sqlite3.connect(aegir.config.config['sqlitedb'])
-            self._conn.row_factory = dict_factory
-            Connection.pool[threadid] = self._conn
-        else:
-            self._conn = Connection.pool[threadid]
-            pass
+        global dbconn
+        self._conn = sqlite3.connect(aegir.config.config['sqlitedb'])
+        self._conn.row_factory = dict_factory
+        dbconn = self
         #pprint(['db.Connection', threadid, self, self._conn])
         pass
 
@@ -56,14 +54,14 @@ class Connection():
 
     def getPrograms(self):
         ret = list()
-        for prog in _conn.execute('SELECT * FROM programs ORDER BY name'):
+        for prog in self._conn.execute('SELECT * FROM programs ORDER BY name'):
             ret.append(Program(self, data=prog))
             pass
         return ret
 
     def getProgram(self, progid):
         curs = self._conn.cursor()
-        res = curs.execute('SELECT id,name,starttemp,endtemp,boiltime,nomash,noboil FROM programs WHERE id=?', (progid,))
+        pres = curs.execute('SELECT id,name,starttemp,endtemp,boiltime,nomash,noboil FROM programs WHERE id=?', (progid,))
         prog = pres.fetchone()
         if prog is None:
             raise Exception('No program with ID {id}'.format(id = progid))
@@ -247,7 +245,7 @@ class Program():
         pass
 
     def remove(self):
-        self._conn.execute('DELETE FROM programs WHERE id = ?', (progid,));
+        self._conn.execute('DELETE FROM programs WHERE id = ?', (self._progid,));
         pass
 
     pass
