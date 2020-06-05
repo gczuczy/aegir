@@ -3,7 +3,8 @@ import { NgModule } from '@angular/core';
 import { HttpClientModule } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { APP_BASE_HREF } from '@angular/common';
-import { Angular2FontawesomeModule } from 'angular2-fontawesome/angular2-fontawesome';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import {NgbModule} from '@ng-bootstrap/ng-bootstrap';
 
 import { BrewModule } from './brew/brew.module';
 import { ProgramsModule } from './programs/programs.module';
@@ -22,7 +23,7 @@ import { APP_ROUTES } from './app.routes';
     ],
     imports: [
 	BrowserModule,
-	Angular2FontawesomeModule,
+	FontAwesomeModule,
 	HttpClientModule,
 	BrewModule,
 	SettingsModule,
