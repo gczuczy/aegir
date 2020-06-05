@@ -15,6 +15,7 @@ def init(app, api):
 
 def validateProgram(prog):
     errors = []
+    dbc = aegir.db.Connection()
 
     # check the name first
     if len(prog['name']) < 3 or len(prog['name']) > 32:
@@ -25,7 +26,7 @@ def validateProgram(prog):
     progid = None
     if 'id' in prog:
         progid = prog['id']
-    if not aegir.db.checkprogramname(prog['name'], progid):
+    if not dbc.checkProgramName(prog['name'], progid):
         errors.append('A program with the same name already exists')
         pass
 
@@ -81,8 +82,10 @@ def validateProgram(prog):
 
 class Programs(flask_restful.Resource):
     def get(self):
+        dbc = aegir.db.Connection()
+        progs = dbc.getPrograms()
         return {'status': 'success',
-                'data': aegir.db.getprograms()}
+                'data': [p.data() for p in progs]}
 
     def post(self):
         '''
@@ -105,7 +108,8 @@ class Programs(flask_restful.Resource):
         # now add it
         progid = None
         try:
-            progid = aegir.db.addprogram(data)
+            dbc = aegir.db.Connection()
+            progid = dbc.addProgram(data)
         except KeyError as e:
             return {'status': 'error',
                     'errors': ['KeyError: {name}'.format(name=str(e))]}, 400
@@ -124,17 +128,18 @@ class Program(flask_restful.Resource):
     def get(self, progid):
         res = None
         try:
-            res = aegir.db.getprogram(progid)
+            dbc = aegir.db.Connection()
+            res = dbc.getProgram(progid)
         except Exception as e:
             return {'status': 'error',
                     'errors': [str(e)]}, 400
 
         return {'status': 'success',
-                'data': res}
+                'data': res.data()}
 
     def delete(self, progid):
         try:
-            aegir.db.delprogram(progid)
+            aegir.db.Connection().getProgram(progid).remove()
         except Exception as e:
             return {'status': 'error',
                     'errors': [str(e)]}, 400
@@ -150,7 +155,7 @@ class Program(flask_restful.Resource):
         # now add it
         progid = None
         try:
-            progid = aegir.db.saveprogram(data)
+            progid = aegir.db.Connection().getProgram(progid).update(data)
         except KeyError as e:
             return {'status': 'error',
                     'errors': ['KeyError: {name}'.format(name=str(e))]}, 400

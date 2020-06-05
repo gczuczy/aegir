@@ -8,7 +8,7 @@ config = {}
 def init(cfgfile):
     global config
     with open(cfgfile, 'r') as cfgfh:
-        config = yaml.load(cfgfh.read())
+        config = yaml.load(cfgfh.read(), Loader=yaml.FullLoader)
         pass
     #pprint(config)
     pass
