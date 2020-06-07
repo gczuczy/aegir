@@ -34,3 +34,6 @@
 
 # python compiled files
 *.pyc
+
+# python packages
+*.egg-info
