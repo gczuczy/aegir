@@ -88,11 +88,10 @@ namespace aegir {
 
     // PIN layout
     c_pinlayout.clear();
-    c_pinlayout["swled"] = 16;
-    c_pinlayout["swon"]  = 20;
-    c_pinlayout["swoff"] = 21;
-    c_pinlayout["rimsheat"] = 23;
-    c_pinlayout["rimspump"] = 24;
+    c_pinlayout["mtlevel"] = 16;
+    c_pinlayout["mtpump"] = 23;
+    c_pinlayout["bkpump"] = 24;
+    c_pinlayout["mtheat"] = 25;
     c_pinlayout["buzzer"] = 26;
 
     // SPI config
@@ -118,7 +117,7 @@ namespace aegir {
     c_zmq_pr_port = 42069;
 
     // the heating element's power
-    c_hepower = 3000;
+    c_hepower = 9000;
 
     // pin polling interval
     c_pinival = 100;
