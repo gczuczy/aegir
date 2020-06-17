@@ -11,15 +11,14 @@ namespace aegir {
 
   // PIN default configuration
   pinconfig_t g_pinconfig = pinconfig_t{
-    {"swled", PinConfig(PinMode::OUT, PinPull::NONE)},
-    {"swon",  PinConfig(PinMode::IN, PinPull::DOWN)},
-    {"swoff", PinConfig(PinMode::IN, PinPull::DOWN)},
+    {"mtlevel", PinConfig(PinMode::IN, PinPull::DOWN)},
     {"cs0", PinConfig(PinMode::OUT, PinPull::NONE)},
     {"cs1", PinConfig(PinMode::OUT, PinPull::NONE)},
     {"cs2", PinConfig(PinMode::OUT, PinPull::NONE)},
     {"cs3", PinConfig(PinMode::OUT, PinPull::NONE)},
-    {"rimsheat", PinConfig(PinMode::OUT, PinPull::NONE)},
-    {"rimspump", PinConfig(PinMode::OUT, PinPull::NONE)},
+    {"mtpump", PinConfig(PinMode::OUT, PinPull::NONE)},
+    {"bkpump", PinConfig(PinMode::OUT, PinPull::NONE)},
+    {"mtheat", PinConfig(PinMode::OUT, PinPull::NONE)},
     {"buzzer", PinConfig(PinMode::OUT, PinPull::NONE)}
   };
 
