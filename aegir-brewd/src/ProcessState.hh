@@ -49,7 +49,7 @@ namespace aegir {
 	Sparging, // keeps on endtemp temperature, and circulates
 	PreBoil, // Heats the BK up to boiling, till the start of the boil timer
 	Hopping, // BK being boild, hopping timers started
-	Cooling, // The wort is being cooled down, later whirlpool and such
+	Cooling, // The wort is being cooled down
 	Finished // Brewind process finished
     };
     typedef std::map<uint32_t, float> ThermoDataPoints;

@@ -19,8 +19,9 @@ namespace aegir {
       printf("Got a SIGSEGV\n");
       GPIO &gpio = *GPIO::getInstance();
       try {
-	gpio["rimsheat"].low();
-	gpio["rimspump"].low();
+	gpio["mtheat"].low();
+	gpio["mtpump"].low();
+	gpio["bkpump"].low();
       }
       catch (...) {
       }

@@ -218,15 +218,15 @@ namespace aegir {
       if ( c_stoprecirc || !c_needcontrol ) {
 	if ( c_ps.getState() != ProcessState::States::Maintenance  ) {
 	  if ( c_ps.getForcePump() ) {
-	    setPIN("rimspump", PINState::On);
+	    setPIN("mtpump", PINState::On);
 	  } else {
-	    setPIN("rimspump", PINState::Off);
+	    setPIN("mtpump", PINState::Off);
 	  }
 	}
-	setPIN("rimsheat", PINState::Off);
+	setPIN("mtheat", PINState::Off);
       } // stop recirculation or we don't need control anymore
       if ( c_needcontrol && c_ps.getBlockHeat() )
-	setPIN("rimsheat", PINState::Off);
+	setPIN("mtheat", PINState::Off);
 
       // end the GPIO change cycle
       endCycle();
@@ -300,18 +300,26 @@ namespace aegir {
       c_ps.setHoppingStart(now);
     }
 
+    if ( _new == ProcessState::States::Cooling ) {
+      setPIN("bkpump", PINState::On);
+    }
+
+    if ( _old == ProcessState::States::Cooling ) {
+      setPIN("bkpump", PINState::Off);
+    }
+
     if ( _new == ProcessState::States::Finished ) {
       setPIN("buzzer", PINState::Off);
-      setPIN("rimsheat", PINState::Off);
-      setPIN("rimspump", PINState::Off);
+      setPIN("mtheat", PINState::Off);
+      setPIN("mtpump", PINState::Off);
     }
 
     if ( _new == ProcessState::States::Empty ) {
       c_prog = nullptr;
       c_heratiohistory.clear();
       setPIN("buzzer", PINState::Off);
-      setPIN("rimsheat", PINState::Off);
-      setPIN("rimspump", PINState::Off);
+      setPIN("mtheat", PINState::Off);
+      setPIN("mtpump", PINState::Off);
     }
 
     // when the state is reset
@@ -322,8 +330,8 @@ namespace aegir {
       c_temptarget = 0;
       c_heratiohistory.clear();
       setPIN("buzzer", PINState::Off);
-      setPIN("rimsheat", PINState::Off);
-      setPIN("rimspump", PINState::Off);
+      setPIN("mtheat", PINState::Off);
+      setPIN("mtpump", PINState::Off);
     }
   }
 
@@ -339,7 +347,7 @@ namespace aegir {
 	   temp);
 #endif
 
-    setPIN("rimspump", ((pump || heat) ? PINState::On : PINState::Off));
+    setPIN("mtpump", ((pump || heat) ? PINState::On : PINState::Off));
 
     setTempTarget(temp, 6.0f);
     c_needcontrol = heat;
@@ -347,8 +355,8 @@ namespace aegir {
   }
 
   void Controller::stageEmpty(PINTracker &_pt) {
-    setPIN("rimsheat", PINState::Off);
-    setPIN("rimspump", PINState::Off);
+    setPIN("mtheat", PINState::Off);
+    setPIN("mtpump", PINState::Off);
     c_needcontrol = false;
   }
 
@@ -499,15 +507,15 @@ namespace aegir {
 
   void Controller::stagePreBoil(PINTracker &_pt) {
     //printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
-    setPIN("rimspump", c_ps.getForcePump()?PINState::On : PINState::Off);
-    setPIN("rimsheat", PINState::Off);
+    setPIN("mtpump", c_ps.getForcePump()?PINState::On : PINState::Off);
+    setPIN("mtheat", PINState::Off);
     c_needcontrol = false;
   }
 
   void Controller::stageHopping(PINTracker &_pt) {
     //printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
-    setPIN("rimspump", c_ps.getForcePump()?PINState::On : PINState::Off);
-    setPIN("rimsheat", PINState::Off);
+    setPIN("mtpump", c_ps.getForcePump()?PINState::On : PINState::Off);
+    setPIN("mtheat", PINState::Off);
     c_needcontrol = false;
 
     auto prog = c_ps.getProgram();
@@ -569,7 +577,7 @@ namespace aegir {
   void Controller::stageCooling(PINTracker &_pt) {
     float bktemp = c_ps.getSensorTemp("BK");
 
-    setPIN("rimspump", c_ps.getForcePump()?PINState::On : PINState::Off);
+    setPIN("mtpump", c_ps.getForcePump()?PINState::On : PINState::Off);
     if ( bktemp <= c_cfg->getCoolTemp() ) {
       //c_ps.setState(ProcessState::States::Finished);
       setPIN("buzzer", PINState::Pulsate, 1.0f, 0.23f);
@@ -582,8 +590,9 @@ namespace aegir {
   void Controller::stageFinished(PINTracker &_pt) {
 #if 0
     setPIN("buzzer", PINState::Off);
-    setPIN("rimspump", PINState::Off);
-    setPIN("rimsheat", PINState::Off);
+    setPIN("mtpump", PINState::Off);
+    setPIN("bkpump", PINState::Off);
+    setPIN("mtheat", PINState::Off);
 #endif
     c_needcontrol = false;
   }
@@ -612,8 +621,8 @@ namespace aegir {
     c_newtemptarget = false;
 
     if ( c_ps.getBlockHeat() ) {
-      setPIN("rimsheat", PINState::Off);
-      setPIN("rimspump", PINState::On);
+      setPIN("mtheat", PINState::Off);
+      setPIN("mtpump", PINState::On);
       return 1;
     }
 
@@ -621,8 +630,8 @@ namespace aegir {
 
     time_t now = time(0);
 
-    if ( getPIN("rimspump")->getOldValue() != PINState::On )
-      setPIN("rimspump", PINState::On);
+    if ( getPIN("mtpump")->getOldValue() != PINState::On )
+      setPIN("mtpump", PINState::On);
 
     float dt = now - c_lastcontrol;
     c_lastcontrol = now;
@@ -659,7 +668,7 @@ namespace aegir {
     printf("Controller::tempControl(): %li MT: dt:%.2f last:%.2f curr:%.2f dT:%.4f\n",
 	   now, dt, last_mt, curr_mt, dT_mt);
 
-    float last_ratio = getPIN("rimsheat")->getOldOnratio();
+    float last_ratio = getPIN("mtheat")->getOldOnratio();
 
     // First calculate how much power is needed to
     // heat up the whole stuff in the mashtun to the
@@ -912,7 +921,7 @@ namespace aegir {
   }
 
   void Controller::setHERatio(float _cycletime, float _ratio) {
-    setPIN("rimsheat", PINState::Pulsate, _cycletime, _ratio);
+    setPIN("mtheat", PINState::Pulsate, _cycletime, _ratio);
     c_heratiohistory[(uint32_t)time(0)] = _ratio;
   }
 
