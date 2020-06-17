@@ -247,19 +247,14 @@ namespace aegir {
     ProcessState::Guard guard_ps(c_ps);
     ProcessState::States state = c_ps.getState();
 
-    // The pump&heat control button
+    // if the MT water level mater signals, we're stopping the circulation
     if ( _pt.hasChanges() ) {
-      std::shared_ptr<PINTracker::PIN> swon(_pt.getPIN("swon"));
-      std::shared_ptr<PINTracker::PIN> swoff(_pt.getPIN("swoff"));
+      std::shared_ptr<PINTracker::PIN> mtlvl(_pt.getPIN("mtlevel"));
       // whether we have at least one of the controls
-      if ( swon->isChanged() || swoff->isChanged() ) {
-	if ( swon->getNewValue() != PINState::Off
-	     && swoff->getNewValue() == PINState::Off ) {
-	  setPIN("swled", PINState::On);
+      if ( mtlvl->isChanged() ) {
+	if (  mtlvl->getNewValue() != PINState::Off ) {
 	  c_stoprecirc = true;
-	} else if ( swon->getNewValue() == PINState::Off &&
-		    swoff->getNewValue() != PINState::Off ) {
-	  setPIN("swled", PINState::Off);
+	} else {
 	  c_stoprecirc = false;
 	}
       }
