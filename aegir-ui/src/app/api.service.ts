@@ -280,4 +280,9 @@ export class ApiService {
 
 	return this.http.post('/api/brewd/override', body, options);
     }
+
+    getConfig() {
+	return this.http.get<ApiResponse>(`/api/brewd/config`);
+    }
+
 }

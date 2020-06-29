@@ -17,8 +17,8 @@ namespace aegir {
 
     std::istringstream iss(msg);
     std::string errors;
-    if ( Json::parseFromStream(crf, iss, &c_json, &errors) )
-      throw Exception("Cannot parse message as JSON: %s", errors.c_str());
+    if ( !Json::parseFromStream(crf, iss, &c_json, &errors) )
+      throw Exception("Cannot parse message as JSON: %s/%s", errors.c_str(), _msg.c_str());
 
 #if 0
     std::string typestr("unknown");

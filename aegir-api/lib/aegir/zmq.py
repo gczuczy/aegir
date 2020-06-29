@@ -34,7 +34,7 @@ def reconnect_socket():
     _socket_pr = _ctx.socket(zmq.REQ)
     addr = 'tcp://127.0.0.1:{port}'.format(port = aegir.config.config['prport'])
     _socket_pr.connect(addr)
-    #pprint(['connecting to zmq', addr])
+    pprint(['connecting to zmq', addr])
     _socket_pr.setsockopt(zmq.RCVTIMEO, 1000)
     _socket_pr.setsockopt(zmq.LINGER, 0)
     #_socket_pr.setsockopt(zmq.PROBE_ROUTER, 1)
@@ -44,16 +44,17 @@ def prmessage(command, data):
 
     msg = {'command': command,
            'data': data}
+    #pprint(msg)
     try:
         _socket_pr.send_json(msg)
     except Exception as e:
         #pprint(['zmq_send', e])
         reconnect_socket()
-        raise Exception("brewd is not running")
+        raise Exception("Error while sending message: {msg}".format(msg = str(e)))
 
     try:
         return _socket_pr.recv_json()
     except Exception as e:
-        #pprint(['zmq_recv', e])
-        raise Exception("Cannot parse brewd response")
+        pprint(['zmq_recv', e])
+        raise Exception("Cannot parse brewd response: {err}".format(err = str(e)))
     pass

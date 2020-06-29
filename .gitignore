@@ -37,3 +37,6 @@
 
 # python packages
 *.egg-info
+
+# core foles
+*.core

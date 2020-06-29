@@ -8,4 +8,4 @@ Controller:
  - During ForcePump, set the temperature what to keep, like during maintenance
  - Fix hopping display on the UI, currently it shows negative hops for past ones
  - Add option for "eco" tempkeeping during maintenance
- 
+ - Implement daemonizing

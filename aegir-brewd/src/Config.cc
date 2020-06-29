@@ -417,4 +417,25 @@ namespace aegir {
     _layout = c_pinlayout;
     return *this;
   }
+
+  Config &Config::setHEPower(uint32_t _v) {
+    c_hepower = _v;
+    return *this;
+  }
+
+  Config &Config::setTempAccuracy(float _v) {
+    c_tempaccuracy = _v;
+    return *this;
+  }
+
+  Config &Config::setHeatOverhead(float _v) {
+    c_heatoverhead = _v;
+    return *this;
+  }
+
+  Config &Config::setCoolTemp(float _v) {
+    c_cooltemp = _v;
+    return *this;
+  }
+
 }

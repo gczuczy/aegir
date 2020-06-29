@@ -53,6 +53,8 @@ namespace aegir {
     std::shared_ptr<Json::Value> handleStopMaintenance(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleSetMaintenance(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleOverride(const Json::Value &_data);
+    std::shared_ptr<Json::Value> handleGetConfig(const Json::Value &_data);
+    std::shared_ptr<Json::Value> handleSetConfig(const Json::Value &_data);
   };
 }
 

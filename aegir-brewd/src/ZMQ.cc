@@ -96,11 +96,11 @@ namespace aegir {
 	return MessageFactory::getInstance().create(msg);
       }
       catch (Exception &e) {
-	printf("MessageFactory unknown message type: %s", e.what());
+	//printf("MessageFactory unknown message type(%i): %s\n", __LINE__, e.what());
 	return nullptr;
       }
     } else if ( _mf == MessageFormat::JSON ) {
-      return std::make_shared<JSONMessage>(msg);
+	return std::make_shared<JSONMessage>(msg);
     }
     return nullptr;
   }

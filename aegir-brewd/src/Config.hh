@@ -104,6 +104,12 @@ namespace aegir {
     inline const float getHeatOverhead() const { return c_heatoverhead; };
     inline const float getHECycleTime() const { return c_hecycletime; };
     inline const float getCoolTemp() const { return c_cooltemp; };
+
+    // Setting config elements
+    Config &setHEPower(uint32_t _v);
+    Config &setTempAccuracy(float _v);
+    Config &setHeatOverhead(float _v);
+    Config &setCoolTemp(float _v);
   };
 }
 

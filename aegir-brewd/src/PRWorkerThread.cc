@@ -80,6 +80,8 @@ namespace aegir {
     c_handlers["stopMaintenance"] = std::bind(&PRWorkerThread::handleStopMaintenance, this, std::placeholders::_1);
     c_handlers["setMaintenance"] = std::bind(&PRWorkerThread::handleSetMaintenance, this, std::placeholders::_1);
     c_handlers["override"] = std::bind(&PRWorkerThread::handleOverride, this, std::placeholders::_1);
+    c_handlers["getConfig"] = std::bind(&PRWorkerThread::handleGetConfig, this, std::placeholders::_1);
+    c_handlers["setConfig"] = std::bind(&PRWorkerThread::handleSetConfig, this, std::placeholders::_1);
 
     // connect the IO socket
     c_mq_iocmd.connect("inproc://iocmd");
@@ -100,44 +102,67 @@ namespace aegir {
     std::chrono::microseconds ival(20000);
     std::shared_ptr<Message> msg;
     while (c_run) {
-      while ( (msg = c_mq_prw.recv(ZMQ::MessageFormat::JSON)) ) {
-	// if it's not a JSON type, then send an error response
-	try {
-	  if ( msg->type() != MessageType::JSON ) {
-	    printf("PRWorkerThread: Got a non-JSON message\n");
+      try{
+	while ( (msg = c_mq_prw.recv(ZMQ::MessageFormat::JSON)) ) {
+	  // if it's not a JSON type, then send an error response
+	  try {
+	    if ( msg->type() != MessageType::JSON ) {
+	      //printf("PRWorkerThread: Got a non-JSON message\n");
+	      Json::Value root;
+	      root["status"] = "error";
+	      root["message"] = "Not a JSON Message";
+	      c_mq_prw.send(JSONMessage(root));
+	      continue;
+	    }
+	    // Handling the JSON message
+	    auto jsonmsg = std::static_pointer_cast<JSONMessage>(msg);
+	    auto reply = handleJSONMessage(jsonmsg->getJSON());
+	    c_mq_prw.send(JSONMessage(*reply));
+	  }
+	  catch (Exception &e) {
+	    printf("PRWorkerThread: Exception while handling zmq message: %s\n", e.what());
 	    Json::Value root;
 	    root["status"] = "error";
-	    root["message"] = "Not a JSON Message";
+	    root["message"] = e.what();
 	    c_mq_prw.send(JSONMessage(root));
-	    continue;
 	  }
-	  // Handling the JSON message
-	  auto jsonmsg = std::static_pointer_cast<JSONMessage>(msg);
-	  auto reply = handleJSONMessage(jsonmsg->getJSON());
-	  c_mq_prw.send(JSONMessage(*reply));
-	}
-	catch (Exception &e) {
-	  printf("PRWorkerThread: Exception while handling zmq message: %s\n", e.what());
-	  Json::Value root;
-	  root["status"] = "error";
-	  root["message"] = e.what();
-	  c_mq_prw.send(JSONMessage(root));
-	}
-	catch (std::exception &e) {
-	  printf("PRWorkerThread: Exception while handling zmq message: %s\n", e.what());
-	  Json::Value root;
-	  root["status"] = "error";
-	  root["message"] = e.what();
-	  c_mq_prw.send(JSONMessage(root));
-	}
-	catch (...) {
-	  printf("PRWorkerThread: unknown exception while recv zmq message\n");
-	  Json::Value root;
-	  root["status"] = "error";
-	  root["message"] = "Unknown exception";
-	  c_mq_prw.send(JSONMessage(root));
-	}
-      } // c_mq_recv
+	  catch (std::exception &e) {
+	    printf("PRWorkerThread: Exception while handling zmq message: %s\n", e.what());
+	    Json::Value root;
+	    root["status"] = "error";
+	    root["message"] = e.what();
+	    c_mq_prw.send(JSONMessage(root));
+	  }
+	  catch (...) {
+	    printf("PRWorkerThread: unknown exception while recv zmq message\n");
+	    Json::Value root;
+	    root["status"] = "error";
+	    root["message"] = "Unknown exception";
+	    c_mq_prw.send(JSONMessage(root));
+	  }
+	} // c_mq_recv
+      } // try { while
+      catch (Exception &e) {
+	printf("PRWorkerThread: Exception while handling zmq message: %s\n", e.what());
+	Json::Value root;
+	root["status"] = "error";
+	root["message"] = e.what();
+	c_mq_prw.send(JSONMessage(root));
+      }
+      catch (std::exception &e) {
+	printf("PRWorkerThread: Exception while handling zmq message: %s\n", e.what());
+	Json::Value root;
+	root["status"] = "error";
+	root["message"] = e.what();
+	c_mq_prw.send(JSONMessage(root));
+      }
+      catch (...) {
+	printf("PRWorkerThread: unknown exception while recv zmq message\n");
+	Json::Value root;
+	root["status"] = "error";
+	root["message"] = "Unknown exception";
+	c_mq_prw.send(JSONMessage(root));
+      }
       std::this_thread::sleep_for(ival);
     }
     printf("PRWorkerThread %s stopped\n", c_name.c_str());
@@ -181,7 +206,7 @@ namespace aegir {
 
     // check whether we have the "command" defined
     if ( !_msg.isMember("command") ) {
-      printf("PRWorkerThread::handleJSONMessage(): command is not defined\n");
+      //printf("PRWorkerThread::handleJSONMessage(): command is not defined\n");
       Json::Value root;
       root["status"] = "error";
       root["message"] = "command not supplied";
@@ -943,6 +968,103 @@ namespace aegir {
 	throw Exception("blockheat must be of the type bool");
       ps.setBlockHeat(jsonvalue.asBool());
     }
+
+    // return success
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value(Json::ValueType::nullValue);
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  /*
+    HEpower
+    tempaccuracy
+    cooltemp
+    heatoverhead
+   */
+  std::shared_ptr<Json::Value> PRWorkerThread::handleGetConfig(const Json::Value &_data) {
+    Config *cfg = Config::getInstance();
+
+    Json::Value data;
+    data["hepower"] = cfg->getHEPower();
+    data["tempaccuracy"] = cfg->getTempAccuracy();
+    data["cooltemp"] = cfg->getCoolTemp();
+    data["heatoverhead"] = cfg->getHeatOverhead();
+
+    // return success
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = data;
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRWorkerThread::handleSetConfig(const Json::Value &_data) {
+    ProcessState &ps(ProcessState::getInstance());
+
+    // we cannot set maintenance options if we're not in maintmode
+    if ( ps.getState() != ProcessState::States::Empty ) {
+      throw Exception("Cannot set maintenance options in the current state");
+    }
+
+    Config *cfg = Config::getInstance();
+    Json::Value jsonvalue;
+    uint32_t hepwr;
+    float tempaccuracy, heatoverhead, cooltemp;
+
+    hepwr = cfg->getHEPower();
+    tempaccuracy = cfg->getTempAccuracy();
+    heatoverhead = cfg->getHeatOverhead();
+    cooltemp = cfg->getCoolTemp();
+
+    // he power
+    if ( _data.isMember("hepower") ) {
+      if ( !_data["hepower"].isConvertibleTo(Json::ValueType::uintValue) )
+	throw Exception("hepower must be an unsigned integer");
+
+      hepwr = _data["hepower"].asUInt();
+      if ( hepwr < 1000 || hepwr > 10000 )
+	throw Exception("hepower is out of range");
+    }
+
+    // temp accuracy
+    if ( _data.isMember("tempaccuracy") ) {
+      if ( !_data["tempaccuracy"].isConvertibleTo(Json::ValueType::realValue) )
+	throw Exception("tempaccuracy must be a float");
+
+      tempaccuracy = _data["tempaccuracy"].asFloat();
+
+      if ( tempaccuracy <= 0.1 || tempaccuracy >= 1 )
+	throw Exception("tempaccuracy is out of range");
+    }
+
+    // heating overhead
+    if ( _data.isMember("heatoverhead") ) {
+      if ( !_data["heatoverhead"].isConvertibleTo(Json::ValueType::realValue) )
+	throw Exception("heatoverhead must be a float");
+
+      heatoverhead = _data["heatoverhead"].asFloat();
+      if ( heatoverhead <= 0.5 || heatoverhead >= 2.0 )
+	throw Exception("heatoverhead is out of range");
+    }
+
+    // cooltemp
+    if ( _data.isMember("cooltemp") ) {
+      if ( !_data["cooltemp"].isConvertibleTo(Json::ValueType::realValue) )
+	throw Exception("cooltemp must be a float");
+
+      cooltemp = _data["cooltemp"].asFloat();
+
+      if ( cooltemp <= 15 || cooltemp >= 30 )
+	throw Exception("cooltemp is out of range");
+    }
+
+    cfg->setHEPower(hepwr).
+      setTempAccuracy(tempaccuracy).
+      setHeatOverhead(heatoverhead).
+      setCoolTemp(cooltemp).
+      save();
 
     // return success
     Json::Value retval;

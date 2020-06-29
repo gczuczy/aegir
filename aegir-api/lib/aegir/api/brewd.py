@@ -13,6 +13,7 @@ import aegir.zmq
 
 def init(app, api):
     api.add_resource(BrewProgram, '/api/brewd/program')
+    api.add_resource(BrewConfig, '/api/brewd/config')
     api.add_resource(BrewState, '/api/brewd/state')
     api.add_resource(BrewStateVolume, '/api/brewd/state/volume')
     api.add_resource(BrewStateTempHistory, '/api/brewd/state/temphistory')
@@ -21,7 +22,7 @@ def init(app, api):
     pass
 
 class BrewProgram(flask_restful.Resource):
-    def post(this):
+    def post(self):
         data = flask.request.get_json();
 
         program = None
@@ -89,8 +90,56 @@ class BrewProgram(flask_restful.Resource):
         return zresp
     pass
 
+class BrewConfig(flask_restful.Resource):
+    def get(self):
+        zresp = None
+        try:
+            zresp = aegir.zmq.prmessage("getConfig", None)
+        except Exception as e:
+            pprint(e)
+            return {"status": "error", "errors": [str(e)]}, 422
+
+        pprint(zresp)
+        if not 'status' in zresp:
+            return {"status": "error", "errors": ['Malformed response']}, 422
+
+        if zresp['status'] != 'success':
+            return {"status": "error", "errors": ['Error in response']}, 422
+
+        return {'status': 'success', 'data': zresp['data']}
+
+    def post(self):
+        '''
+        Set configuration variables
+        hepower, tempaccuracy, heatoverhead, cooltemp
+        '''
+        data = flask.request.get_json();
+        zresp = None
+        zdata = {}
+
+        for var in ['hepower', 'tempaccuracy', 'heatoverhead', 'cooltemp']:
+            if var in data:
+                zdata = data[var]
+                pass
+            pass
+
+        try:
+            zresp = aegir.zmq.prmessage('setConfig', zdata)
+        except Exception as e:
+            #pprint(['error', zresp, e]);
+            return {"status": "error", "errors": [str(e)]}, 422
+
+        if not 'status' in zresp:
+            return {"status": "error", "errors": ['Malformed response']}, 422
+
+        if zresp['status'] != 'success':
+            #pprint(['error in zresp', zresp])
+            return {"status": "error", "errors": ['Error in response']}, 422
+
+        return {'status': 'success'}
+
 class BrewState(flask_restful.Resource):
-    def get(this):
+    def get(self):
         history = flask.request.args.get('history', None)
         # handle the defaults
         needhistory = history == 'yes'
@@ -112,7 +161,7 @@ class BrewState(flask_restful.Resource):
 
         return {'status': 'success', 'data': zresp['data']}
 
-    def post(this):
+    def post(self):
         '''
         POST is used to indicate state controls, such as having malts added,
         whether sparging is completed and boiling can begin, etc.

@@ -112,11 +112,11 @@ int main(int argc, char *argv[]) {
     delete ctrl;
   }
   catch (aegir::Exception &e) {
-    fprintf(stderr, "Error initializing GPIO interface: %s\n", e.what());
+    fprintf(stderr, "Error starting up: %s\n", e.what());
     return 2;
   }
   catch (std::exception &e) {
-    fprintf(stderr, "Error initializing GPIO interface: %s\n", e.what());
+    fprintf(stderr, "Error/std starting up: %s\n", e.what());
     return 2;
   }
 
