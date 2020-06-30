@@ -1,0 +1,8 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP DC15-DC5
+D Generic 12-to-5V DC-DC Converter
+K DCDC
+$ENDCMP
+#
+#End Doc Library
