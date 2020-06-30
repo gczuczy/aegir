@@ -46,10 +46,12 @@ namespace aegir {
       Socket &send(const Message &_msg, bool _more=false);
       std::shared_ptr<Message> recv(MessageFormat _mf = MessageFormat::INTERNAL);
       Socket &setIdentity(const std::string &_id);
+      void close();
 
     private:
       SocketType c_type;
       void *c_sock;
+      bool c_closed;
     };
 
   private:
@@ -69,8 +71,10 @@ namespace aegir {
 
   public:
     static ZMQ &getInstance();
-    int proxy(Socket &_frontend, Socket &_backend, Socket &_ctrl);
-    int proxy(Socket &_frontend, Socket &_backend, Socket &_capture, Socket &_ctrl);
+    int proxyCtrl(Socket &_frontend, Socket &_backend, Socket &_ctrl);
+    int proxyCtrl(Socket &_frontend, Socket &_backend, Socket &_capture, Socket &_ctrl);
+    int proxy(Socket &_frontend, Socket &_backend);
+    int proxy(Socket &_frontend, Socket &_backend, Socket &_capture);
     void close();
   };
 }

@@ -165,6 +165,8 @@ namespace aegir {
       }
       std::this_thread::sleep_for(ival);
     }
+    c_mq_iocmd.close();
+    c_mq_prw.close();
     printf("PRWorkerThread %s stopped\n", c_name.c_str());
   }
 
@@ -485,6 +487,9 @@ namespace aegir {
 
       // Add the current target temperature
       data["targettemp"] = ps.getTargetTemp();
+
+      // water level sensor
+      data["levelerror"] = ps.getLevelError();
 
       // If we have a loaded program, return its id
       if ( ps.getState() >= ProcessState::States::Loaded ) {

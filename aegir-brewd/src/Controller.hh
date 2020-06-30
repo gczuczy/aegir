@@ -72,7 +72,7 @@ namespace aegir {
     std::thread::id c_mythread;
     std::mutex c_mtx_stchqueue;
     std::list<std::pair<ProcessState::States, ProcessState::States> > c_stchqueue;
-    bool c_stoprecirc;
+    bool c_levelerror;
     time_t c_lastcontrol;
     float c_last_flow_volume;
     ProcessState &c_ps;

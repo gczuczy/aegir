@@ -20,7 +20,7 @@ namespace aegir {
   Controller *Controller::c_instance(0);
 
   Controller::Controller(): PINTracker(), c_mq_io(ZMQ::SocketType::SUB), c_ps(ProcessState::getInstance()),
-			    c_mq_iocmd(ZMQ::SocketType::PUB), c_stoprecirc(false), c_needcontrol(false) {
+			    c_mq_iocmd(ZMQ::SocketType::PUB), c_levelerror(false), c_needcontrol(false) {
     // subscribe to our publisher for IO events
     try {
       c_mq_io.connect("inproc://iopub").subscribe("");
@@ -202,7 +202,7 @@ namespace aegir {
 	tc_installed = true;
       }
 
-      // if we don't need tempcontrol and the event is installed, removeit
+      // if we don't need tempcontrol and the event is installed, remove it
       if ( !c_needcontrol && tc_installed ) {
 	//EV_SET(kev, ident, filter, flags, fflags, data, udata);
 	EV_SET(&kevchanges[0], kq_id_temp, EVFILT_TIMER, EV_DELETE, 0, 0, 0);
@@ -215,7 +215,7 @@ namespace aegir {
 
       // if the recirc button is pushed, or we don't need tempcontrol anymore
       // stop the pump and the heating element
-      if ( c_stoprecirc || !c_needcontrol ) {
+      if ( c_levelerror || !c_needcontrol ) {
 	if ( c_ps.getState() != ProcessState::States::Maintenance  ) {
 	  if ( c_ps.getForcePump() ) {
 	    setPIN("mtpump", PINState::On);
@@ -234,6 +234,8 @@ namespace aegir {
 
     close(kq);
 
+    c_mq_io.close();
+    c_mq_iocmd.close();
     printf("Controller stopped\n");
   }
 
@@ -250,13 +252,10 @@ namespace aegir {
     // if the MT water level mater signals, we're stopping the circulation
     if ( _pt.hasChanges() ) {
       std::shared_ptr<PINTracker::PIN> mtlvl(_pt.getPIN("mtlevel"));
-      // whether we have at least one of the controls
+      // handle the water level sensor in the MT
       if ( mtlvl->isChanged() ) {
-	if (  mtlvl->getNewValue() != PINState::Off ) {
-	  c_stoprecirc = true;
-	} else {
-	  c_stoprecirc = false;
-	}
+	c_levelerror = (mtlvl->getNewValue() == PINState::On);
+	c_ps.setLevelError(c_levelerror);
       }
     } // pump&heat switch
 

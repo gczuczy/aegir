@@ -51,21 +51,27 @@ namespace aegir {
       c_workers.insert(thr);
     }
 
-    ZMQ::getInstance().proxy(c_mq_pr, c_mq_prw, c_mq_prdbg, c_mq_prctrl);
+    // the steerable proxy for some reason doesn't stop for the TERMINATE
+    // so we're back to the non-steerable version
+    //ZMQ::getInstance().proxyCtrl(c_mq_pr, c_mq_prw, c_mq_prdbg, c_mq_prctrl);
+    ZMQ::getInstance().proxy(c_mq_pr, c_mq_prw, c_mq_prdbg);
 
     for (auto &it: c_workers) {
       delete it;
     }
 
+    c_mq_pr.close();
+    c_mq_prw.close();
+    c_mq_prctrl.close();
+    c_mq_prdbg.close();
     printf("PRThread stopped\n");
   }
 
   void PRThread::stop() noexcept {
-    printf("PRThread::stop() called\n");
     c_run = false;
+
 #if 0
     ZMQ::Socket ctrl(ZMQ::SocketType::PUB);
-
     try {
       ctrl.connect("inproc://prctrl");
       ctrl.send("TERMINATE");
@@ -73,6 +79,9 @@ namespace aegir {
     catch (Exception &e) {
       printf("PRThread::stop() ZMQ failed: %s\n", e.what());
     }
+#else
+    c_mq_pr.close();
+    c_mq_prw.close();
 #endif
   }
 }

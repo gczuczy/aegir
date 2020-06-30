@@ -134,8 +134,6 @@ namespace aegir {
       } // evlist check
     }
 
-    // close the ZMQ context
-    ZMQ::getInstance().close();
     // waiting for thread executions to finish
     for ( auto &it: c_threads ) {
       printf("Stopping thread %s\n", it.second.name.c_str());
@@ -144,8 +142,11 @@ namespace aegir {
 
     // wait for the threads to finish
     for ( auto &it: c_threads ) {
+      printf("Waiting for thread %s\n\n", it.second.name.c_str());
       it.second.thr.join();
     }
+    // close the ZMQ context
+    ZMQ::getInstance().close();
 
     return *this;
   }

@@ -278,6 +278,11 @@ namespace aegir {
 
     }
 
+    c_mq_pub.close();
+    c_mq_iocmd.close();
+    // these are in the dtor
+    //c_gpio;
+    //c_spi;
     printf("IOHandler stopped\n");
   }
 }

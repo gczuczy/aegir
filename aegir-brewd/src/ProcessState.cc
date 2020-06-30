@@ -145,6 +145,10 @@ namespace aegir {
     c_mashstep = -1;
     c_mashstepstart = 0;
     c_targettemp = 0;
+    c_maint_heat = false;
+    c_maint_pump = false;
+    c_maint_whirlpool = true;
+    c_levelerror = false;
     c_maint_temp = 37;
     c_t_hopstart = 0;
     c_hopid = 0;

@@ -17,7 +17,7 @@ namespace aegir {
    * ZMQ::Socket
    */
 
-  ZMQ::Socket::Socket(SocketType _type): c_type(_type), c_sock(0) {
+  ZMQ::Socket::Socket(SocketType _type): c_type(_type), c_sock(0), c_closed(false) {
     void *ctx = ZMQ::getInstance().getContext();
     c_sock = zmq_socket(ctx, (int)c_type);
 #if 0
@@ -28,7 +28,7 @@ namespace aegir {
   }
 
   ZMQ::Socket::~Socket() {
-    zmq_close(c_sock);
+    if ( !c_closed ) zmq_close(c_sock);
   }
 
   ZMQ::Socket &ZMQ::Socket::bind(const std::string &_addr) {
@@ -113,6 +113,11 @@ namespace aegir {
     return *this;
   }
 
+  void ZMQ::Socket::close() {
+    if ( !c_closed ) zmq_close(c_sock);
+    c_closed = true;
+  }
+
   /*
    * ZMQ
    */
@@ -142,12 +147,20 @@ namespace aegir {
     return c_ctx;
   }
 
-  int ZMQ::proxy(ZMQ::Socket &_frontend, ZMQ::Socket &_backend, ZMQ::Socket &_ctrl) {
+  int ZMQ::proxyCtrl(ZMQ::Socket &_frontend, ZMQ::Socket &_backend, ZMQ::Socket &_ctrl) {
     return zmq_proxy_steerable( _frontend.c_sock, _backend.c_sock, 0, _ctrl.c_sock);
   }
 
-  int ZMQ::proxy(ZMQ::Socket &_frontend, ZMQ::Socket &_backend, ZMQ::Socket &_capture, ZMQ::Socket &_ctrl) {
+  int ZMQ::proxyCtrl(ZMQ::Socket &_frontend, ZMQ::Socket &_backend, ZMQ::Socket &_capture, ZMQ::Socket &_ctrl) {
     return zmq_proxy_steerable( _frontend.c_sock, _backend.c_sock, _capture.c_sock, _ctrl.c_sock);
+  }
+
+  int ZMQ::proxy(ZMQ::Socket &_frontend, ZMQ::Socket &_backend) {
+    return zmq_proxy_steerable( _frontend.c_sock, _backend.c_sock, 0, 0);
+  }
+
+  int ZMQ::proxy(ZMQ::Socket &_frontend, ZMQ::Socket &_backend, ZMQ::Socket &_capture) {
+    return zmq_proxy_steerable( _frontend.c_sock, _backend.c_sock, _capture.c_sock, 0);
   }
 
   void ZMQ::close() {

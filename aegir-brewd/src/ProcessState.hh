@@ -111,6 +111,8 @@ namespace aegir {
     inline bool getForcePump() { return c_force_pump; };
     inline ProcessState &setBlockHeat(bool _val) { c_block_heat = _val; return *this; };
     inline bool getBlockHeat() { return c_block_heat; };
+    inline ProcessState &setLevelError(bool _val) { c_levelerror = _val; return *this; };
+    inline bool getLevelError() { return c_levelerror; };
 
   protected:
     std::recursive_mutex c_mtx_state;
@@ -145,6 +147,8 @@ namespace aegir {
     // sparge/boil/cool forcings
     std::atomic<bool> c_force_pump;
     std::atomic<bool> c_block_heat;
+    // water level sensor
+    std::atomic<bool> c_levelerror;
   };
 }
 

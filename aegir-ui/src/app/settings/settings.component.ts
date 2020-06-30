@@ -38,4 +38,6 @@ export class SettingsComponent implements OnInit {
 
     }
 
+    save(x) {
+    }
 }
