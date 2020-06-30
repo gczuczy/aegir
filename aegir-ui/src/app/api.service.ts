@@ -260,14 +260,15 @@ export class ApiService {
 	return this.http.put('/api/brewd/maintenance', body, options);
     }
 
-    setMaintenance(pump, heat, temp): Observable<{}> {
+    setMaintenance(pump, heat, whirlpool, temp): Observable<{}> {
 	let body = JSON.stringify({'pump': pump,
+				   'whirlpool': whirlpool,
 				   'heat': heat,
 				   'temp': temp});
 	let headers = new HttpHeaders({'Content-Type': 'application/json'});
 	let options = {'headers': headers};
 
-	//console.log("Setting maint to ", pump, heat, temp, body, headers, options);
+	//console.log("Setting maint to ", pump, whirlpool, heat, temp, body, headers, options);
 
 	return this.http.post('/api/brewd/maintenance', body, options);
     }

@@ -321,6 +321,9 @@ class BrewMaintenance(flask_restful.Resource):
         if 'pump' in data:
             zdata['pump'] = (data['pump'] == True)
             pass
+        if 'whirlpool' in data:
+            zdata['whirlpool'] = (data['whirlpool'] == True)
+            pass
         if 'heat' in data:
             zdata['heat'] = (data['heat'] == True)
             pass

@@ -95,6 +95,8 @@ namespace aegir {
     // maintenance mode
     inline ProcessState &setMaintPump(bool _val) {c_maint_pump = _val; return *this; };
     inline bool getMaintPump() {return c_maint_pump; };
+    inline ProcessState &setMaintWhirlpool(bool _val) {c_maint_whirlpool = _val; return *this; };
+    inline bool getMaintWhirlpool() {return c_maint_whirlpool; };
     inline ProcessState &setMaintHeat(bool _val) {c_maint_heat = _val; return *this; };
     inline bool getMaintHeat() {return c_maint_heat; };
     inline ProcessState &setMaintTemp(float _val) {c_maint_temp = _val; return *this; };
@@ -137,6 +139,7 @@ namespace aegir {
     std::atomic<uint32_t> c_t_hoptime; // for the UI
     // maintmode variables
     std::atomic<bool> c_maint_pump;
+    std::atomic<bool> c_maint_whirlpool;
     std::atomic<bool> c_maint_heat;
     std::atomic<float> c_maint_temp;
     // sparge/boil/cool forcings

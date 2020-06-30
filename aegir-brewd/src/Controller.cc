@@ -337,6 +337,7 @@ namespace aegir {
 
   void Controller::maintenanceMode(PINTracker &_pt) {
     bool pump = c_ps.getMaintPump();
+    bool whirlpool = c_ps.getMaintWhirlpool();
     bool heat = c_ps.getMaintHeat();
     float temp = c_ps.getMaintTemp();
 
@@ -348,6 +349,7 @@ namespace aegir {
 #endif
 
     setPIN("mtpump", ((pump || heat) ? PINState::On : PINState::Off));
+    setPIN("bkpump", (whirlpool ? PINState::On : PINState::Off));
 
     setTempTarget(temp, 6.0f);
     c_needcontrol = heat;

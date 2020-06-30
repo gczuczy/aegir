@@ -904,7 +904,7 @@ namespace aegir {
       throw Exception("Cannot set maintenance options in the current state");
     }
 
-    bool pump(false), heat(false);
+    bool pump(false), heat(false), whirlpool(false);
     float temp(37);
     bool haspump(false), hasheat(false), hastemp(false);
     Json::Value jsonvalue;
@@ -924,6 +924,12 @@ namespace aegir {
 	throw Exception("heat must be of the type bool");
       heat = jsonvalue.asBool();
     }
+    if ( _data.isMember("whirlpool") ) {
+      jsonvalue = _data["whirlpool"];
+      if ( !jsonvalue.isBool() )
+	throw Exception("heat must be of the type bool");
+      whirlpool = jsonvalue.asBool();
+    }
     if ( _data.isMember("temp") ) {
       hastemp = true;
       jsonvalue = _data["temp"];
@@ -938,7 +944,10 @@ namespace aegir {
     // we're defensive. Do not turn on the heat without the pump
     if ( heat && !pump ) heat = false;
 
-    ps.setMaintPump(pump).setMaintTemp(temp).setMaintHeat(heat);
+    ps.setMaintPump(pump)
+      .setMaintTemp(temp)
+      .setMaintHeat(heat)
+      .setMaintWhirlpool(whirlpool);
 
     // return success
     Json::Value retval;
