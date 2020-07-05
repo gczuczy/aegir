@@ -80,6 +80,8 @@ namespace aegir {
     float c_hecycletime;
     // cooling temperature
     float c_cooltemp;
+    // heating start delay time, circ pump is not instant, seconds
+    uint32_t c_hedelay;
 
   public:
     ~Config();
@@ -104,12 +106,14 @@ namespace aegir {
     inline const float getHeatOverhead() const { return c_heatoverhead; };
     inline const float getHECycleTime() const { return c_hecycletime; };
     inline const float getCoolTemp() const { return c_cooltemp; };
+    inline const uint32_t getHEDelay() const { return c_hedelay; };
 
     // Setting config elements
     Config &setHEPower(uint32_t _v);
     Config &setTempAccuracy(float _v);
     Config &setHeatOverhead(float _v);
     Config &setCoolTemp(float _v);
+    Config &setHEDelay(uint32_t _v);
   };
 }
 

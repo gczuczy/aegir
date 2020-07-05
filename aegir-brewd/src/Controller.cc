@@ -20,7 +20,8 @@ namespace aegir {
   Controller *Controller::c_instance(0);
 
   Controller::Controller(): PINTracker(), c_mq_io(ZMQ::SocketType::SUB), c_ps(ProcessState::getInstance()),
-			    c_mq_iocmd(ZMQ::SocketType::PUB), c_levelerror(false), c_needcontrol(false) {
+			    c_mq_iocmd(ZMQ::SocketType::PUB), c_levelerror(false), c_needcontrol(false),
+			    c_hestartdelay(-1) {
     // subscribe to our publisher for IO events
     try {
       c_mq_io.connect("inproc://iopub").subscribe("");
@@ -107,14 +108,16 @@ namespace aegir {
     while ( c_run ) {
 
       // first, gather the events
+      // timeout=NULL, kevent blocks here until there's an event
       nevents = kevent(kq, 0, 0, kevents, 2, 0);
 
       // in case of errors, check again
       if ( nevents <= 0 ) continue;
+      // gather the triggered events into a set
+      // for easier checking later
       events.clear();
-      for ( int i=0; i<nevents; ++i ) {
+      for ( int i=0; i<nevents; ++i )
 	events.insert(kevents[i].ident);
-      }
 
       // PINTracker's cycle
       startCycle();
@@ -131,7 +134,7 @@ namespace aegir {
 	      setPIN(psmsg->getName(), psmsg->getState());
 	    }
 	    catch (Exception &e) {
-	      printf("No such pin: '%s' %lu\n", psmsg->getName().c_str(), psmsg->getName().length());
+	      printf("Error on PIN '%s'/%lu: %s\n", psmsg->getName().c_str(), psmsg->getName().length(), e.what());
 	      continue;
 	    }
 	  } else if ( msg->type() == MessageType::THERMOREADING ) {
@@ -151,7 +154,7 @@ namespace aegir {
 	}
       } // End of pin and sensor readings
       catch (Exception &e) {
-	printf("Exception: %s\n", e.what());
+	printf("Controller::run exception: %s\n", e.what());
       }
 
       // state changes and controlling goes hand-in-hand
@@ -161,6 +164,7 @@ namespace aegir {
 	oldstate = state;
 	// handle the state changes
 	{
+	  // trigger the state change queue handler
 	  std::lock_guard<std::mutex> g(c_mtx_stchqueue);
 	  if ( c_stchqueue.size() ) {
 	    for ( auto &it: c_stchqueue ) {
@@ -213,6 +217,7 @@ namespace aegir {
 	tc_installed = false;
       }
 
+      // TODO: REVISE, seprate the level error case
       // if the recirc button is pushed, or we don't need tempcontrol anymore
       // stop the pump and the heating element
       if ( c_levelerror || !c_needcontrol ) {
@@ -224,9 +229,20 @@ namespace aegir {
 	  }
 	}
 	setPIN("mtheat", PINState::Off);
-      } // stop recirculation or we don't need control anymore
+      } // stop recirculation if we don't need control anymore, OR there's level error
       if ( c_needcontrol && c_ps.getBlockHeat() )
 	setPIN("mtheat", PINState::Off);
+
+      // check whether the mtheat had just been turned on
+      auto mtheat = getPIN("mtheat");
+      if ( mtheat->getOldValue() == PINState::Off &&
+	   mtheat->getNewValue() != PINState::Off ) {
+	setPIN("mtheat", PINState::Pulsate, 5.0f, 0.01f);
+	c_hestartdelay = c_cfg->getHEDelay();
+      } else if ( c_hestartdelay > 0 ) {
+	--c_hestartdelay;
+	setPIN("mtheat", PINState::Pulsate, 5.0f, 0.01f);
+      }
 
       // end the GPIO change cycle
       endCycle();

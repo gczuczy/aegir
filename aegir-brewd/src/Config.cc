@@ -132,6 +132,9 @@ namespace aegir {
 
     // cooling temperature
     c_cooltemp = 24.0f;
+
+    // HE startup delay
+    c_hedelay = 10;
   }
 
   void Config::load() {
@@ -315,6 +318,14 @@ namespace aegir {
 	  throw Exception("Cooling temperature must be between 10C and 30C");
       }
 
+      // HE startup delay
+      if ( config["hedelay"] && config["hedelay"].IsScalar() ) {
+	YAML::Node ct = config["hedelay"];
+	c_hedelay = ct.as<uint32_t>();
+	if ( c_hedelay > 30.0 )
+	  throw Exception("HE startup delay must be less than 30");
+      }
+
     }
     catch (std::exception &e) {
       throw Exception("Error during parsing config: %s", e.what());
@@ -397,6 +408,9 @@ namespace aegir {
     // cooling temperature
     yout << YAML::Key << "cooltemp" << YAML::Value << c_cooltemp;
 
+    // cooling temperature
+    yout << YAML::Key << "hedelay" << YAML::Value << c_hedelay;
+
     // End the config
     yout << YAML::EndMap;
 
@@ -438,4 +452,8 @@ namespace aegir {
     return *this;
   }
 
+  Config &Config::setHEDelay(uint32_t _v) {
+    c_hedelay = _v;
+    return *this;
+  }
 }

@@ -1005,6 +1005,7 @@ namespace aegir {
     data["tempaccuracy"] = cfg->getTempAccuracy();
     data["cooltemp"] = cfg->getCoolTemp();
     data["heatoverhead"] = cfg->getHeatOverhead();
+    data["hedelay"] = cfg->getHEDelay();
 
     // return success
     Json::Value retval;
@@ -1024,13 +1025,14 @@ namespace aegir {
 
     Config *cfg = Config::getInstance();
     Json::Value jsonvalue;
-    uint32_t hepwr;
+    uint32_t hepwr, hedelay;
     float tempaccuracy, heatoverhead, cooltemp;
 
     hepwr = cfg->getHEPower();
     tempaccuracy = cfg->getTempAccuracy();
     heatoverhead = cfg->getHeatOverhead();
     cooltemp = cfg->getCoolTemp();
+    hedelay = cfg->getHEDelay();
 
     // he power
     if ( _data.isMember("hepower") ) {
@@ -1074,10 +1076,21 @@ namespace aegir {
 	throw Exception("cooltemp is out of range");
     }
 
+    // he startup delay
+    if ( _data.isMember("hedelay") ) {
+      if ( !_data["hedelay"].isConvertibleTo(Json::ValueType::uintValue) )
+	throw Exception("hedelay must be an unsigned integer");
+
+      hepwr = _data["hedelay"].asUInt();
+      if ( hedelay > 30 )
+	throw Exception("hedelay is out of range");
+    }
+
     cfg->setHEPower(hepwr).
       setTempAccuracy(tempaccuracy).
       setHeatOverhead(heatoverhead).
       setCoolTemp(cooltemp).
+      setHEDelay(hedelay).
       save();
 
     // return success
