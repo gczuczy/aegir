@@ -21,7 +21,7 @@ namespace aegir {
 
   Controller::Controller(): PINTracker(), c_mq_io(ZMQ::SocketType::SUB), c_ps(ProcessState::getInstance()),
 			    c_mq_iocmd(ZMQ::SocketType::PUB), c_levelerror(false), c_needcontrol(false),
-			    c_hestartdelay(-1) {
+			    c_hestartdelay(-1), c_hepause(false) {
     // subscribe to our publisher for IO events
     try {
       c_mq_io.connect("inproc://iopub").subscribe("");
@@ -122,7 +122,7 @@ namespace aegir {
       // PINTracker's cycle
       startCycle();
 
-      // read the GPIO PINs first
+      // read the GPIO PINs and SPI bus first
       try {
 	while ( (msg = c_mq_io.recv()) != nullptr ) {
 	  if ( msg->type() == MessageType::PINSTATE ) {
@@ -183,9 +183,26 @@ namespace aegir {
 	state = c_ps.getState();
       } while ( state != oldstate );
 
+      // check the tube's temperature, watch for overheating
+      float rimstemp = c_ps.getSensorTemp("RIMS");
+      if ( c_needcontrol && !c_hepause &&
+	   rimstemp >= (c_temptarget+c_cfg->getHeatOverhead()) ) {
+	printf("Pausing heat: RIMS:%.2f Target:%.2f Overhead:%.2f (%.2f)\n",
+	       rimstemp, c_temptarget, c_cfg->getHeatOverhead(),
+	       c_temptarget+c_cfg->getHeatOverhead());
+	c_hepause = true;
+	setPIN("mtheat", PINState::Pulsate, 5.0f, 0.01f);
+      } else if ( c_needcontrol && c_hepause &&
+		  rimstemp < (c_temptarget+c_cfg->getHeatOverhead()) ) {
+	printf("hepause:off newtemptarget:true\n");
+	c_hepause = false;
+	c_newtemptarget = true;
+      }
+
       // the temp control event
-      if ( events.find(kq_id_temp) != events.end() ||
-	   (c_needcontrol && c_newtemptarget)) {
+      if ( !c_hepause &&
+	   (events.find(kq_id_temp) != events.end() ||
+	    (c_needcontrol && c_newtemptarget)) ) {
 	printf("Rnning tempcontrol...\n");
 	nexttempcontrol = tempControl();
 	printf("Tempcontrol said %i secs\n", nexttempcontrol);
@@ -196,7 +213,7 @@ namespace aegir {
 
       // if we need tempcontrols, then keep on
       // installing the oneshot event
-      if ( c_needcontrol && !tc_installed ) {
+      if ( c_needcontrol && !tc_installed && !c_hepause) {
 	//EV_SET(kev, ident, filter, flags, fflags, data, udata);
 	EV_SET(&kevchanges[0], kq_id_temp, EVFILT_TIMER, EV_ADD|EV_ONESHOT, NOTE_SECONDS, nexttempcontrol, 0);
 
@@ -207,7 +224,8 @@ namespace aegir {
       }
 
       // if we don't need tempcontrol and the event is installed, remove it
-      if ( !c_needcontrol && tc_installed ) {
+      if ( !c_needcontrol && tc_installed ||
+	   c_needcontrol && c_hepause && tc_installed) {
 	//EV_SET(kev, ident, filter, flags, fflags, data, udata);
 	EV_SET(&kevchanges[0], kq_id_temp, EVFILT_TIMER, EV_DELETE, 0, 0, 0);
 
@@ -220,6 +238,9 @@ namespace aegir {
       // TODO: REVISE, seprate the level error case
       // if the recirc button is pushed, or we don't need tempcontrol anymore
       // stop the pump and the heating element
+#if 0
+      printf("c_levelerror: %c needcontrol: %c\n", c_levelerror?'t':'f', c_needcontrol?'t':'f');
+#endif
       if ( c_levelerror || !c_needcontrol ) {
 	if ( c_ps.getState() != ProcessState::States::Maintenance  ) {
 	  if ( c_ps.getForcePump() ) {
@@ -228,19 +249,24 @@ namespace aegir {
 	    setPIN("mtpump", PINState::Off);
 	  }
 	}
+	printf("Setting mtheat off %i\n", __LINE__);
 	setPIN("mtheat", PINState::Off);
       } // stop recirculation if we don't need control anymore, OR there's level error
-      if ( c_needcontrol && c_ps.getBlockHeat() )
+      if ( c_needcontrol && c_ps.getBlockHeat() ) {
+	printf("Setting mtheat off %i\n", __LINE__);
 	setPIN("mtheat", PINState::Off);
+      }
 
       // check whether the mtheat had just been turned on
       auto mtheat = getPIN("mtheat");
       if ( mtheat->getOldValue() == PINState::Off &&
 	   mtheat->getNewValue() != PINState::Off ) {
+	printf("Starting hedelay\n");
 	setPIN("mtheat", PINState::Pulsate, 5.0f, 0.01f);
 	c_hestartdelay = c_cfg->getHEDelay();
       } else if ( c_hestartdelay > 0 ) {
 	--c_hestartdelay;
+	printf("Still in hedelay: %i\n", c_hestartdelay);
 	setPIN("mtheat", PINState::Pulsate, 5.0f, 0.01f);
       }
 
@@ -265,12 +291,13 @@ namespace aegir {
     ProcessState::Guard guard_ps(c_ps);
     ProcessState::States state = c_ps.getState();
 
-    // if the MT water level mater signals, we're stopping the circulation
+    // if the MT water level meter signals, we're stopping the circulation
     if ( _pt.hasChanges() ) {
       std::shared_ptr<PINTracker::PIN> mtlvl(_pt.getPIN("mtlevel"));
       // handle the water level sensor in the MT
       if ( mtlvl->isChanged() ) {
-	c_levelerror = (mtlvl->getNewValue() == PINState::On);
+	c_levelerror = (mtlvl->getNewValue() == PINState::Off);
+	printf("MTlevel changed to %s\n", c_levelerror?"error":"ok");
 	c_ps.setLevelError(c_levelerror);
       }
     } // pump&heat switch
@@ -296,6 +323,13 @@ namespace aegir {
 
     c_lastcontrol = 0;
     uint32_t now = time(0);
+
+    if ( _new == ProcessState::States::Maintenance ) {
+      setPIN("buzzer", PINState::Off);
+      setPIN("mtheat", PINState::Off);
+      setPIN("bkpump", PINState::Off);
+      setPIN("mtpump", PINState::Off);
+    }
 
     if ( _new == ProcessState::States::NeedMalt ) {
 	setPIN("buzzer", PINState::Pulsate, 2.1f, 0.4f);
@@ -363,7 +397,13 @@ namespace aegir {
 	   temp);
 #endif
 
+    // controlling mtpump on heat is needed when the heating element
+    // is directly on that circle, without an exchanger
+#if 0
     setPIN("mtpump", ((pump || heat) ? PINState::On : PINState::Off));
+#else
+    setPIN("mtpump", (pump ? PINState::On : PINState::Off));
+#endif
     setPIN("bkpump", (whirlpool ? PINState::On : PINState::Off));
 
     setTempTarget(temp, 6.0f);

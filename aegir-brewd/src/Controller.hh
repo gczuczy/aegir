@@ -85,6 +85,7 @@ namespace aegir {
     float c_tempoverheat;
     std::map<uint32_t, float> c_heratiohistory;
     int32_t c_hestartdelay;
+    bool c_hepause;
   };
 }
 
