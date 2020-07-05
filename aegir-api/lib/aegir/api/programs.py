@@ -153,10 +153,9 @@ class Program(flask_restful.Resource):
         if errors:
             return {'status': 'error', 'errors': errors}, 422
 
-        # now add it
-        progid = None
+        # now save it
         try:
-            progid = aegir.db.Connection().getProgram(progid).update(data)
+            aegir.db.Connection().getProgram(progid).update(data)
         except KeyError as e:
             return {'status': 'error',
                     'errors': ['KeyError: {name}'.format(name=str(e))]}, 400

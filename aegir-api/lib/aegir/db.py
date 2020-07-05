@@ -80,8 +80,6 @@ class Connection():
         return True
 
     def addProgram(self, prog):
-        pprint(prog)
-
         curs = self._conn.cursor()
         curs.execute('''
         INSERT INTO programs (name, starttemp, endtemp, boiltime, nomash, noboil)
@@ -169,7 +167,7 @@ class Program():
 
     @property
     def progid(self):
-        return self._id
+        return self._progid
 
     @property
     def data(self):
@@ -208,7 +206,7 @@ class Program():
         return self._hops
 
     def update(self, prog):
-        progid = self._id
+        progid = self._progid
         curs = self._conn.cursor()
 
         # update the main data
