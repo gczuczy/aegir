@@ -6,6 +6,7 @@ import flask
 import flask_restful
 import dateutil.parser
 import datetime
+import copy
 from pprint import pprint
 
 import aegir.db
@@ -27,16 +28,17 @@ class BrewProgram(flask_restful.Resource):
 
         program = None
         try:
-            program = aegir.db.getprogram(data['id'])
+            program = aegir.db.Connection().getProgram(data['id'])
         except Exception as e:
             return {"status": "error",
                     "errors": [str(e)]}, 422
 
-        for hop in program['hops']:
+        progdata = copy.deepcopy(program.data)
+        for hop in progdata['hops']:
             hop['attime'] *= 60
             pass
 
-        zreq = {"program": program}
+        zreq = {"program": progdata}
         try:
             for field in ['startat', 'startmode', 'volume']:
                 if not field in data:
@@ -75,7 +77,7 @@ class BrewProgram(flask_restful.Resource):
             return {"status": "error",
                     "errors": "Unknown start mode: {sm}".format(sm = zreq['startmode'])}, 422
 
-        #pprint(['loading', zreq])
+        pprint(['loading', zreq])
         zresp = None
         try:
             zresp = aegir.zmq.prmessage("loadProgram", zreq)
