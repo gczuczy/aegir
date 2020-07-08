@@ -144,7 +144,7 @@ namespace aegir {
 	auto psmsg = std::static_pointer_cast<PinStateMessage>(msg);
 	auto it = c_outpins.find(psmsg->getName());
 	if ( it != c_outpins.end() ) {
-#if 1 || defined(AEGIR_DEBUG)
+#if defined(AEGIR_DEBUG)
 	  printf("IOHandler: setting %s to %hhu\n", psmsg->getName().c_str(), (uint8_t)psmsg->getState());
 #endif
 	  // always clear the pulsate state, it's either not needed,

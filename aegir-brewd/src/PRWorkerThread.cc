@@ -244,7 +244,7 @@ namespace aegir {
     }
 
     try {
-      ElapsedTime t("PRWorkerThread handle "+cmdstr);
+      //ElapsedTime t("PRWorkerThread handle "+cmdstr);
       return cmdit->second(_msg["data"]);
     }
     catch (Exception &e) {
@@ -315,7 +315,7 @@ namespace aegir {
     // verifying startat finished
 
     // verify the volume
-    if ( volume > 70 )
+    if ( volume > 80 )
       throw Exception("volume is too large");
 
     // now check the program

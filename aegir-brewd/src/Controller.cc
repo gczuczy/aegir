@@ -186,14 +186,14 @@ namespace aegir {
       // check the tube's temperature, watch for overheating
       float rimstemp = c_ps.getSensorTemp("RIMS");
       if ( c_needcontrol && !c_hepause &&
-	   rimstemp >= (c_temptarget+c_cfg->getHeatOverhead()) ) {
+	   rimstemp >= (c_temptarget+c_cfg->getHeatOverhead()*1.15) ) {
 	printf("Pausing heat: RIMS:%.2f Target:%.2f Overhead:%.2f (%.2f)\n",
 	       rimstemp, c_temptarget, c_cfg->getHeatOverhead(),
 	       c_temptarget+c_cfg->getHeatOverhead());
 	c_hepause = true;
 	setPIN("mtheat", PINState::Pulsate, 5.0f, 0.01f);
       } else if ( c_needcontrol && c_hepause &&
-		  rimstemp < (c_temptarget+c_cfg->getHeatOverhead()) ) {
+		  rimstemp < (c_temptarget+c_cfg->getHeatOverhead()*1.1) ) {
 	printf("hepause:off newtemptarget:true\n");
 	c_hepause = false;
 	c_newtemptarget = true;
@@ -249,7 +249,7 @@ namespace aegir {
 	    setPIN("mtpump", PINState::Off);
 	  }
 	}
-	printf("Setting mtheat off %i\n", __LINE__);
+	//printf("Setting mtheat off %i\n", __LINE__);
 	setPIN("mtheat", PINState::Off);
       } // stop recirculation if we don't need control anymore, OR there's level error
       if ( c_needcontrol && c_ps.getBlockHeat() ) {
@@ -261,12 +261,12 @@ namespace aegir {
       auto mtheat = getPIN("mtheat");
       if ( mtheat->getOldValue() == PINState::Off &&
 	   mtheat->getNewValue() != PINState::Off ) {
-	printf("Starting hedelay\n");
+	//printf("Starting hedelay\n");
 	setPIN("mtheat", PINState::Pulsate, 5.0f, 0.01f);
 	c_hestartdelay = c_cfg->getHEDelay();
       } else if ( c_hestartdelay > 0 ) {
 	--c_hestartdelay;
-	printf("Still in hedelay: %i\n", c_hestartdelay);
+	//printf("Still in hedelay: %i\n", c_hestartdelay);
 	setPIN("mtheat", PINState::Pulsate, 5.0f, 0.01f);
       }
 
@@ -1019,7 +1019,7 @@ namespace aegir {
     uint32_t last_end = now - startedat;
     float hepwr = (1.0*c_cfg->getHEPower())/1000; // in kW
 
-#if 1
+#if 0
     printf("now:%u startedat:%u last_end:%u\n", now, startedat, last_end);
 #endif
 
@@ -1073,7 +1073,7 @@ namespace aegir {
 
       float V = (pwr * dt) / (4.2 * dT);
 
-#if 1
+#if 0
       printf("Controller::calcFlowRate(): %u: %.4f = (%.2f * %.2f) / (4.2 * %.2f) (t_total:%u)\n",
 	     it->first, V, pwr, dt, dT, t_total);
 #endif
@@ -1085,8 +1085,10 @@ namespace aegir {
     }
 
     float flowrate = V_total / t_total;
+#if 0
     printf("Controller::calcFlowRate(): flowrate: %.4f = %.2f / %u\n",
 	   flowrate, V_total, t_total);
+#endif
     return flowrate;
   }
 }
