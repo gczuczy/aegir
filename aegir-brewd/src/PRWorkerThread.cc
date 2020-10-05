@@ -689,8 +689,8 @@ namespace aegir {
     ProcessState::ThermoDataPoints bk;
     ps.getTCReadings("BK", bk);
     // check the last BoilKettle temperature, must be above 100C
-    if ( bk.rbegin()->second < 100.0 ) {
-      throw Exception("BoilKettle must be above boiling point");
+    if ( 0 && bk.rbegin()->second < 100.0 ) {
+      throw Exception("BoilKettle must be above boiling point (%2.fC)", bk.rbegin()->second);
     }
 
     ps.setState(ProcessState::States::Hopping);

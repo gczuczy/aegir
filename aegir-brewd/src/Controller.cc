@@ -193,7 +193,7 @@ namespace aegir {
 	c_hepause = true;
 	setPIN("mtheat", PINState::Pulsate, 5.0f, 0.01f);
       } else if ( c_needcontrol && c_hepause &&
-		  rimstemp < (c_temptarget+c_cfg->getHeatOverhead()*1.1) ) {
+		  rimstemp < (c_temptarget+c_cfg->getHeatOverhead()*0.95) ) {
 	printf("hepause:off newtemptarget:true\n");
 	c_hepause = false;
 	c_newtemptarget = true;
@@ -931,7 +931,9 @@ namespace aegir {
     // dissipation around the tubing
     float pwr_final = std::max(pwr_abs_min, std::min({pwr_mt + pwr_dissipation, pwr_rims_final}));
     float heratio = pwr_final / hepwr;
-    printf("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.2f(MT:%.2f / RIMS:%.2f)\n",
+    if ( heratio < 0.004f && curr_mt < c_temptarget && curr_rims < c_temptarget)
+      heratio = 0.05f;
+    printf("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.3f(MT:%.2f / RIMS:%.2f)\n",
 	   c_temptarget, c_tempoverheat,
 	   dT_rims, dT_mtc_temptarget,
 	   hepwr, pwr_mt, pwr_rims_final,
