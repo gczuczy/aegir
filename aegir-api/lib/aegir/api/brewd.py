@@ -184,6 +184,8 @@ class BrewState(flask_restful.Resource):
             zcmd = 'startHopping'
         elif data['command'] == 'coolingDone':
             zcmd = 'coolingDone'
+        elif data['command'] == 'transferDone':
+            zcmd = 'transferDone'
         elif data['command'] == 'reset':
             zcmd = 'resetProcess'
         else:
@@ -320,11 +322,11 @@ class BrewMaintenance(flask_restful.Resource):
         data = flask.request.get_json();
 
         zdata = {}
-        if 'pump' in data:
-            zdata['pump'] = (data['pump'] == True)
+        if 'mtpump' in data:
+            zdata['mtpump'] = (data['mtpump'] == True)
             pass
-        if 'whirlpool' in data:
-            zdata['whirlpool'] = (data['whirlpool'] == True)
+        if 'bkpump' in data:
+            zdata['bkpump'] = (data['bkpump'] == True)
             pass
         if 'heat' in data:
             zdata['heat'] = (data['heat'] == True)
@@ -336,7 +338,7 @@ class BrewMaintenance(flask_restful.Resource):
         if len(zdata)==0:
             return {'status': 'error', 'errors': ['No fields set']}, 422
 
-        pprint(zdata)
+        #pprint([data,zdata])
 
         zresp = None
         try:
@@ -355,7 +357,7 @@ class BrewOverride(flask_restful.Resource):
         data = flask.request.get_json();
         zdata = {}
 
-        for field in ['blockheat', 'forcepump']:
+        for field in ['blockheat', 'forcemtpump', 'bkpump']:
             if field in data:
                 zdata[field] = data[field]
                 pass

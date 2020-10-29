@@ -56,6 +56,7 @@ namespace aegir {
     void stagePreBoil(PINTracker &_pt);
     void stageHopping(PINTracker &_pt);
     void stageCooling(PINTracker &_pt);
+    void stageTransfer(PINTracker &_pt);
     void stageFinished(PINTracker &_pt);
     //    void stage();
 

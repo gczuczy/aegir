@@ -28,34 +28,31 @@
     <div class="col-sm2">
       <table class="table table-pad-2px">
 	<tr>
-	  <th>BK Whirlpool</th>
+	  <th>BK Pump</th>
 	  <td>
-	    <!--<ui-switch [(ngModel)]="pumpon" (change)="onPumpChange($event)"></ui-switch>-->
 	    <mat-slide-toggle
-	      [checked]="whirlpoolon"
-	      (change)="onWhirlpoolChange($event)"
+	      [checked]="bkpumpon"
+	      (change)="onBKPumpChange($event)"
 	      >
-	      Whirlpool on
+	      BK Pump on
 	    </mat-slide-toggle>
 	  </td>
 	</tr>
 	<tr>
-	  <th>Pump</th>
+	  <th>MT Pump</th>
 	  <td>
-	    <!--<ui-switch [(ngModel)]="pumpon" (change)="onPumpChange($event)"></ui-switch>-->
 	    <mat-slide-toggle
 	      [checked]="pumpon"
 	      (change)="onPumpChange($event)"
 	      >
-	      Pump On
+	      MT Pump On
 	    </mat-slide-toggle>
 	  </td>
 	</tr>
 	<tr>
 	  <th>Heat</th>
 	  <td>
-	    <!--<ui-switch [(ngModel)]="heaton" (change)="onHeatChange($event)"></ui-switch>-->
-	    <mat-slide-toggle
+ 	    <mat-slide-toggle
 	      [checked]="heaton"
 	      (change)="onHeatChange($event)"
 	      >

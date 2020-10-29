@@ -24,6 +24,7 @@ export class BrewComponent implements OnInit {
     public coolingdone = false;
     public forcepump = false;
     public blockheat = false;
+    public bkpump:boolean = false;
 
     // volume
     public volume: number = 42;
@@ -224,6 +225,10 @@ export class BrewComponent implements OnInit {
 	this.api.coolingDone().subscribe();
     }
 
+    onTransferDone() {
+	this.api.transferDone().subscribe();
+    }
+
     onAbortBrew() {
 	if ( confirm("This will cancel the brew process, are you sure?") ) {
 	    this.api.abortBrew().subscribe();
@@ -256,12 +261,18 @@ export class BrewComponent implements OnInit {
     onBlockHeat(event) {
 	// event is the new value
 	this.blockheat = event['checked'];
-	this.api.override(this.blockheat, this.forcepump).subscribe();
+	this.api.override(this.blockheat, this.forcepump, this.bkpump).subscribe();
     }
 
     onForcePump(event) {
 	// event is the new value
 	this.forcepump = event['checked'];
-	this.api.override(this.blockheat, this.forcepump).subscribe();
+	this.api.override(this.blockheat, this.forcepump, this.bkpump).subscribe();
+    }
+
+    onBKPump(event) {
+	// event is the new value
+	this.bkpump = event['checked'];
+	this.api.override(this.blockheat, this.forcepump, this.bkpump).subscribe();
     }
 }

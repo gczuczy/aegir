@@ -40,10 +40,12 @@ namespace aegir {
     std::shared_ptr<Json::Value> handleLoadProgram(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleGetLoadedProgram(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleGetState(const Json::Value &_data);
+    std::shared_ptr<Json::Value> handleSetState(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleBuzzer(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleHasMalt(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleSpargeDone(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleCoolingDone(const Json::Value &_data);
+    std::shared_ptr<Json::Value> handleTransferDone(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleStartHopping(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleResetProcess(const Json::Value &_data);
     std::shared_ptr<Json::Value> handleGetVolume(const Json::Value &_data);

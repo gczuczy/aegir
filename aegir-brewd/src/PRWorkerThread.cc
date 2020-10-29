@@ -67,10 +67,12 @@ namespace aegir {
     c_handlers["loadProgram"] = std::bind(&PRWorkerThread::handleLoadProgram, this, std::placeholders::_1);
     c_handlers["getProgram"] = std::bind(&PRWorkerThread::handleGetLoadedProgram, this, std::placeholders::_1);
     c_handlers["getState"] = std::bind(&PRWorkerThread::handleGetState, this, std::placeholders::_1);
+    c_handlers["setState"] = std::bind(&PRWorkerThread::handleSetState, this, std::placeholders::_1);
     c_handlers["buzzer"] = std::bind(&PRWorkerThread::handleBuzzer, this, std::placeholders::_1);
     c_handlers["hasMalt"] = std::bind(&PRWorkerThread::handleHasMalt, this, std::placeholders::_1);
     c_handlers["spargeDone"] = std::bind(&PRWorkerThread::handleSpargeDone, this, std::placeholders::_1);
     c_handlers["coolingDone"] = std::bind(&PRWorkerThread::handleCoolingDone, this, std::placeholders::_1);
+    c_handlers["transferDone"] = std::bind(&PRWorkerThread::handleTransferDone, this, std::placeholders::_1);
     c_handlers["startHopping"] = std::bind(&PRWorkerThread::handleStartHopping, this, std::placeholders::_1);
     c_handlers["resetProcess"] = std::bind(&PRWorkerThread::handleResetProcess, this, std::placeholders::_1);
     c_handlers["getVolume"] = std::bind(&PRWorkerThread::handleGetVolume, this, std::placeholders::_1);
@@ -553,6 +555,47 @@ namespace aegir {
     return std::make_shared<Json::Value>(retval);
   }
 
+  std::shared_ptr<Json::Value> PRWorkerThread::handleSetState(const Json::Value &_data) {
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value();
+
+    std::string newstname;
+    if ( _data.isMember("state") ) {
+      Json::Value jsonvalue = _data["state"];
+      if ( !jsonvalue.isString() ) {
+	throw Exception("field 'state' must be a string");
+      }
+
+      newstname = jsonvalue.asString();
+    }
+    ProcessState &ps(ProcessState::getInstance());
+    ProcessState::States currstate = ps.getState();
+
+    std::set<ProcessState::States> empties{
+					   ProcessState::States::Empty,
+					   ProcessState::States::Finished
+    };
+    ProcessState::States newstate = ps.byString(newstname);
+    if ( currstate == ProcessState::States::Maintenance )
+      throw Exception("Please maintmode first");
+
+    if ( empties.find(newstate) != empties.end() )
+      throw Exception("Cannot move to the desired state");
+
+    if ( empties.find(currstate) != empties.end() )
+      throw Exception("Start a program first");
+
+    if ( currstate == newstate )
+      throw Exception("Already in that state");
+
+    if ( newstate < currstate )
+      throw Exception("Going backwards is not allowed");
+
+    ps.setState(newstate);
+
+    return std::make_shared<Json::Value>(retval);
+  }
   /*
     required: state
     if state==pulsate: cycletime, onratio
@@ -664,6 +707,24 @@ namespace aegir {
 
     if ( bktemp >= cfg->getCoolTemp() )
       throw Exception("BK has to be bellow CoolingTemp");
+
+    ps.setState(ProcessState::States::Transfer);
+
+    // return success
+    Json::Value retval;
+    retval["status"] = "success";
+    retval["data"] = Json::Value(Json::ValueType::nullValue);
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRWorkerThread::handleTransferDone(const Json::Value &_data) {
+    ProcessState &ps(ProcessState::getInstance());
+
+    // only valid during cooling
+    if ( ps.getState() != ProcessState::States::Transfer ) {
+      throw Exception("Only valid during Transfer");
+    }
 
     ps.setState(ProcessState::States::Finished);
 
@@ -903,24 +964,29 @@ namespace aegir {
 
   std::shared_ptr<Json::Value> PRWorkerThread::handleSetMaintenance(const Json::Value &_data) {
     ProcessState &ps(ProcessState::getInstance());
+#if 0
+    Json::StreamWriterBuilder swb;
+
+    printf("PRWT::hsm '%s'\n", Json::writeString(swb, _data).c_str());
+#endif
 
     // we cannot set maintenance options if we're not in maintmode
     if ( ps.getState() != ProcessState::States::Maintenance ) {
       throw Exception("Cannot set maintenance options in the current state");
     }
 
-    bool pump(false), heat(false), whirlpool(false);
+    bool mtpump(false), heat(false), bkpump(false);
     float temp(37);
     bool haspump(false), hasheat(false), hastemp(false);
     Json::Value jsonvalue;
 
     // verify the input
-    if ( _data.isMember("pump") ) {
+    if ( _data.isMember("mtpump") ) {
       haspump = true;
-      jsonvalue = _data["pump"];
+      jsonvalue = _data["mtpump"];
       if ( !jsonvalue.isBool() )
 	throw Exception("pump must be of the type bool");
-      pump = jsonvalue.asBool();
+      mtpump = jsonvalue.asBool();
     }
     if ( _data.isMember("heat") ) {
       hasheat = true;
@@ -929,11 +995,11 @@ namespace aegir {
 	throw Exception("heat must be of the type bool");
       heat = jsonvalue.asBool();
     }
-    if ( _data.isMember("whirlpool") ) {
-      jsonvalue = _data["whirlpool"];
+    if ( _data.isMember("bkpump") ) {
+      jsonvalue = _data["bkpump"];
       if ( !jsonvalue.isBool() )
 	throw Exception("heat must be of the type bool");
-      whirlpool = jsonvalue.asBool();
+      bkpump = jsonvalue.asBool();
     }
     if ( _data.isMember("temp") ) {
       hastemp = true;
@@ -947,12 +1013,12 @@ namespace aegir {
       throw Exception("At least one of the fields must be supplied");
 
     // we're defensive. Do not turn on the heat without the pump
-    if ( heat && !pump ) heat = false;
+    //if ( heat && !mtpump ) heat = false;
 
-    ps.setMaintPump(pump)
+    ps.setMaintPump(mtpump)
       .setMaintTemp(temp)
       .setMaintHeat(heat)
-      .setMaintWhirlpool(whirlpool);
+      .setMaintBKPump(bkpump);
 
     // return success
     Json::Value retval;
@@ -969,11 +1035,11 @@ namespace aegir {
 
     Json::Value jsonvalue;
 
-    if ( _data.isMember("forcepump") ) {
-      jsonvalue = _data["forcepump"];
+    if ( _data.isMember("forcemtpump") ) {
+      jsonvalue = _data["forcemtpump"];
       if ( !jsonvalue.isBool() )
-	throw Exception("forcepump must be of the type bool");
-      ps.setForcePump(jsonvalue.asBool());
+	throw Exception("forcemtpump must be of the type bool");
+      ps.setForceMTPump(jsonvalue.asBool());
     }
 
     if ( _data.isMember("blockheat") ) {
@@ -981,6 +1047,13 @@ namespace aegir {
       if ( !jsonvalue.isBool() )
 	throw Exception("blockheat must be of the type bool");
       ps.setBlockHeat(jsonvalue.asBool());
+    }
+
+    if ( _data.isMember("bkpump") ) {
+      jsonvalue = _data["bkpump"];
+      if ( !jsonvalue.isBool() )
+	throw Exception("bkpump must be of the type bool");
+      ps.setBKPump(jsonvalue.asBool());
     }
 
     // return success

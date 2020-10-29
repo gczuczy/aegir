@@ -11,18 +11,19 @@
 namespace aegir {
 
   static std::map<ProcessState::States, std::string> g_strstates{
-    {ProcessState::States::Maintenance, "Maintenance"},
-    {ProcessState::States::Empty, "Empty"},
-      {ProcessState::States::Loaded, "Loaded"},
-      {ProcessState::States::PreWait, "PreWait"},
-      {ProcessState::States::PreHeat, "PreHeat"},
-      {ProcessState::States::NeedMalt, "NeedMalt"},
-      {ProcessState::States::Mashing, "Mashing"},
-      {ProcessState::States::Sparging, "Sparging"},
-      {ProcessState::States::PreBoil, "PreBoil"},
-      {ProcessState::States::Hopping, "Hopping"},
-      {ProcessState::States::Cooling, "Cooling"},
-	{ProcessState::States::Finished, "Finished"}
+								 {ProcessState::States::Maintenance, "Maintenance"},
+								 {ProcessState::States::Empty, "Empty"},
+								 {ProcessState::States::Loaded, "Loaded"},
+								 {ProcessState::States::PreWait, "PreWait"},
+								 {ProcessState::States::PreHeat, "PreHeat"},
+								 {ProcessState::States::NeedMalt, "NeedMalt"},
+								 {ProcessState::States::Mashing, "Mashing"},
+								 {ProcessState::States::Sparging, "Sparging"},
+								 {ProcessState::States::PreBoil, "PreBoil"},
+								 {ProcessState::States::Hopping, "Hopping"},
+								 {ProcessState::States::Cooling, "Cooling"},
+								 {ProcessState::States::Transfer, "Transfer"},
+								 {ProcessState::States::Finished, "Finished"}
   };
 
   ProcessState::Guard::Guard(ProcessState &_ps): c_ps(_ps) {
@@ -147,13 +148,13 @@ namespace aegir {
     c_targettemp = 0;
     c_maint_heat = false;
     c_maint_pump = false;
-    c_maint_whirlpool = true;
+    c_maint_bkpump = false;
     c_levelerror = false;
     c_maint_temp = 37;
     c_t_hopstart = 0;
     c_hopid = 0;
 
-    c_force_pump = false;
+    c_force_mtpump = false;
     c_block_heat = false;
 
     setState(States::Empty);
@@ -163,6 +164,16 @@ namespace aegir {
 
   std::string ProcessState::getStringState() const {
     return g_strstates[c_state];
+  }
+
+  ProcessState::States ProcessState::byString(const std::string &_state) const {
+    States st;
+
+    for ( auto const& [s, str]: g_strstates) {
+      if ( _state == str ) return s;
+    }
+
+    throw Exception("Unknown state");
   }
 
   void ProcessState::registerStateChange(statechange_t _stch) {

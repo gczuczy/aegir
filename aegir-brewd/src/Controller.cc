@@ -65,6 +65,8 @@ namespace aegir {
 							       std::placeholders::_1, std::placeholders::_2);
     c_stagehandlers[ProcessState::States::Cooling] = std::bind(&Controller::stageCooling,
 							       std::placeholders::_1, std::placeholders::_2);
+    c_stagehandlers[ProcessState::States::Transfer] = std::bind(&Controller::stageTransfer, std::placeholders::_1,
+								std::placeholders::_2);
     c_stagehandlers[ProcessState::States::Finished] = std::bind(&Controller::stageFinished, std::placeholders::_1,
 								std::placeholders::_2);
 
@@ -243,7 +245,7 @@ namespace aegir {
 #endif
       if ( c_levelerror || !c_needcontrol ) {
 	if ( c_ps.getState() != ProcessState::States::Maintenance  ) {
-	  if ( c_ps.getForcePump() ) {
+	  if ( c_ps.getForceMTPump() ) {
 	    setPIN("mtpump", PINState::On);
 	  } else {
 	    setPIN("mtpump", PINState::Off);
@@ -297,7 +299,7 @@ namespace aegir {
       // handle the water level sensor in the MT
       if ( mtlvl->isChanged() ) {
 	c_levelerror = (mtlvl->getNewValue() == PINState::Off);
-	printf("MTlevel changed to %s\n", c_levelerror?"error":"ok");
+	//printf("MTlevel changed to %s\n", c_levelerror?"error":"ok");
 	c_ps.setLevelError(c_levelerror);
       }
     } // pump&heat switch
@@ -327,8 +329,8 @@ namespace aegir {
     if ( _new == ProcessState::States::Maintenance ) {
       setPIN("buzzer", PINState::Off);
       setPIN("mtheat", PINState::Off);
-      setPIN("bkpump", PINState::Off);
       setPIN("mtpump", PINState::Off);
+      setPIN("bkpump", PINState::Off);
     }
 
     if ( _new == ProcessState::States::NeedMalt ) {
@@ -357,10 +359,18 @@ namespace aegir {
       setPIN("bkpump", PINState::Off);
     }
 
+    if ( _new == ProcessState::States::Transfer ) {
+      setPIN("buzzer", PINState::Off);
+      setPIN("mtheat", PINState::Off);
+      setPIN("mtpump", PINState::Off);
+      setPIN("bkpump", PINState::On);
+    }
+
     if ( _new == ProcessState::States::Finished ) {
       setPIN("buzzer", PINState::Off);
       setPIN("mtheat", PINState::Off);
       setPIN("mtpump", PINState::Off);
+      setPIN("bkpump", PINState::Off);
     }
 
     if ( _new == ProcessState::States::Empty ) {
@@ -369,6 +379,7 @@ namespace aegir {
       setPIN("buzzer", PINState::Off);
       setPIN("mtheat", PINState::Off);
       setPIN("mtpump", PINState::Off);
+      setPIN("bkpump", PINState::Off);
     }
 
     // when the state is reset
@@ -381,12 +392,13 @@ namespace aegir {
       setPIN("buzzer", PINState::Off);
       setPIN("mtheat", PINState::Off);
       setPIN("mtpump", PINState::Off);
+      setPIN("bkpump", PINState::Off);
     }
   }
 
   void Controller::maintenanceMode(PINTracker &_pt) {
     bool pump = c_ps.getMaintPump();
-    bool whirlpool = c_ps.getMaintWhirlpool();
+    bool bkpump = c_ps.getMaintBKPump();
     bool heat = c_ps.getMaintHeat();
     float temp = c_ps.getMaintTemp();
 
@@ -404,7 +416,7 @@ namespace aegir {
 #else
     setPIN("mtpump", (pump ? PINState::On : PINState::Off));
 #endif
-    setPIN("bkpump", (whirlpool ? PINState::On : PINState::Off));
+    setPIN("bkpump", (bkpump ? PINState::On : PINState::Off));
 
     setTempTarget(temp, 6.0f);
     c_needcontrol = heat;
@@ -564,14 +576,14 @@ namespace aegir {
 
   void Controller::stagePreBoil(PINTracker &_pt) {
     //printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
-    setPIN("mtpump", c_ps.getForcePump()?PINState::On : PINState::Off);
+    setPIN("mtpump", c_ps.getForceMTPump()?PINState::On : PINState::Off);
     setPIN("mtheat", PINState::Off);
     c_needcontrol = false;
   }
 
   void Controller::stageHopping(PINTracker &_pt) {
     //printf("%s:%i:%s\n", __FILE__, __LINE__, __FUNCTION__);
-    setPIN("mtpump", c_ps.getForcePump()?PINState::On : PINState::Off);
+    setPIN("mtpump", c_ps.getForceMTPump()?PINState::On : PINState::Off);
     setPIN("mtheat", PINState::Off);
     c_needcontrol = false;
 
@@ -634,13 +646,18 @@ namespace aegir {
   void Controller::stageCooling(PINTracker &_pt) {
     float bktemp = c_ps.getSensorTemp("BK");
 
-    setPIN("mtpump", c_ps.getForcePump()?PINState::On : PINState::Off);
+    setPIN("mtpump", c_ps.getForceMTPump()?PINState::On : PINState::Off);
     if ( bktemp <= c_cfg->getCoolTemp() ) {
       //c_ps.setState(ProcessState::States::Finished);
       setPIN("buzzer", PINState::Pulsate, 1.0f, 0.23f);
     } else {
       setPIN("buzzer", PINState::Off);
     }
+    c_needcontrol = false;
+  }
+
+  void Controller::stageTransfer(PINTracker &_pt) {
+    setPIN("bkpump", c_ps.getBKPump()?PINState::On : PINState::Off);
     c_needcontrol = false;
   }
 

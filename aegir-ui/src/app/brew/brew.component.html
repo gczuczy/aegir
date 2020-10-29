@@ -11,6 +11,7 @@
 	  <button *ngIf="state=='NeedMalt'" class="btn btn-warning btn-sm" (click)="onHasMalts()">I Can Has Malts</button>
 	  <button *ngIf="state=='Sparging'" class="btn btn-warning btn-sm" (click)="onSpargeDone()">Sparge Done</button>
 	  <button *ngIf="state=='Cooling' && coolingdone" class="btn btn-warning btn-sm" (click)="onCoolingDone()">Cooling Done</button>
+	  <button *ngIf="state=='Transfer'" class="btn btn-warning btn-sm" (click)="onTransferDone()">Transfer Done</button>
 	  <button *ngIf="state=='PreBoil' && bktemp > 100" class="btn btn-warning btn-sm" (click)="onStartBoil()">Start Boil</button>
 	  <button *ngIf="state!='Empty'" class="btn btn-danger btn-sm" (click)="onAbortBrew()">It's a trap!</button>
 	  <!-- Heat blocking during sparging -->
@@ -29,6 +30,15 @@
 	      (change)="onForcePump($event)"
 	      >
 	      Force Pump
+	    </mat-slide-toggle>
+	  </div>
+	  <!-- Transfer -->
+	  <div *ngIf="state=='Transfer'" class="container">
+	    <mat-slide-toggle
+	      [checked]="bkpump"
+	      (change)="onBKPump($event)"
+	      >
+	      BK Pump
 	    </mat-slide-toggle>
 	  </div>
 	</div>
@@ -90,7 +100,7 @@
 		</td>
 		<td>
 		  <i *ngIf="step.orderno == mashstep.orderno && mashstep.time < step.holdtime*60">
-		    {{mashstep.textual}} / 
+		    {{mashstep.textual}} /
 		  </i>
 		  {{step.holdtime}}m</td>
 		<td>{{step.temperature}}</td>

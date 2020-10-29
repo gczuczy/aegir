@@ -1,5 +1,5 @@
 INCPATH=-I/usr/local/include -I../contrib/include
-CXXFLAGS=-Werror -pedantic -std=c++14 -Wno-c11-extensions $(INCPATH)
+CXXFLAGS=-Werror -pedantic -std=c++17 -Wno-c11-extensions $(INCPATH)
 LDFLAGS=-pthread -L/usr/local/lib -lboost_program_options -lgpio -lyaml-cpp -lzmq -ljsoncpp
 
 OBJS=main.o GPIO.o Config.o Exception.o ThreadManager.o IOHandler.o ZMQ.o \

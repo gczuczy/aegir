@@ -14,7 +14,9 @@ export class ApiResponse {
     }
 }
 
-@Injectable()
+@Injectable({
+    providedIn: 'root'
+})
 export class ApiService {
 
     private static instance: ApiService = null;
@@ -71,7 +73,7 @@ export class ApiService {
 
     updateTempHistory(t) {
 	let newstates = new Set(['Maintenance', 'Empty', 'Loaded', 'PreWait', 'PreHeat', 'NeedMalt',
-				 'PreBoil', 'Hopping', 'Cooling', 'Finished']);
+				 'PreBoil', 'Hopping', 'Cooling', 'Transfer', 'Finished']);
 	if ( newstates.has(this.state_data) ) return;
 	if ( this.temphistory_running && t == -1 ) return;
 	this.temphistory_running = true;
@@ -141,6 +143,16 @@ export class ApiService {
 
     coolingDone(): Observable<{}> {
 	let body = JSON.stringify({'command': 'coolingDone'});
+	let headers = new HttpHeaders({'Content-Type': 'application/json'});
+	let options = {'headers': headers};
+
+	//console.log('calling /api/brewd/state', body, options);
+
+	return this.http.post('/api/brewd/state', body, options);
+    }
+
+    transferDone(): Observable<{}> {
+	let body = JSON.stringify({'command': 'transferDone'});
 	let headers = new HttpHeaders({'Content-Type': 'application/json'});
 	let options = {'headers': headers};
 
@@ -260,9 +272,9 @@ export class ApiService {
 	return this.http.put('/api/brewd/maintenance', body, options);
     }
 
-    setMaintenance(pump, heat, whirlpool, temp): Observable<{}> {
-	let body = JSON.stringify({'pump': pump,
-				   'whirlpool': whirlpool,
+    setMaintenance(mtpump, heat, bkpump, temp): Observable<{}> {
+	let body = JSON.stringify({'mtpump': mtpump,
+				   'bkpump': bkpump,
 				   'heat': heat,
 				   'temp': temp});
 	let headers = new HttpHeaders({'Content-Type': 'application/json'});
@@ -273,9 +285,10 @@ export class ApiService {
 	return this.http.post('/api/brewd/maintenance', body, options);
     }
 
-    override(blockheat, forcepump): Observable<{}> {
+    override(blockheat, forcemtpump, bkpump): Observable<{}> {
 	let body = JSON.stringify({'blockheat': blockheat,
-				   'forcepump': forcepump});
+				   'forcemtpump': forcemtpump,
+				   'bkpump': bkpump});
 	let headers = new HttpHeaders({'Content-Type': 'application/json'});
 	let options = {'headers': headers};
 

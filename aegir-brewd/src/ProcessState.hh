@@ -39,18 +39,19 @@ namespace aegir {
     };
     friend Guard;
     enum class States: uint8_t {
-      Maintenance=0, // Maintenance mode
-      Empty, // initialized, no program loadad
-	Loaded, // program loaded, but not started
-	PreWait, // timed mode, waiting for pre-heat to start
-	PreHeat, // pre-heating to starttemp
-	NeedMalt, // Waiting for the malts to be added, manual interaction required
-	Mashing, // Doing the mash steps
-	Sparging, // keeps on endtemp temperature, and circulates
-	PreBoil, // Heats the BK up to boiling, till the start of the boil timer
-	Hopping, // BK is boiling, hopping timers started
-	Cooling, // The wort is being cooled down
-	Finished // Brewing process finished
+				Maintenance=0, // Maintenance mode
+				Empty, // initialized, no program loadad
+				Loaded, // program loaded, but not started
+				PreWait, // timed mode, waiting for pre-heat to start
+				PreHeat, // pre-heating to starttemp
+				NeedMalt, // Waiting for the malts to be added, manual interaction required
+				Mashing, // Doing the mash steps
+				Sparging, // keeps on endtemp temperature, and circulates
+				PreBoil, // Heats the BK up to boiling, till the start of the boil timer
+				Hopping, // BK is boiling, hopping timers started
+				Cooling, // The wort is being cooled down
+				Transfer, // transfer from BK to fermenter
+				Finished // Brewing process finished
     };
     typedef std::map<uint32_t, float> ThermoDataPoints;
     typedef std::function<void(States, States)> statechange_t;
@@ -71,6 +72,7 @@ namespace aegir {
     std::shared_ptr<Program> getProgram();
     inline States getState() const { return c_state; };
     std::string getStringState() const;
+    States byString(const std::string &_state) const;
     ProcessState &setState(States _st);
     ProcessState &reset();
     void registerStateChange(statechange_t _stch);
@@ -95,8 +97,8 @@ namespace aegir {
     // maintenance mode
     inline ProcessState &setMaintPump(bool _val) {c_maint_pump = _val; return *this; };
     inline bool getMaintPump() {return c_maint_pump; };
-    inline ProcessState &setMaintWhirlpool(bool _val) {c_maint_whirlpool = _val; return *this; };
-    inline bool getMaintWhirlpool() {return c_maint_whirlpool; };
+    inline ProcessState &setMaintBKPump(bool _val) {c_maint_bkpump = _val; return *this; };
+    inline bool getMaintBKPump() {return c_maint_bkpump; };
     inline ProcessState &setMaintHeat(bool _val) {c_maint_heat = _val; return *this; };
     inline bool getMaintHeat() {return c_maint_heat; };
     inline ProcessState &setMaintTemp(float _val) {c_maint_temp = _val; return *this; };
@@ -107,12 +109,14 @@ namespace aegir {
     inline uint32_t getHopId() { return c_hopid; };
     inline ProcessState &setHopTime(uint32_t _val) { c_t_hoptime = _val; return *this; };
     inline uint32_t getHopTime() const { return c_t_hoptime; };
-    inline ProcessState &setForcePump(bool _val) { c_force_pump = _val; return *this; };
-    inline bool getForcePump() { return c_force_pump; };
+    inline ProcessState &setForceMTPump(bool _val) { c_force_mtpump = _val; return *this; };
+    inline bool getForceMTPump() { return c_force_mtpump; };
     inline ProcessState &setBlockHeat(bool _val) { c_block_heat = _val; return *this; };
     inline bool getBlockHeat() { return c_block_heat; };
     inline ProcessState &setLevelError(bool _val) { c_levelerror = _val; return *this; };
     inline bool getLevelError() { return c_levelerror; };
+    inline ProcessState &setBKPump(bool _val) { c_bkpump = _val; return *this; };
+    inline bool getBKPump() { return c_bkpump; };
 
   protected:
     std::recursive_mutex c_mtx_state;
@@ -141,12 +145,13 @@ namespace aegir {
     std::atomic<uint32_t> c_t_hoptime; // for the UI
     // maintmode variables
     std::atomic<bool> c_maint_pump;
-    std::atomic<bool> c_maint_whirlpool;
+    std::atomic<bool> c_maint_bkpump;
     std::atomic<bool> c_maint_heat;
     std::atomic<float> c_maint_temp;
     // sparge/boil/cool forcings
-    std::atomic<bool> c_force_pump;
+    std::atomic<bool> c_force_mtpump;
     std::atomic<bool> c_block_heat;
+    std::atomic<bool> c_bkpump;
     // water level sensor
     std::atomic<bool> c_levelerror;
   };

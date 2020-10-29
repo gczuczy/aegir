@@ -13,7 +13,7 @@ export class MaintenanceComponent implements OnInit {
     inmaint:boolean = false;
 
     pumpon:boolean = false;
-    whirlpoolon:boolean = false;
+    bkpumpon:boolean = false;
     heaton:boolean = false;
     heattemp:number = 37.0;
 
@@ -57,14 +57,14 @@ export class MaintenanceComponent implements OnInit {
 	if ( !this.pumpon ) {
 	    this.heaton = false;
 	}
-	this.api.setMaintenance(this.pumpon, this.heaton, this.whirlpoolon, this.heattemp).subscribe();
+	this.api.setMaintenance(this.pumpon, this.heaton, this.bkpumpon, this.heattemp).subscribe();
     }
 
-    onWhirlpoolChange(event) {
+    onBKPumpChange(event) {
 	// event is the new value
 	//console.log('onPumpChange', event);
-	this.whirlpoolon = event['checked'];
-	this.api.setMaintenance(this.pumpon, this.heaton, this.whirlpoolon, this.heattemp).subscribe();
+	this.bkpumpon = event['checked'];
+	this.api.setMaintenance(this.pumpon, this.heaton, this.bkpumpon, this.heattemp).subscribe();
     }
 
     onHeatChange(event) {
@@ -74,10 +74,10 @@ export class MaintenanceComponent implements OnInit {
 	if ( this.heaton ) {
 	    this.pumpon = true;
 	}
-	this.api.setMaintenance(this.pumpon, this.heaton, this.whirlpoolon, this.heattemp).subscribe();
+	this.api.setMaintenance(this.pumpon, this.heaton, this.bkpumpon, this.heattemp).subscribe();
     }
 
     onTempSet() {
-	this.api.setMaintenance(this.pumpon, this.heaton, this.whirlpoolon, this.heattemp).subscribe();
+	this.api.setMaintenance(this.pumpon, this.heaton, this.bkpumpon, this.heattemp).subscribe();
     }
 }
