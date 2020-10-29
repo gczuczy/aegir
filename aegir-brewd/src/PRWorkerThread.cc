@@ -559,40 +559,39 @@ namespace aegir {
     Json::Value retval;
     retval["status"] = "success";
     retval["data"] = Json::Value();
+    ProcessState &ps(ProcessState::getInstance());
+    std::set<ProcessState::States> empties{ProcessState::States::Empty,
+					   ProcessState::States::Finished};
+    ProcessState::States currstate = ps.getState();
 
-    std::string newstname;
     if ( _data.isMember("state") ) {
       Json::Value jsonvalue = _data["state"];
       if ( !jsonvalue.isString() ) {
 	throw Exception("field 'state' must be a string");
       }
+      std::string newstname;
+
+      ProcessState::States newstate = ps.byString(newstname);
+      if ( currstate == ProcessState::States::Maintenance )
+	throw Exception("Please leave maintmode first");
+
+      if ( empties.find(newstate) != empties.end() )
+	throw Exception("Cannot move to the desired state");
+
+      if ( empties.find(currstate) != empties.end() )
+	throw Exception("Start a program first");
+
+      if ( currstate == newstate )
+	throw Exception("Already in that state");
+
+      if ( newstate < currstate )
+	throw Exception("Going backwards is not allowed");
+
+      ps.setState(newstate);
 
       newstname = jsonvalue.asString();
     }
-    ProcessState &ps(ProcessState::getInstance());
-    ProcessState::States currstate = ps.getState();
 
-    std::set<ProcessState::States> empties{
-					   ProcessState::States::Empty,
-					   ProcessState::States::Finished
-    };
-    ProcessState::States newstate = ps.byString(newstname);
-    if ( currstate == ProcessState::States::Maintenance )
-      throw Exception("Please maintmode first");
-
-    if ( empties.find(newstate) != empties.end() )
-      throw Exception("Cannot move to the desired state");
-
-    if ( empties.find(currstate) != empties.end() )
-      throw Exception("Start a program first");
-
-    if ( currstate == newstate )
-      throw Exception("Already in that state");
-
-    if ( newstate < currstate )
-      throw Exception("Going backwards is not allowed");
-
-    ps.setState(newstate);
 
     return std::make_shared<Json::Value>(retval);
   }
