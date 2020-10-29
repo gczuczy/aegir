@@ -299,4 +299,13 @@ export class ApiService {
 	return this.http.get<ApiResponse>(`/api/brewd/config`);
     }
 
+    setCoolTemp(cooltemp): Observable<{}> {
+	let body = JSON.stringify({'cooltemp': cooltemp});
+	let headers = new HttpHeaders({'Content-Type': 'application/json'});
+	let options = {'headers': headers};
+
+	//console.log("Setting volume to ", volume, body, headers, options);
+
+	return this.http.post('/api/brewd/state/cooltemp', body, options);
+    }
 }

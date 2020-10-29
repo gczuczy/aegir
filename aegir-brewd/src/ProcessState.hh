@@ -117,6 +117,8 @@ namespace aegir {
     inline bool getLevelError() { return c_levelerror; };
     inline ProcessState &setBKPump(bool _val) { c_bkpump = _val; return *this; };
     inline bool getBKPump() { return c_bkpump; };
+    inline ProcessState &setCoolTemp(float _val) { c_cooltemp = _val; return *this; };
+    inline float getCoolTemp() { return c_cooltemp; };
 
   protected:
     std::recursive_mutex c_mtx_state;
@@ -154,6 +156,8 @@ namespace aegir {
     std::atomic<bool> c_bkpump;
     // water level sensor
     std::atomic<bool> c_levelerror;
+    // cooling temperature
+    std::atomic<float> c_cooltemp;
   };
 }
 

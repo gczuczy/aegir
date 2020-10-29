@@ -32,6 +32,14 @@
 	      Force Pump
 	    </mat-slide-toggle>
 	  </div>
+	  <!-- Cooling -->
+	  <div *ngIf="state=='Cooling'" class="container">
+	    <div class="card-header bg-light">Cooling target</div>
+	    <div class="card-body input-group">
+	      <input id="volume" class="form-control" type="number" value="{{cooltemp}}" [(ngModel)]="cooltemp">
+	      <button class="btn btn-primary" type="submit" (click)="onCoolTempSet()">Set</button>
+	</div>
+	  </div>
 	  <!-- Transfer -->
 	  <div *ngIf="state=='Transfer'" class="container">
 	    <mat-slide-toggle
@@ -70,6 +78,10 @@
 	    <tr>
 	      <th>Temp target</th>
 	      <td>{{targettemp}} C</td>
+	    </tr>
+	    <tr *ngIf="state == 'Cooling'">
+	      <th>Cooling target</th>
+	      <td>{{cooltemp}} C</td>
 	    </tr>
 	    <ng-template ngFor let-step [ngForOf]="sensors">
 	      <tr>

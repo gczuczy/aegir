@@ -439,10 +439,14 @@ namespace aegir {
     printf("Controller::stageLoaded(): state:%s\n", c_ps.getStringState().c_str());
 #endif
     c_needcontrol = false;
+
+    // set the cooling target
+    c_ps.setCoolTemp(c_cfg->getCoolTemp());
+
     // in case of nomash, we're jumping to preboil
     if ( c_prog->getNoMash() ) {
       c_ps.setState(ProcessState::States::PreBoil);
-      printf("Controller::stageLoaded(): nomash detected, jumping to preboil");
+      //printf("Controller::stageLoaded(): nomash detected, jumping to preboil\n");
       return;
     }
 
@@ -647,7 +651,7 @@ namespace aegir {
     float bktemp = c_ps.getSensorTemp("BK");
 
     setPIN("mtpump", c_ps.getForceMTPump()?PINState::On : PINState::Off);
-    if ( bktemp <= c_cfg->getCoolTemp() ) {
+    if ( bktemp <= c_ps.getCoolTemp() ) {
       //c_ps.setState(ProcessState::States::Finished);
       setPIN("buzzer", PINState::Pulsate, 1.0f, 0.23f);
     } else {

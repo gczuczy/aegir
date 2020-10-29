@@ -20,6 +20,7 @@ def init(app, api):
     api.add_resource(BrewStateTempHistory, '/api/brewd/state/temphistory')
     api.add_resource(BrewMaintenance, '/api/brewd/maintenance')
     api.add_resource(BrewOverride, '/api/brewd/override')
+    api.add_resource(BrewStateCoolTemp, '/api/brewd/state/cooltemp')
     pass
 
 class BrewProgram(flask_restful.Resource):
@@ -375,3 +376,32 @@ class BrewOverride(flask_restful.Resource):
 
         return {"status": "success", "data": zresp['data']}, 200
     pass
+
+class BrewStateCoolTemp(flask_restful.Resource):
+    '''
+    Setting the cooling target temperature during the cooling state
+    '''
+
+    def post(self):
+        '''
+        Sets a new cooling target temp
+        '''
+        data = flask.request.get_json();
+        zcmd = 'setCoolTemp';
+
+        if not 'cooltemp' in data:
+            return {'status': 'error',
+                    'errors': ['cooltemp missing']}, 422
+
+        zdata = {'cooltemp': data['cooltemp']}
+        try:
+            zresp = aegir.zmq.prmessage(zcmd, zdata)
+        except Exception as e:
+            return {"status": "error", "errors": [str(e)]}, 422
+
+        if zresp['status'] != 'success':
+            if 'message' in zresp:
+                return {"status": "error", "errors": [zresp['message']]}, 422
+            return {"status": "error", "errors": ['Unknown error']}, 422
+
+        return {'status': 'success'}

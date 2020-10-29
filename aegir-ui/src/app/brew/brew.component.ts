@@ -26,6 +26,9 @@ export class BrewComponent implements OnInit {
     public blockheat = false;
     public bkpump:boolean = false;
 
+    // cooling temperature
+    public cooltemp:number = null;
+
     // volume
     public volume: number = 42;
 
@@ -97,7 +100,10 @@ export class BrewComponent implements OnInit {
 	}
 
 	if ( 'cooling' in data ) {
-	    this.coolingdone = data['cooling']['ready']
+	    this.coolingdone = data['cooling']['ready'];
+	    if ( this.cooltemp == null ) {
+		this.cooltemp = data['cooling']['cooltemp'];
+	    }
 	} else {
 	    this.coolingdone = false;
 	}
@@ -274,5 +280,14 @@ export class BrewComponent implements OnInit {
 	// event is the new value
 	this.bkpump = event['checked'];
 	this.api.override(this.blockheat, this.forcepump, this.bkpump).subscribe();
+    }
+
+    onCoolTempSet() {
+	this.api.setCoolTemp(this.cooltemp)
+	    .subscribe(data => console.log(data),
+		       err => console.log(err));
+
+	// and finally display the newly active volume
+	this.onVolumeReset();
     }
 }

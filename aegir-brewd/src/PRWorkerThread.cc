@@ -84,6 +84,7 @@ namespace aegir {
     c_handlers["override"] = std::bind(&PRWorkerThread::handleOverride, this, std::placeholders::_1);
     c_handlers["getConfig"] = std::bind(&PRWorkerThread::handleGetConfig, this, std::placeholders::_1);
     c_handlers["setConfig"] = std::bind(&PRWorkerThread::handleSetConfig, this, std::placeholders::_1);
+    c_handlers["setCoolTemp"] = std::bind(&PRWorkerThread::handleSetCoolTemp, this, std::placeholders::_1);
 
     // connect the IO socket
     c_mq_iocmd.connect("inproc://iocmd");
@@ -420,7 +421,9 @@ namespace aegir {
     Program prog(prog_id, prog_starttemp, prog_endtemp, prog_boiltime*60,
 		 prog_nomash, prog_noboil,
 		 prog_mashsteps, prog_hops);
-    ProcessState::getInstance().loadProgram(prog, startat, volume);
+    Config *cfg = Config::getInstance();
+    ps.loadProgram(prog, startat, volume)
+      .setCoolTemp(cfg->getCoolTemp());
 
     // the success reply
     Json::Value resp;
@@ -514,11 +517,13 @@ namespace aegir {
       // during cooling let the UI know whether we're good to finish
       if ( ps.getState() == ProcessState::States::Cooling ) {
 	Json::Value cooling;
-	Config *cfg = Config::getInstance();
 	float bktemp =  ps.getSensorTemp("BK");
-	float cooltemp = cfg->getCoolTemp();
+	float cooltemp = ps.getCoolTemp();
+
+	printf("GetState cooltemp: %.2f\n", cooltemp);
 
 	cooling["ready"] = (bktemp < cooltemp);
+	cooling["cooltemp"] = cooltemp;
 
 	data["cooling"] = cooling;
       }
@@ -571,7 +576,9 @@ namespace aegir {
       }
       std::string newstname;
 
+      newstname = jsonvalue.asString();
       ProcessState::States newstate = ps.byString(newstname);
+
       if ( currstate == ProcessState::States::Maintenance )
 	throw Exception("Please leave maintmode first");
 
@@ -588,8 +595,6 @@ namespace aegir {
 	throw Exception("Going backwards is not allowed");
 
       ps.setState(newstate);
-
-      newstname = jsonvalue.asString();
     }
 
 
@@ -702,9 +707,8 @@ namespace aegir {
     }
 
     float bktemp = ps.getSensorTemp("BK");
-    Config *cfg = Config::getInstance();
 
-    if ( bktemp >= cfg->getCoolTemp() )
+    if ( bktemp >= ps.getCoolTemp() )
       throw Exception("BK has to be bellow CoolingTemp");
 
     ps.setState(ProcessState::States::Transfer);
@@ -1169,6 +1173,34 @@ namespace aegir {
     Json::Value retval;
     retval["status"] = "success";
     retval["data"] = Json::Value(Json::ValueType::nullValue);
+
+    return std::make_shared<Json::Value>(retval);
+  }
+
+  std::shared_ptr<Json::Value> PRWorkerThread::handleSetCoolTemp(const Json::Value &_data) {
+    ProcessState &ps(ProcessState::getInstance());
+
+    // we cannot set maintenance options if we're not in maintmode
+    if ( ps.getState() != ProcessState::States::Cooling ) {
+      throw Exception("Only valid during cooling");
+    }
+
+    float cooltemp;
+    // cooltemp
+    if ( _data.isMember("cooltemp") ) {
+      if ( !_data["cooltemp"].isConvertibleTo(Json::ValueType::realValue) )
+	throw Exception("cooltemp must be a float");
+
+      cooltemp = _data["cooltemp"].asFloat();
+
+      if ( cooltemp <= 15 || cooltemp >= 30 )
+	throw Exception("cooltemp is out of range");
+    }
+
+    Json::Value retval;
+
+    ps.setCoolTemp(cooltemp);
+    retval["status"] = "success";
 
     return std::make_shared<Json::Value>(retval);
   }
