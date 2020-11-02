@@ -299,7 +299,7 @@ namespace aegir {
     jsonvalue = _data["volume"];
     if ( jsonvalue.type() != Json::ValueType::intValue &&
 	 jsonvalue.type() != Json::ValueType::uintValue )
-      throw Exception("data.startat must be an integer type and not %s", jsvt2str(jsonvalue.type()).c_str());
+      throw Exception("data.volume must be an integer type and not %s", jsvt2str(jsonvalue.type()).c_str());
     volume = jsonvalue.asUInt();
 
     //printf("Startat:%u Volume:%u\n", startat, volume);
