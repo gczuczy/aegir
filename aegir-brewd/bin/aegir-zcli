@@ -1,0 +1,41 @@
+#!/usr/bin/env python3.8
+
+import zmq
+import json
+from pprint import pprint
+
+
+class Client:
+    def __init__(self, port=42069):
+        self._ctx = zmq.Context.instance()
+        self._socket_pr = self._ctx.socket(zmq.REQ)
+        addr = 'tcp://127.0.0.1:42069'
+        self._socket_pr.connect(addr)
+        #pprint(['connecting to zmq', addr])
+        self._socket_pr.setsockopt(zmq.RCVTIMEO, 1000)
+        self._socket_pr.setsockopt(zmq.LINGER, 0)
+        #_socket_pr.setsockopt(zmq.PROBE_ROUTER, 1)
+        pass
+
+    def message(self, command, data={}):
+        msg = {'command': command,
+               'data': data}
+        #pprint(msg)
+        try:
+            self._socket_pr.send_json(msg)
+        except Exception as e:
+            raise Exception("Error while sending message: {msg}".format(msg = str(e)))
+
+        try:
+            return self._socket_pr.recv_json()
+        except Exception as e:
+            #pprint(['zmq_recv', e])
+            raise Exception("Cannot parse brewd response: {err}".format(err = str(e)))
+        pass
+    pass
+
+cl = Client()
+resp = cl.message('setState', {'state': 'Cooling'})
+pprint(resp)
+resp = cl.message('getState')
+pprint(resp)
