@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.26)
 set(default_build_type "Release")
 set(CMAKE_CXX_STANDARD 20)
 set(Boost_NO_WARN_NEW_VERSIONS 1)
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
 
 project(brewd VERSION 0.1.0 LANGUAGES CXX)
 
@@ -11,7 +12,8 @@ add_executable(brewd)
 set_target_properties(
   brewd
   PROPERTIES
-    OUTPUT_NAME "aegir-brewd"
+  OUTPUT_NAME "aegir-brewd"
+  RUNTIME_OUTPUT_DIRECTORY ${brewd_SOURCE_DIR}/bin
 )
 
 configure_file(include/cmakeconfig.hh.in include/cmakeconfig.hh)
