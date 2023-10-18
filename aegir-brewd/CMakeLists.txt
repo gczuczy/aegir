@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(Boost_NO_WARN_NEW_VERSIONS 1)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
 
+
 project(brewd VERSION 0.1.0 LANGUAGES CXX)
 
 add_executable(brewd)
