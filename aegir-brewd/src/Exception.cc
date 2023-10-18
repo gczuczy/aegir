@@ -8,9 +8,9 @@ namespace aegir {
     char buff[512];
     int len;
 
-    va_list args;
+    std::va_list args;
     va_start(args, _fmt);
-    len = std::vsnprintf(buff, sizeof(buff)-1, _fmt, args);
+    len = std::vsnprintf(buff, (std::size_t)sizeof(buff)-1, _fmt, args);
     va_end(args);
     c_msg = std::string(buff, len);
   }
