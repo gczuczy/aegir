@@ -15,7 +15,14 @@ keywords = [
     "RIMS",
     "beer",
 ]
-dependencies = []
+dependencies = [
+  "Flask >= 3.0.0",
+  "Flask-RESTful",
+  "sqlite3",
+  "PyYAML >= 6.0.0",
+  "pyzmq >= 25.1.1",
+  "python-dateutil >= 2.8.2"
+]
 
 [project.urls]
 Documentation = "https://github.com/gczuczy/aegir"
