@@ -31,7 +31,6 @@ Source = "https://github.com/gczuczy/aegir"
 
 [project.scripts]
 aegir-api = "aegir.cli:api"
-aegir-wsgi = "aegir.cli:wsgi"
 
 [tool.hatch.version]
 path = "aegir/__init__.py"

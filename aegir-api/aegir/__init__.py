@@ -25,10 +25,11 @@ def init(cfgfile):
     aegir.zmq.init(_app)
     aegir.db.init(_app)
     aegir.api.init(_app, _api)
-    pass
+    return _app
 
 def run(debug=False):
     _app.run(port=aegir.config.config['port'],
              debug=aegir.config.config['debug'] or debug,
              threaded=False)
     pass
+
