@@ -13,7 +13,9 @@ _ctx = None
 _socket_pr = None
 
 def init(app):
-    app.before_first_request(instance_init)
+    with app.app_context():
+        instance_init()
+        pass
     pass
 
 def instance_init():
