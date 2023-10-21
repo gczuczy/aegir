@@ -9,6 +9,8 @@ import aegir.api
 import aegir.zmq
 import aegir.db
 
+__version__ = "0.1.0"
+
 _app = None
 _api = None
 
@@ -23,10 +25,11 @@ def init(cfgfile):
     aegir.zmq.init(_app)
     aegir.db.init(_app)
     aegir.api.init(_app, _api)
-    pass
+    return _app
 
-def run():
+def run(debug=False):
     _app.run(port=aegir.config.config['port'],
-             debug=aegir.config.config['debug'],
+             debug=aegir.config.config['debug'] or debug,
              threaded=False)
     pass
+
