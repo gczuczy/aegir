@@ -1,39 +1,32 @@
-import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
-import { HttpClientModule } from '@angular/common/http';
-import { RouterModule } from '@angular/router';
-import { APP_BASE_HREF } from '@angular/common';
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import {NgbModule} from '@ng-bootstrap/ng-bootstrap';
+import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
-import { BrewModule } from './brew/brew.module';
-import { ProgramsModule } from './programs/programs.module';
-import { SettingsModule } from './settings/settings.module';
-import { MaintenanceModule } from './maintenance/maintenance.module';
-
+import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 
-import { ApiService } from './api.service';
+import { HttpClientModule } from '@angular/common/http';
 
-import { APP_ROUTES } from './app.routes';
+import { BrewComponent } from './brew/brew.component';
+import { ProgramsComponent } from './programs/programs.component';
+import { MaintenanceComponent } from './maintenance/maintenance.component';
+import { SettingsComponent } from './settings/settings.component';
 
 @NgModule({
-    declarations: [
-	AppComponent,
-    ],
-    imports: [
-	BrowserModule,
-	FontAwesomeModule,
-	HttpClientModule,
-	BrewModule,
-	SettingsModule,
-	ProgramsModule,
-	MaintenanceModule,
-	RouterModule.forRoot(APP_ROUTES),
-    ],
-    providers: [
-	ApiService
-    ],
-    bootstrap: [AppComponent]
+  declarations: [
+    AppComponent,
+    BrewComponent,
+    ProgramsComponent,
+    MaintenanceComponent,
+    SettingsComponent
+  ],
+  imports: [
+    BrowserModule,
+    BrowserAnimationsModule,
+    AppRoutingModule,
+    HttpClientModule
+  ],
+  providers: [],
+  bootstrap: [AppComponent]
 })
 export class AppModule { }
