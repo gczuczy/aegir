@@ -127,7 +127,7 @@ namespace aegir {
     c_handle = gpio_open_device(_device.c_str());
 
     if ( c_handle == GPIO_INVALID_HANDLE ) {
-      throw Exception("GPIO: gpio_open_device(): invalid handle");
+      throw Exception("GPIO: gpio_open_device(%s): invalid handle", _device.c_str());
     }
 
     fetchpins();
