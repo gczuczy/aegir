@@ -5,12 +5,18 @@ import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { timer, Observable, BehaviorSubject } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-import { apiStateResponse, apiStateData, apiConfigResponse, apiConfig } from './api.types';
+import { apiStateResponse, apiStateData,
+	 apiConfigResponse, apiConfig,
+	 apiProgramsResponse, apiProgram,
+	 apiProgramResponse, apiProgramDeleteResponse,
+	 apiAddProgramResponse, apiAddProgramData } from './api.types';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
+
+  public updateAnnounce$ = new BehaviorSubject<boolean>(false);
 
   // observable state
   private timer_state;
@@ -94,4 +100,39 @@ export class ApiService {
       );
   }
 
+  announceUpdate() {
+    this.updateAnnounce$.next(true);
+  }
+
+  getPrograms(): Observable<apiProgram[]> {
+    return this.http.get('/api/programs')
+      .pipe(
+	map(res => (<apiProgramsResponse>res).data)
+      );
+  }
+
+  getProgram(progid: number): Observable<apiProgram> {
+    return this.http.get(`/api/programs/${progid}`)
+      .pipe(
+	map(res => (<apiProgramResponse>res).data)
+      );
+  }
+
+  delProgram(progid: number): Observable<apiProgramDeleteResponse> {
+    return this.http.delete(`/api/programs/${progid}`)
+      .pipe(
+	map(res => <apiProgramDeleteResponse>res)
+      );
+  }
+
+  addProgram(data: apiProgram): Observable<apiAddProgramData> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+
+    return this.http.post('/api/programs', body, options).
+      pipe(
+	map(res => (<apiAddProgramResponse>res).data)
+      );
+  }
 }

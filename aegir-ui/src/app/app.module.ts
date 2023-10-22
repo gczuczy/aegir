@@ -14,6 +14,10 @@ import { BrewComponent } from './brew/brew.component';
 import { ProgramsComponent } from './programs/programs.component';
 import { MaintenanceComponent } from './maintenance/maintenance.component';
 import { SettingsComponent } from './settings/settings.component';
+import { ProgramComponent } from './program/program.component';
+import { AddProgramComponent } from './add-program/add-program.component';
+import { EditProgramComponent } from './edit-program/edit-program.component';
+import { LoadProgramComponent } from './load-program/load-program.component';
 
 @NgModule({
   declarations: [
@@ -21,7 +25,11 @@ import { SettingsComponent } from './settings/settings.component';
     BrewComponent,
     ProgramsComponent,
     MaintenanceComponent,
-    SettingsComponent
+    SettingsComponent,
+    ProgramComponent,
+    AddProgramComponent,
+    EditProgramComponent,
+    LoadProgramComponent
   ],
   imports: [
     BrowserModule,

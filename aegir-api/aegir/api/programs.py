@@ -80,12 +80,23 @@ def validateProgram(prog):
         return None
     return errors
 
+def fixProgramData(p):
+    return {'builtime': p['boiltime'],
+            'endtemp': p['endtemp'],
+            'hops': p['hops'],
+            'id': p['id'],
+            'mashsteps': p['mashsteps'],
+            'name': p['name'],
+            'starttemp': p['starttemp'],
+            'noboil': not not p['noboil'],
+            'nomash': not not p['nomash']}
+
 class Programs(flask_restful.Resource):
     def get(self):
         dbc = aegir.db.Connection()
         progs = dbc.getPrograms()
         return {'status': 'success',
-                'data': [p.data for p in progs]}
+                'data': [fixProgramData(p.data) for p in progs]}
 
     def post(self):
         '''
@@ -126,7 +137,7 @@ class Program(flask_restful.Resource):
     Deals with a single program
     '''
     def get(self, progid):
-        pprint(['Program', progid])
+        #pprint(['Program', progid])
         res = None
         try:
             dbc = aegir.db.Connection()
@@ -136,7 +147,7 @@ class Program(flask_restful.Resource):
                     'errors': [str(e)]}, 400
 
         return {'status': 'success',
-                'data': res.data}
+                'data': fixProgramData(res.data)}
 
     def delete(self, progid):
         try:

@@ -1,0 +1,73 @@
+<div class="container" *ngIf="program">
+  <!-- Header and action buttons -->
+  <div class="row">
+    <div class="col"><h1>{{program.name}}</h1></div>
+    <div class="col">
+      <button class="btn btn-primary btn-sm align-middle" (click)="onEdit()">Edit</button>
+      <button class="btn btn-primary btn-sm" (click)="onLoad()">Load</button>
+      <button class="btn btn-danger btn-sm" (click)="onDelete()">Delete</button>
+    </div>
+  </div>
+  <p>&nbsp;</p>
+  <!-- basic program data -->
+  <div class="row"><div class="col">
+  <table class="table table-sm">
+    <tr>
+      <td><strong>Name</strong></td>{{program.name}}<td></td>
+      <td><strong>Boiltime</strong></td>{{program.boiltime}} minutes<td></td>
+    </tr>
+    <tr>
+      <td><strong>Start temp</strong></td>{{program.starttemp}} C<td></td>
+      <td><strong>End temp</strong></td>{{program.endtemp}} C<td></td>
+    </tr>
+  </table>
+  </div></div>
+  <div class="row"><div class="col"><p>&nbsp;</p></div></div>
+  <div class="row">
+    <div *ngIf="!program.nomash" class="col" >
+      <h2>Mash steps</h2>
+      <br/>
+      <table class="table table-sm">
+	<thead>
+	  <tr>
+	    <th>Temperature</th>
+	    <th>Hold time</th>
+	  </tr>
+	</thead>
+	<tbody>
+	  <ng-template ngFor let-step [ngForOf]="program.mashsteps">
+	  <tr>
+	    <td>{{step.temperature}} C</td>
+	    <td>{{step.holdtime}} minutes</td>
+	  </tr>
+	  </ng-template>
+	</tbody>
+      </table>
+    </div>
+    <div *ngIf="!program.noboil" class="col">
+      <h2>Hops</h2>
+      <br/>
+      <table class="table table-sm">
+	<thead>
+	  <tr>
+	    <th>Hop</th>
+	    <th>Quantity</th>
+	    <th>At time</th>
+	  </tr>
+	</thead>
+	<tbody>
+	  <ng-template ngFor let-hop [ngForOf]="program.hops">
+	  <tr>
+	    <td>{{hop.hopname}}</td>
+	    <td>{{hop.hopqty}}</td>
+	    <td>T-{{hop.attime}} minutes</td>
+	  </tr>
+	  </ng-template>
+	</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div class="alert alert-info" *ngIf="!program">
+  Loading Program...
+</div>
