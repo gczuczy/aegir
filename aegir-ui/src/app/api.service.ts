@@ -9,7 +9,8 @@ import { apiStateResponse, apiStateData,
 	 apiConfigResponse, apiConfig,
 	 apiProgramsResponse, apiProgram,
 	 apiProgramResponse, apiProgramDeleteResponse,
-	 apiAddProgramResponse, apiAddProgramData } from './api.types';
+	 apiAddProgramResponse, apiAddProgramData,
+	 apiSaveProgramResponse, apiSaveProgramData} from './api.types';
 
 @Injectable({
   providedIn: 'root'
@@ -135,4 +136,16 @@ export class ApiService {
 	map(res => (<apiAddProgramResponse>res).data)
       );
   }
+
+  saveProgram(data: apiProgram): Observable<apiSaveProgramData> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+
+    return this.http.post(`/api/programs/${data.id}`, body, options).
+      pipe(
+	map(res => (<apiSaveProgramResponse>res).data)
+      );
+  }
+
 }

@@ -81,3 +81,13 @@ export interface apiAddProgramResponse {
   data: apiAddProgramData,
   errors: string[]
 }
+
+export interface apiSaveProgramData {
+  progid: number,
+}
+
+export interface apiSaveProgramResponse {
+  status: string,
+  data: apiSaveProgramData,
+  errors: string[]
+}

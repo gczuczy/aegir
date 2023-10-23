@@ -7,17 +7,20 @@ import { ApiService } from '../api.service';
 import { apiAddProgramData,
 	 apiProgram, apiProgramHopStep, apiProgramMashStep } from '../api.types';
 
+import { initMashStep, initHop, defineValidators,
+	 programForm, toApiProgram } from '../programs.common';
+
 @Component({
   selector: 'app-add-program',
   templateUrl: './add-program.component.html',
   styleUrls: ['./add-program.component.css']
 })
-export class AddProgramComponent implements OnInit {
+export class AddProgramComponent implements OnInit, programForm {
 
   errors: string[] | null = null;
 
-  private minmashtemp:number = 37;
-  private maxmashtemp:number = 85;
+  public minmashtemp:number = 37;
+  public maxmashtemp:number = 80;
 
   public hasmash:boolean = true;
   public hasboil:boolean = true;
@@ -35,7 +38,7 @@ export class AddProgramComponent implements OnInit {
 				   (control: AbstractControl) => Validators.min(30)(control),
 				   (control: AbstractControl) => Validators.max(300)(control)]),
     hasmash: new FormControl(this.hasmash, []),
-    mashsteps: this.fb.array([this.initMashStep(0)]),
+    mashsteps: this.fb.array([initMashStep(0, this.fb, this.maxmashtemp)]),
     hasboil: new FormControl(this.hasboil, []),
     hops: this.fb.array([])
   });
@@ -51,127 +54,13 @@ export class AddProgramComponent implements OnInit {
     this.hasmash = true;
     this.hasboil = true;
 
-    this.addProgramForm.setValidators(this.formValidator.bind(this));
-
-    // Add the starttemp validator, which updates the mashtemp validators
-    this.addProgramForm.controls['starttemp'].valueChanges.subscribe({
-      next: (value:number) => {
-	const endctrl = <FormArray>this.addProgramForm!.controls['endtemp'];
-	let endval = endctrl.value
-
-	// set the mintemp's max
-	if ( value != this.minmashtemp ) {
-	  endctrl.setValidators([Validators.required,
-				 (control: AbstractControl) => Validators.min(value)(control),
-				 (control: AbstractControl) => Validators.max(90)(control)]);
-	  endctrl.updateValueAndValidity();
-	  this.minmashtemp = value;
-	}
-      }
-    });
-
-    // Add the endtemp validator, which updates the mashtemp validators
-    this.addProgramForm.controls['endtemp'].valueChanges.subscribe({
-      next: (value:number) => {
-	const startctrl = <FormArray>this.addProgramForm!.controls['starttemp'];
-	let startval = startctrl.value
-
-	// set the mintemp's max
-	if ( value != this.maxmashtemp ) {
-	  startctrl.setValidators([Validators.required,
-				   (control: AbstractControl) => Validators.min(25)(control),
-				   (control: AbstractControl) => Validators.max(value)(control)]);
-	  startctrl.updateValueAndValidity();
-	  this.maxmashtemp = value;
-	}
-      }
-    });
-
-    // Add the boiltime validator, which updates the hop timing validators
-    this.addProgramForm.controls['boiltime'].valueChanges.subscribe({
-      next: (value:number) => {
-	const hopctrl = <FormArray>this.addProgramForm!.controls['hops'];
-
-	for ( let hop of hopctrl.controls ) {
-	  hop!.get('attime')!.setValidators([Validators.required,
-					   (control: AbstractControl) => Validators.min(0)(control),
-					   (control: AbstractControl) => Validators.max(value)(control)]);
-	  hop!.get('attime')!.updateValueAndValidity();
-	}
-      }
-    });
-
+    defineValidators(this.addProgramForm, this);
   } // ngOnInit
 
-  public formValidator(form: AbstractControl): ValidationErrors | null {
-    //console.log('formValidator', form)
-
-    let startval = form.get('starttemp')!.value;
-    let endval = form.get('endtemp')!.value;
-
-    const msctrl : FormArray = form.get('mashsteps') as FormArray;
-    let tempsteps: Array<number> = msctrl.value;
-
-    let absmin = startval;
-    let absmax = endval;
-    let i = 0;
-    for ( let step of msctrl['controls'] ) {
-      let min = <number>(i==0 ? absmin : tempsteps[i-1]);
-      let max = <number>(i+1==msctrl['controls']!.length ? absmax : tempsteps[i+1]);
-      let stepval = step.get('temp')!.value;
-      /*
-	console.log('i:', i, ' Min:', min, ' max:', max, ' val:', stepval,
-	' status:', step.get('temp').status);
-      */
-      step.get('temp')!.setValidators([Validators.required,
-				       (control: AbstractControl) => Validators.min(min+1)(control),
-				       (control: AbstractControl) => Validators.max(max-1)(control)]);
-      if ( (stepval <= min || stepval >= max) || step.get('temp')!.invalid ) {
-	step.get('temp')!.markAsTouched();
-      }
-      if ( (stepval > min && stepval < max && step.get('temp')!.invalid) ||
-	(stepval <= min || stepval >= max) && step.get('temp')!.valid ) {
-	step.get('temp')!.updateValueAndValidity();
-      }
-      i += 1;
-    }
-
-    let hasboil = form.get('hasboil')!.value;
-    let hasmash = form.get('hasmash')!.value;
-    //console.log('add-p::formvalidator', hasboil, hasmash);
-    if ( !hasboil && !hasmash ) return {'mashboil': 'Either mash or boil is needed'};
-
-    if ( hasboil ) {
-      const hops : FormArray = form.get('hops') as FormArray;
-      if ( hops.length == 0 )
-	return {'needhops': 'Need hops when boiling'}
-    }
-
-    if ( hasmash ) {
-      const steps = form.get('mashsteps')!.value;
-      if ( steps.length == 0 )
-	return {'needmashsteps': 'Need at least 1 mash steps'}
-    }
-    return null;
-  } // formValidator
-
-  initMashStep(n: number) {
-    let endtemp = 80;
-    if ( this.addProgramForm ) {
-      endtemp = this.addProgramForm.controls['endtemp'].value
-    }
-    return this.fb.group({
-      order: [n],
-      temp: [42, [Validators.required,
-		  (control: AbstractControl) => Validators.min(20)(control),
-		  (control: AbstractControl) => Validators.max(endtemp)(control)]],
-      holdtime: [15, [Validators.required]]
-    });
-  }
-
   public addMashStep() {
-    const control = <FormArray>this.addProgramForm.controls['mashsteps'];
-    let ms = this.initMashStep(control.length);
+    const control = this.addProgramForm.get('mashsteps')! as FormArray;
+    let endtemp = this.addProgramForm.get('endtemp')!.value;
+    let ms = initMashStep(control.length, this.fb, endtemp);
     control.push(ms);
   }
 
@@ -189,22 +78,9 @@ export class AddProgramComponent implements OnInit {
     }
   }
 
-  initHop() {
-    const boiltime = this.addProgramForm.controls['boiltime']
-    return this.fb.group({
-      attime: [0, [Validators.required,
-		  (control: AbstractControl) => Validators.min(0)(control),
-		  (control: AbstractControl) => Validators.max(boiltime.value)(control)]],
-      name: ['', [Validators.required,
-		  Validators.minLength(3)]],
-      quantity: [0, [Validators.required,
-		     (control: AbstractControl) => Validators.min(1)(control)]]
-    });
-  }
-
   public addHop() {
     const control = <FormArray>this.addProgramForm.controls['hops'];
-    control.push(this.initHop());
+    control.push(initHop(this.addProgramForm, this.fb));
   }
 
   public removeHop(i: number) {
@@ -228,16 +104,9 @@ export class AddProgramComponent implements OnInit {
     return this.addProgramForm.get('hops') as FormArray;
   }
 
-  getHops(model: FormArray): apiProgramHopStep[] {
-    return model.value;
-  }
-
-  getMashSteps(model: FormArray): apiProgramMashStep[] {
-    return model.value;
-  }
-
   public save(model: FormGroup) {
     //console.log('save ', model);
+    /*
     let hasmash = model.get('hasmash')!.value;
     let hasboil = model.get('hasboil')!.value;
     let p : apiProgram = {
@@ -249,7 +118,9 @@ export class AddProgramComponent implements OnInit {
       noboil: !hasboil,
       mashsteps: this.getMashSteps(model.get('mashsteps')! as FormArray),
       hops: this.getHops(model.get('hops')! as FormArray)
-    };
+      };
+    */
+    let p  = toApiProgram(model);
     this.api.addProgram(p).subscribe(
       (resp:apiAddProgramData) => {
 	let progid = resp.progid;
