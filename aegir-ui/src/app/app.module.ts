@@ -6,6 +6,8 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 
+import { FontAwesomeModule} from '@fortawesome/angular-fontawesome';
+
 import { HttpClientModule } from '@angular/common/http';
 
 import { FormsModule, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -18,6 +20,7 @@ import { ProgramComponent } from './program/program.component';
 import { AddProgramComponent } from './add-program/add-program.component';
 import { EditProgramComponent } from './edit-program/edit-program.component';
 import { LoadProgramComponent } from './load-program/load-program.component';
+import { NgChartsModule } from 'ng2-charts';
 
 @NgModule({
   declarations: [
@@ -38,7 +41,9 @@ import { LoadProgramComponent } from './load-program/load-program.component';
     AppRoutingModule,
     HttpClientModule,
     FormsModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    FontAwesomeModule,
+    NgChartsModule
   ],
   providers: [],
   bootstrap: [AppComponent]

@@ -23,7 +23,7 @@ export class ApiService {
   private timer_state;
   private timer_state_sub;
   private state_data = 'Empty';
-  private temphistory_data = null;
+  public temphistory$ = new BehaviorSubject<apiBrewTempHistoryData|null>(null);
   private state = new BehaviorSubject(<apiStateData>{
     levelerror: false,
     state: 'Empty',
@@ -55,7 +55,7 @@ export class ApiService {
 	this.state_data = res.data.state;
 	let newstates = new Set(['Empty', 'Loaded', 'PreWait', 'PreHeat', 'NeedMalt']);
 	if ( newstates.has(state) ) {
-	  this.temphistory_data = null;
+	  this.temphistory$.next(null);
 	}
 	this.state.next(res.data);
       }, (err:any) => {
