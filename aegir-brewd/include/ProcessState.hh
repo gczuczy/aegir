@@ -39,19 +39,19 @@ namespace aegir {
     };
     friend Guard;
     enum class States: uint8_t {
-				Maintenance=0, // Maintenance mode
-				Empty, // initialized, no program loadad
-				Loaded, // program loaded, but not started
-				PreWait, // timed mode, waiting for pre-heat to start
-				PreHeat, // pre-heating to starttemp
-				NeedMalt, // Waiting for the malts to be added, manual interaction required
-				Mashing, // Doing the mash steps
-				Sparging, // keeps on endtemp temperature, and circulates
-				PreBoil, // Heats the BK up to boiling, till the start of the boil timer
-				Hopping, // BK is boiling, hopping timers started
-				Cooling, // The wort is being cooled down
-				Transfer, // transfer from BK to fermenter
-				Finished // Brewing process finished
+      Maintenance=0, // Maintenance mode
+      Empty, // initialized, no program loadad
+      Loaded, // program loaded, but not started
+      PreWait, // timed mode, waiting for pre-heat to start
+      PreHeat, // pre-heating to starttemp
+      NeedMalt, // Waiting for the malts to be added, manual interaction required
+      Mashing, // Doing the mash steps
+      Sparging, // keeps on endtemp temperature, and circulates
+      PreBoil, // Heats the BK up to boiling, till the start of the boil timer
+      Hopping, // BK is boiling, hopping timers started
+      Cooling, // The wort is being cooled down
+      Transfer, // transfer from BK to fermenter
+      Finished // Brewing process finished
     };
     typedef std::map<uint32_t, float> ThermoDataPoints;
     typedef std::function<void(States, States)> statechange_t;

@@ -32,23 +32,23 @@ namespace aegir {
   // ThermoCouple type lookups
   std::map<std::string, MAX31856::TCType> g_string_to_tctype{
     {"B", MAX31856::TCType::B},
-      {"E", MAX31856::TCType::E},
-	{"J", MAX31856::TCType::J},
-	  {"K", MAX31856::TCType::K},
-	    {"N", MAX31856::TCType::N},
-	      {"R", MAX31856::TCType::R},
-		{"S", MAX31856::TCType::S},
-		  {"T", MAX31856::TCType::T}
+    {"E", MAX31856::TCType::E},
+    {"J", MAX31856::TCType::J},
+    {"K", MAX31856::TCType::K},
+    {"N", MAX31856::TCType::N},
+    {"R", MAX31856::TCType::R},
+    {"S", MAX31856::TCType::S},
+    {"T", MAX31856::TCType::T}
   };
   std::map<MAX31856::TCType, std::string> g_tctype_to_string{
     {MAX31856::TCType::B, "B"},
-      {MAX31856::TCType::E, "E"},
-	{MAX31856::TCType::J, "J"},
-	  {MAX31856::TCType::K, "K"},
-	    {MAX31856::TCType::N, "N"},
-	      {MAX31856::TCType::R, "R"},
-		{MAX31856::TCType::S, "S"},
-		  {MAX31856::TCType::T, "T"}
+    {MAX31856::TCType::E, "E"},
+    {MAX31856::TCType::J, "J"},
+    {MAX31856::TCType::K, "K"},
+    {MAX31856::TCType::N, "N"},
+    {MAX31856::TCType::R, "R"},
+    {MAX31856::TCType::S, "S"},
+    {MAX31856::TCType::T, "T"}
   };
   // Noisefilter lookups
   std::map<std::string, NoiseFilters> g_string_to_noisefilter{

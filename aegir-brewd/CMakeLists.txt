@@ -10,6 +10,13 @@ project(brewd VERSION 0.1.0 LANGUAGES CXX)
 
 add_executable(brewd)
 
+find_package(Catch2 3 REQUIRED)
+add_executable(tests)
+target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+include(CTest)
+include(Catch)
+catch_discover_tests(tests)
+
 set_target_properties(
   brewd
   PROPERTIES
@@ -17,9 +24,23 @@ set_target_properties(
   RUNTIME_OUTPUT_DIRECTORY ${brewd_SOURCE_DIR}/bin
 )
 
+set_target_properties(
+  tests
+  PROPERTIES
+  OUTPUT_NAME "tests"
+  RUNTIME_OUTPUT_DIRECTORY ${brewd_SOURCE_DIR}/bin
+)
+
 configure_file(include/cmakeconfig.hh.in include/cmakeconfig.hh)
 
 target_include_directories(brewd
+  PRIVATE ${brewd_SOURCE_DIR}/include
+  PRIVATE ${brewd_SOURCE_DIR}/contrib/include
+  SYSTEM /usr/local/include
+  SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+)
+
+target_include_directories(tests
   PRIVATE ${brewd_SOURCE_DIR}/include
   PRIVATE ${brewd_SOURCE_DIR}/contrib/include
   SYSTEM /usr/local/include
@@ -105,6 +126,7 @@ target_link_options(brewd
 
 add_subdirectory(src)
 add_subdirectory(include)
+add_subdirectory(tests)
 
 set_property(TARGET brewd PROPERTY CXX_STANDARD 20)
 set_property(TARGET brewd PROPERTY CXX_STANDARD_REQUIRED True)

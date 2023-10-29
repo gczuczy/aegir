@@ -18,9 +18,9 @@ namespace aegir {
 
   enum class MessageType:uint8_t {
     UNKNOWN=0,
-      PINSTATE=1,
-      THERMOREADING=2,
-      JSON=3
+    PINSTATE=1,
+    THERMOREADING=2,
+    JSON=3
   };
 
   const std::string hexdump(const msgstring &_msg);

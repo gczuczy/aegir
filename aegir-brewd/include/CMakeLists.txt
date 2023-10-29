@@ -18,6 +18,8 @@ list(APPEND brewd_HEADERS
   ThreadManager.hh
   ZMQ.hh
   cmakeconfig.hh
+  TSDB.hh
+  types.hh
 )
 
 # disabled due to
@@ -27,6 +29,11 @@ list(APPEND brewd_HEADERS
 #)
 
 target_sources(brewd
+  PRIVATE
+  ${brewd_HEADERS}
+)
+
+target_sources(tests
   PRIVATE
   ${brewd_HEADERS}
 )

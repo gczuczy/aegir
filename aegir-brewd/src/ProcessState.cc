@@ -11,19 +11,19 @@
 namespace aegir {
 
   static std::map<ProcessState::States, std::string> g_strstates{
-								 {ProcessState::States::Maintenance, "Maintenance"},
-								 {ProcessState::States::Empty, "Empty"},
-								 {ProcessState::States::Loaded, "Loaded"},
-								 {ProcessState::States::PreWait, "PreWait"},
-								 {ProcessState::States::PreHeat, "PreHeat"},
-								 {ProcessState::States::NeedMalt, "NeedMalt"},
-								 {ProcessState::States::Mashing, "Mashing"},
-								 {ProcessState::States::Sparging, "Sparging"},
-								 {ProcessState::States::PreBoil, "PreBoil"},
-								 {ProcessState::States::Hopping, "Hopping"},
-								 {ProcessState::States::Cooling, "Cooling"},
-								 {ProcessState::States::Transfer, "Transfer"},
-								 {ProcessState::States::Finished, "Finished"}
+    {ProcessState::States::Maintenance, "Maintenance"},
+    {ProcessState::States::Empty, "Empty"},
+    {ProcessState::States::Loaded, "Loaded"},
+    {ProcessState::States::PreWait, "PreWait"},
+    {ProcessState::States::PreHeat, "PreHeat"},
+    {ProcessState::States::NeedMalt, "NeedMalt"},
+    {ProcessState::States::Mashing, "Mashing"},
+    {ProcessState::States::Sparging, "Sparging"},
+    {ProcessState::States::PreBoil, "PreBoil"},
+    {ProcessState::States::Hopping, "Hopping"},
+    {ProcessState::States::Cooling, "Cooling"},
+    {ProcessState::States::Transfer, "Transfer"},
+    {ProcessState::States::Finished, "Finished"}
   };
 
   ProcessState::Guard::Guard(ProcessState &_ps): c_ps(_ps) {
