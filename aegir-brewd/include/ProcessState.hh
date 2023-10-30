@@ -131,11 +131,12 @@ namespace aegir {
     std::atomic<uint32_t> c_volume; //liters
     std::atomic<uint32_t> c_startedat; //when we went from !isactive->isactive
     std::atomic<uint32_t> c_t_endsparge; // when sparging is done
-    // cache the last readings
-    std::map<std::string, float> c_lasttemps;
+    // TSDB cache the last readings
+    //std::map<std::string, float> c_lasttemps;
     // states
     std::atomic<States> c_state;
-    std::map<std::string, ThermoDataPoints> c_thermoreadings;
+    // TSDB
+    //std::map<std::string, ThermoDataPoints> c_thermoreadings;
     // active mash step
     std::atomic<int8_t> c_mashstep;
     std::atomic<time_t> c_mashstepstart;

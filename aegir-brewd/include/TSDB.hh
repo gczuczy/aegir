@@ -18,7 +18,7 @@ namespace aegir {
   class TSDB {
   public:
     // types
-    typedef float datapoints[(size_t)ThermoSensors::_SIZE];
+    typedef float datapoints[(size_t)ThermoCouple::_SIZE];
     struct alignas(sizeof(long)) entry {
       time_t time;
       time_t dt;

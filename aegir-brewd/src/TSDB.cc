@@ -45,7 +45,7 @@ namespace aegir {
       c_db[idx].dt = tv.tv_sec - c_db[0].time;
 
       c_db[idx].readings[0] = _data[0];
-      for (int i=0; i< (int)ThermoSensors::_SIZE; ++i)
+      for (int i=0; i< (int)ThermoCouple::_SIZE; ++i)
 	c_db[idx].readings[i] = _data[i];
 
       // by incrementing the size afterwards
@@ -58,7 +58,7 @@ namespace aegir {
 
   void TSDB::last(datapoints& _data) {
     std::shared_lock l(c_mutex);
-    for (int i=0; i< (int)ThermoSensors::_SIZE; ++i)
+    for (int i=0; i< (int)ThermoCouple::_SIZE; ++i)
       _data[i] = c_db[c_size-1].readings[i];
   }
 
@@ -69,7 +69,7 @@ namespace aegir {
       std::shared_lock l(c_mutex);
       _data.time = c_db[_idx].time;
       _data.dt = c_db[_idx].dt;
-      for (int i=0; i< (int)ThermoSensors::_SIZE; ++i)
+      for (int i=0; i< (int)ThermoCouple::_SIZE; ++i)
 	_data.readings[i] = c_db[_idx].readings[i];
     }
   }

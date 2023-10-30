@@ -12,6 +12,7 @@
 #include <set>
 
 #include "MAX31856.hh"
+#include "types.hh"
 
 namespace aegir {
 
@@ -63,7 +64,8 @@ namespace aegir {
     // SPI / DirectSelect pin layout
     std::map<int, std::string> c_spi_dschips;
     // thermocouple layout
-    std::map<std::string, int> c_thermocouples;
+    // std::map<std::string, int> c_thermocouples;
+    int c_thermocouples[ThermoSensors::_SIZE];
     // thermocouple reading interval in seconds
     uint32_t c_thermoival;
     // PR ZMQ address
@@ -97,7 +99,9 @@ namespace aegir {
     inline const MAX31856::TCType getMAX31856TCType() const {return c_spi_max31856_tctype;};
     inline const NoiseFilters getMAX31856NoiseFilter() const { return c_spi_max31856_noisefilter;};
     inline const void getSPIDSChips(std::map<int, std::string> &_chips) const {_chips = c_spi_dschips;};
-    inline const void getThermocouples(std::map<std::string, int> &_tcs) const {_tcs = c_thermocouples;};
+    inline const void getThermocouples(int &_tcs[4]) const {
+      for (int i=0; i < ThermoSensors::_SIZE; ++i) _tcs[i] = c_thermocouples[i];
+    };
     inline const uint32_t getTCival() const { return c_thermoival;};
     inline const uint16_t getPRPort() const { return c_zmq_pr_port; };
     inline const uint32_t getHEPower() const { return c_hepower; };

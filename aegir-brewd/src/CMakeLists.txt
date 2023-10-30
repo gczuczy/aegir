@@ -20,10 +20,12 @@ target_sources(brewd
   ZMQ.cc
   main.cc
   TSDB.cc
+  types.cc
 )
 
 target_sources(tests
   PRIVATE
   TSDB.cc
   Exception.cc
+  types.cc
 )

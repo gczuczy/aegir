@@ -22,7 +22,7 @@ namespace aegir {
     {"buzzer", PinConfig(PinMode::OUT, PinPull::NONE)}
   };
 
-  static std::set<std::string> g_tcnames{"RIMS", "MashTun", "HLT", "BK"};
+  static std::set<std::string> g_tcnames{"HERMS", "MashTun", "HLT", "BK"};
 
   // SPI ChipSelector string translations
   static std::map<ChipSelectors, std::string> g_spi_cs_to_string{
@@ -107,7 +107,11 @@ namespace aegir {
     c_spi_dschips = {{0, "cs0"}, {1, "cs1"}, {2, "cs2"}, {3, "cs3"}};
 
     // thermocouples
-    c_thermocouples = {{"MashTun", 1}, {"RIMS", 0}, {"HLT", 2}, {"BK", 3}};
+    //c_thermocouples = {{"MashTun", 1}, {"RIMS", 0}, {"HLT", 2}, {"BK", 3}};
+    c_thermocouples[ThermoSensors::MT] = 1;
+    c_thermocouples[ThermoSensors::HERMS] = 0;
+    c_thermocouples[ThermoSensors::BK] = 3;
+    c_thermocouples[ThermoSensors::HLT] = 2;
 
     // thermocouple reading interval
     c_thermoival = 1;
