@@ -53,7 +53,7 @@ namespace aegir {
       Transfer, // transfer from BK to fermenter
       Finished // Brewing process finished
     };
-    typedef std::map<uint32_t, float> ThermoDataPoints;
+    // TSDB typedef std::map<uint32_t, float> ThermoDataPoints;
     typedef std::function<void(States, States)> statechange_t;
   private:
   private:
@@ -81,7 +81,7 @@ namespace aegir {
     inline ProcessState &setVolume(uint32_t _v) { c_volume = _v; return *this; };
     ProcessState &addThermoReading(const std::string &_sensor, const uint32_t _time, const float _temp);
     ProcessState &getThermoCouples(std::set<std::string> &_tcs);
-    ProcessState &getTCReadings(const std::string &_sensor, ThermoDataPoints &_tcvals);
+    // TSDB ProcessState &getTCReadings(const std::string &_sensor, ThermoDataPoints &_tcvals);
     inline float getSensorTemp(const std::string &_sensor) const {return c_lasttemps.find(_sensor)->second;};
     //inline time_t getStartedAt() const {return c_startedat;};
     uint32_t getStartedAt() const;

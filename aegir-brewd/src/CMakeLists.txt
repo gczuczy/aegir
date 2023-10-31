@@ -28,4 +28,5 @@ target_sources(tests
   TSDB.cc
   Exception.cc
   types.cc
+  Config.cc
 )

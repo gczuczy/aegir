@@ -124,6 +124,16 @@ target_link_options(brewd
   -ljsoncpp
 )
 
+target_link_options(tests
+  PRIVATE
+  -L/usr/local/lib
+  -L${Boost_LIBRARY_DIRS}
+  -pthread
+  -lyaml-cpp
+  -lzmq
+  -ljsoncpp
+)
+
 add_subdirectory(src)
 add_subdirectory(include)
 add_subdirectory(tests)

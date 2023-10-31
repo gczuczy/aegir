@@ -41,6 +41,11 @@ namespace aegir {
     Config &operator=(const Config&) = delete;
     Config &operator=(Config&&) = delete;
 
+  public:
+    struct tcids {
+      int tcs[ThermoCouple::_SIZE];
+    };
+
   private:
     Config(const std::string &_cfgfile, bool _noload=false);
     void setDefaults();
@@ -65,7 +70,7 @@ namespace aegir {
     std::map<int, std::string> c_spi_dschips;
     // thermocouple layout
     // std::map<std::string, int> c_thermocouples;
-    int c_thermocouples[ThermoSensors::_SIZE];
+    tcids c_thermocouples;
     // thermocouple reading interval in seconds
     uint32_t c_thermoival;
     // PR ZMQ address
@@ -99,9 +104,7 @@ namespace aegir {
     inline const MAX31856::TCType getMAX31856TCType() const {return c_spi_max31856_tctype;};
     inline const NoiseFilters getMAX31856NoiseFilter() const { return c_spi_max31856_noisefilter;};
     inline const void getSPIDSChips(std::map<int, std::string> &_chips) const {_chips = c_spi_dschips;};
-    inline const void getThermocouples(int &_tcs[4]) const {
-      for (int i=0; i < ThermoSensors::_SIZE; ++i) _tcs[i] = c_thermocouples[i];
-    };
+    inline const tcids& getThermocouples() const { return c_thermocouples; };
     inline const uint32_t getTCival() const { return c_thermoival;};
     inline const uint16_t getPRPort() const { return c_zmq_pr_port; };
     inline const uint32_t getHEPower() const { return c_hepower; };

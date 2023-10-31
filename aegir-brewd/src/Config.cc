@@ -107,11 +107,10 @@ namespace aegir {
     c_spi_dschips = {{0, "cs0"}, {1, "cs1"}, {2, "cs2"}, {3, "cs3"}};
 
     // thermocouples
-    //c_thermocouples = {{"MashTun", 1}, {"RIMS", 0}, {"HLT", 2}, {"BK", 3}};
-    c_thermocouples[ThermoSensors::MT] = 1;
-    c_thermocouples[ThermoSensors::HERMS] = 0;
-    c_thermocouples[ThermoSensors::BK] = 3;
-    c_thermocouples[ThermoSensors::HLT] = 2;
+    c_thermocouples.tcs[ThermoCouple::MT] = 1;
+    c_thermocouples.tcs[ThermoCouple::HERMS] = 0;
+    c_thermocouples.tcs[ThermoCouple::BK] = 3;
+    c_thermocouples.tcs[ThermoCouple::HLT] = 2;
 
     // thermocouple reading interval
     c_thermoival = 1;
@@ -249,15 +248,14 @@ namespace aegir {
 	      int id = tc[it].as<int>();
 	      if ( id < 0 || id > 3 )
 		throw Exception("Thermocouple id out of range: %i", id);
-	      c_thermocouples[it] = id;
+	      c_thermocouples.tcs[ThermoCouple(it)] = id;
 	    }
 	  }
 	  // now verify whether any of them is on the same id
 	  std::set<int> tmp;
-	  for (auto &it: c_thermocouples) {
-	    if ( tmp.find(it.second) != tmp.end() )
-	      throw Exception("Duplicate thermocouple id: %i", it.second);
-	    tmp.insert(it.second);
+	  for (uint8_t i=0; i < ThermoCouple::_SIZE; ++i) {
+	    if ( tmp.find(c_thermocouples.tcs[i]) != tmp.end() )
+	      throw Exception("Duplicate thermocouple id: %i", i);
 	  }
 	} // thermocouples
 	if ( spi["thermointerval"] && spi["thermointerval"].IsScalar() ) {
@@ -383,7 +381,12 @@ namespace aegir {
 
     // Thermocouple layout
     yout << YAML::Key << "thermocouples";
-    yout << YAML::Value << c_thermocouples;
+    {
+      std::map<std::string, int> tcmap;
+      for (uint8_t i=0; i < ThermoCouple::_SIZE; ++i)
+	tcmap[ThermoCouple(i).toStr()] = c_thermocouples.tcs[i];
+      yout << YAML::Value << tcmap;
+    }
 
     // thermocouple reading interval
     yout << YAML::Key << "thermointerval";
