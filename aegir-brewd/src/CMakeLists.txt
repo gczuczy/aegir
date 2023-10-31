@@ -29,4 +29,5 @@ target_sources(tests
   Exception.cc
   types.cc
   Config.cc
+  Message.cc
 )

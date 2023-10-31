@@ -36,7 +36,7 @@ namespace aegir {
   extern pinconfig_t g_pinconfig;
 
   class Config {
-    Config(const Config&) = delete;
+    Config();
     Config(Config&&) = delete;
     Config &operator=(const Config&) = delete;
     Config &operator=(Config&&) = delete;
@@ -88,7 +88,7 @@ namespace aegir {
     uint32_t c_hedelay;
 
   public:
-    Config();
+    Config(const Config&) = delete;
     ~Config();
     static std::shared_ptr<Config> getInstance();
     void load(const std::string& _file);

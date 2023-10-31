@@ -30,23 +30,18 @@ namespace aegir {
     return e;
   }
 
-  int TSDB::insert(const datapoints& _data) {
+  int TSDB::insert(const time_t _time, const ThermoReadings& _data) {
     if ( c_size +1 >= c_capacity ) grow();
 
-    struct timeval tv;
     int idx;
-
-    gettimeofday(&tv, 0);
 
     {
       std::shared_lock l(c_mutex);
       idx = c_size; // 0-indexed, size is the next entry
-      c_db[idx].time = tv.tv_sec;
-      c_db[idx].dt = tv.tv_sec - c_db[0].time;
+      c_db[idx].time = _time;
+      c_db[idx].dt = _time - c_db[0].time;
 
-      c_db[idx].readings[0] = _data[0];
-      for (int i=0; i< (int)ThermoCouple::_SIZE; ++i)
-	c_db[idx].readings[i] = _data[i];
+      c_db[idx].readings = _data;
 
       // by incrementing the size afterwards
       // the new data is made available once it's filled
@@ -56,10 +51,11 @@ namespace aegir {
     return idx;
   }
 
-  void TSDB::last(datapoints& _data) {
+  const ThermoReadings& TSDB::last() const {
     std::shared_lock l(c_mutex);
-    for (int i=0; i< (int)ThermoCouple::_SIZE; ++i)
-      _data[i] = c_db[c_size-1].readings[i];
+    if ( !c_size )
+      throw Exception("No data in TSDB");
+    return c_db[c_size-1].readings;
   }
 
   void TSDB::at(const uint32_t _idx, entry& _data) const {
@@ -69,8 +65,7 @@ namespace aegir {
       std::shared_lock l(c_mutex);
       _data.time = c_db[_idx].time;
       _data.dt = c_db[_idx].dt;
-      for (int i=0; i< (int)ThermoCouple::_SIZE; ++i)
-	_data.readings[i] = c_db[_idx].readings[i];
+      _data.readings = c_db[_idx].readings;
     }
   }
 

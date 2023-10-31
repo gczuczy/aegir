@@ -5,15 +5,16 @@
 #ifndef AEGIR_IOHANDLER_H
 #define AEGIR_IOHANDLER_H
 
-#include "ThreadManager.hh"
-#include "ZMQ.hh"
-#include "SPI.hh"
-#include "MAX31856.hh"
-
 #include <vector>
 #include <memory>
 #include <map>
 #include <string>
+
+#include "ThreadManager.hh"
+#include "ZMQ.hh"
+#include "SPI.hh"
+#include "MAX31856.hh"
+#include "Config.hh"
 
 namespace aegir {
 
@@ -39,7 +40,7 @@ namespace aegir {
     ZMQ::Socket c_mq_pub;
     ZMQ::Socket c_mq_iocmd;
     std::vector<std::unique_ptr<MAX31856>> c_tcs;
-    std::map<std::string, int> c_tcmap;
+    Config::tcids c_tcmap;
     uint32_t c_thermoival;
     uint32_t c_pinival;
     // PIN holding structures

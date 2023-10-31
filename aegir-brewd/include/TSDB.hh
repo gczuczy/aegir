@@ -18,11 +18,10 @@ namespace aegir {
   class TSDB {
   public:
     // types
-    typedef float datapoints[(size_t)ThermoCouple::_SIZE];
     struct alignas(sizeof(long)) entry {
       time_t time;
       time_t dt;
-      datapoints readings;
+      ThermoReadings readings;
     };
 
   private:
@@ -41,8 +40,14 @@ namespace aegir {
 
     const entry operator[](int i) const;
 
-    int insert(const datapoints& _data);
-    void last(datapoints& _data);
+    inline int insert(const ThermoReadings& _data) {
+      struct timeval tv;
+      gettimeofday(&tv, 0);
+
+      return insert(tv.tv_sec, _data);
+    }
+    int insert(const time_t _time, const ThermoReadings& _data);
+    const ThermoReadings& last() const;
     void at(const uint32_t _idx, entry& _data) const;
     uint32_t from(const uint32_t _idx, entry *_data, const uint32_t _size) const;
     inline uint32_t size() const {return c_size;};

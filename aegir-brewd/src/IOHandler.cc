@@ -7,7 +7,9 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#ifdef AEGIR_DEBUG
 #include <chrono>
+#endif
 #include <regex>
 
 #include "ZMQ.hh"
@@ -43,7 +45,7 @@ namespace aegir {
       }
     }
     // fetch the sensor mapping from the config
-    cfg->getThermocouples(c_tcmap);
+    c_tcmap = cfg->getThermocouples();
     // and the reading interval
     c_thermoival = cfg->getTCival();
     // and the pin polling ival
@@ -89,30 +91,16 @@ namespace aegir {
   void IOHandler::readTCs() {
     struct timeval tv;
     gettimeofday(&tv, 0);
-#ifdef AEGIR_DEBUG
-    printf("\nIOHandler::readTCs():\n");
-    auto start = std::chrono::high_resolution_clock::now();
-#endif
-    for (auto &it: c_tcmap) {
-      float temp = c_tcs[it.second]->readTCTemp();
-#ifdef AEGIR_DEBUG
-      float cjtemp = c_tcs[it.second]->readCJTemp();
-      float cjto = c_tcs[it.second]->getCJOffset();
-      printf("Sensor %s/%i temp: %f C Time: %li CJ:%.2f CJTO:%.4f\n", it.first.c_str(), it.second, temp,
-	     tv.tv_sec, cjtemp, cjto);
-#endif
-      try {
-	c_mq_pub.send(ThermoReadingMessage(it.first, temp, tv.tv_sec));
-      }
-      catch (Exception &e) {
-	printf("IOHandler::readTCs zmq send failed: %s\n", e.what());
-      }
+    ThermoReadings tr;
+    for (int i=0; i < ThermoCouple::_SIZE; ++i) {
+      tr[0] = c_tcs[c_tcmap.tcs[i]]->readTCTemp();
     }
-#ifdef AEGIR_DEBUG
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff = end-start;
-    printf("IOHandler::readTCs(): sensor reading took %.4f ms\n", diff.count()*1000);
-#endif
+    try {
+      c_mq_pub.send(ThermoReadingMessage(tr, tv.tv_sec));
+    }
+    catch (Exception &e) {
+      printf("IOHandler::readTCs zmq send failed: %s\n", e.what());
+    }
   }
 
   void IOHandler::handlePins() {
@@ -240,7 +228,7 @@ namespace aegir {
 	  ident  = ke[i].ident;
 	  filter = ke[i].filter;
 	  // EVFILT_TIMER with ident=0 is our sensor timer
-	  // we only ready the sensors, when a brew process is active
+	  // we only read the sensors, when a brew process is active
 	  if ( filter == EVFILT_TIMER && ident == 0 ) {
 	    // TC reading
 	    readTCs();

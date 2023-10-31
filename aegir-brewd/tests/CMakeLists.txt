@@ -4,4 +4,5 @@ target_sources(tests
   tsdb.cc
   types.cc
   Config.cc
+  Message.cc
 )

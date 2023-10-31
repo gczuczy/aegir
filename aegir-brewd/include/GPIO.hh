@@ -13,15 +13,9 @@
 #include <vector>
 
 #include "Exception.hh"
+#include "types.hh"
 
 namespace aegir {
-
-  enum class PINState: uint8_t {
-    Off=0,
-      On=1,
-      Pulsate=2,
-      Unknown=255
-      };
 
 
   class GPIO {

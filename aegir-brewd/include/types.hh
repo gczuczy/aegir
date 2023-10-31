@@ -2,12 +2,17 @@
   Generic type declarations
  */
 
+#ifndef AEGIR_TYPES_H
+#define AEGIR_TYPES_H
+
 #include <cstdint>
 #include <string>
 
 namespace aegir {
-  // types
 
+  /*
+    ThermoCouple
+   */
   class ThermoCouple {
   public:
     enum Value: uint8_t {
@@ -35,4 +40,22 @@ namespace aegir {
     const char* toStr() const;
   };
 
+  struct ThermoReadings {
+    float data[ThermoCouple::_SIZE];
+    inline float& operator[](std::size_t _idx) {return data[_idx];};
+    inline const float& operator[](std::size_t _idx) const {return data[_idx];};
+  };
+
+  /*
+    PINState
+   */
+  enum class PINState: uint8_t {
+    Off=0,
+    On=1,
+    Pulsate=2,
+    Unknown=255
+  };
+
 }
+
+#endif
