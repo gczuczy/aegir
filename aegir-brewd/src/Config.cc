@@ -1,10 +1,13 @@
-#include <yaml-cpp/yaml.h>
+
+#include "Config.hh"
+
+#include <stdio.h>
 
 #include <iostream>
 #include <fstream>
-#include <map>
 
-#include "Config.hh"
+#include <yaml-cpp/yaml.h>
+
 #include "Exception.hh"
 
 namespace aegir {
@@ -60,26 +63,17 @@ namespace aegir {
       {NoiseFilters::HZ60, "60Hz"}
   };
 
-  // The singleton instance holder
-  Config *Config::c_instance=0;
-
-  Config::Config(const std::string &_cfgfile, bool _noload): c_cfgfile(_cfgfile) {
+  Config::Config() {
     setDefaults();
-    if ( !_noload ) load();
   }
 
   Config::~Config() {
     save();
   }
 
-  Config *Config::instantiate(const std::string &_cfgfile, bool _noload) {
-    if ( !c_instance ) c_instance = new Config(_cfgfile, _noload);
-    return c_instance;
-  }
-
-  // TODO: throw exception when !c_instance
-  Config *Config::getInstance() {
-    return c_instance;
+  std::shared_ptr<Config> Config::getInstance() {
+    static std::shared_ptr<Config> instance{new Config()};
+    return instance;
   }
 
   void Config::setDefaults() {
@@ -140,7 +134,8 @@ namespace aegir {
     c_hedelay = 10;
   }
 
-  void Config::load() {
+  void Config::load(const std::string& _file) {
+    c_cfgfile = _file;
     YAML::Node config;
     try {
       config = YAML::LoadFile(c_cfgfile);
@@ -350,7 +345,14 @@ namespace aegir {
     }
   }
 
+  Config &Config::save(const std::string& _file) {
+    c_cfgfile = _file;
+    return save();
+  }
+
   Config &Config::save() {
+    // don't save if we don't have a file but the defaults
+    if ( c_cfgfile.empty() ) return *this;
     YAML::Emitter yout;
 
     yout << YAML::BeginMap;

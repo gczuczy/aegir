@@ -9,8 +9,16 @@
 #define CFG_TEST_FILE "tests/data/aegir-brewd.yaml"
 
 
-TEST_CASE("Config::instantiate", "[Config]") {
-  aegir::Config* cfg = aegir::Config::instantiate(CFG_TEST_FILE);
+TEST_CASE("Config", "[Config]") {
+  auto cfg = aegir::Config::getInstance();
+
+  {
+    auto cfg2 = aegir::Config::getInstance();
+    REQUIRE(cfg == cfg2);
+  }
+
+  cfg->load(CFG_TEST_FILE);
+  INFO("Config loaded");
 
   REQUIRE(cfg->getSPIDevice() == "/dev/spigen0.0");
 
@@ -28,6 +36,4 @@ TEST_CASE("Config::instantiate", "[Config]") {
   REQUIRE(tcs.tcs[aegir::ThermoCouple::BK] == 3);
   REQUIRE(tcs.tcs[aegir::ThermoCouple::HLT] == 2);
   REQUIRE(tcs.tcs[aegir::ThermoCouple::HERMS] == 0);
-
-  delete cfg;
 }

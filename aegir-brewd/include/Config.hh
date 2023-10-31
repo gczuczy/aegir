@@ -10,6 +10,7 @@
 #include <string>
 #include <map>
 #include <set>
+#include <memory>
 
 #include "MAX31856.hh"
 #include "types.hh"
@@ -35,7 +36,6 @@ namespace aegir {
   extern pinconfig_t g_pinconfig;
 
   class Config {
-    Config() = delete;
     Config(const Config&) = delete;
     Config(Config&&) = delete;
     Config &operator=(const Config&) = delete;
@@ -47,13 +47,10 @@ namespace aegir {
     };
 
   private:
-    Config(const std::string &_cfgfile, bool _noload=false);
     void setDefaults();
-    void load();
     void checkPinConfig(std::map<std::string, int> &_layout);
 
   private:
-    static Config *c_instance;
     std::string c_cfgfile;
     // Config parameters
     // The device for the GPIO controller
@@ -91,9 +88,11 @@ namespace aegir {
     uint32_t c_hedelay;
 
   public:
+    Config();
     ~Config();
-    static Config *instantiate(const std::string &_cfgfile, bool _noload=false);
-    static Config *getInstance();
+    static std::shared_ptr<Config> getInstance();
+    void load(const std::string& _file);
+    Config &save(const std::string& _file);
     Config &save();
 
     // retrieve config elements

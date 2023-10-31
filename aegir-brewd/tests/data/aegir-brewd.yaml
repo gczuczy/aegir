@@ -1,37 +1,37 @@
-gpio:
-  device: /dev/gpioc0
-  pins:
-    bkpump: 24
-    buzzer: 26
-    cs0: 7
-    cs1: 8
-    cs2: 5
-    cs3: 6
-    mtheat: 25
-    mtlevel: 16
-    mtpump: 23
-spi:
-  device: /dev/spigen0.0
-  selector: DirectSelect
-  MAX31856:
-    noisefilter: 50Hz
-    tctype: T
-  DirectSelect:
-    0: cs0
-    1: cs1
-    2: cs2
-    3: cs3
-  thermocouples:
-    BoilKettle: 3
-    HERMS: 0
-    HotLiquorTank: 2
-    MashTun: 1
-  thermointerval: 1
-prport: 42069
-elementpower: 9000
-pinpollinterval: 100
-tempaccuracy: 0.300000012
-heatoverhead: 2.5
-hecycletime: 3
-cooltemp: 24
-hedelay: 10
+"gpio":
+  "device": "/dev/gpioc0"
+  "pins":
+    "bkpump": 24
+    "buzzer": 26
+    "cs0": 7
+    "cs1": 8
+    "cs2": 5
+    "cs3": 6
+    "mtheat": 25
+    "mtlevel": 16
+    "mtpump": 23
+"spi":
+  "device": "/dev/spigen0.0"
+  "selector": "DirectSelect"
+  "MAX31856":
+    "noisefilter": "50Hz"
+    "tctype": "T"
+  "DirectSelect":
+    0: "cs0"
+    1: "cs1"
+    2: "cs2"
+    3: "cs3"
+  "thermocouples":
+    "BoilKettle": 3
+    "HERMS": 0
+    "HotLiquorTank": 2
+    "MashTun": 1
+  "thermointerval": 1
+"prport": 42069
+"elementpower": 9000
+"pinpollinterval": 100
+"tempaccuracy": 0.300000012
+"heatoverhead": 2.5
+"hecycletime": 3
+"cooltemp": 24
+"hedelay": 10

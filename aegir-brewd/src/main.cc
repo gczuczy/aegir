@@ -57,25 +57,26 @@ int main(int argc, char *argv[]) {
   //printf("Config file: %s\n", cfgfile.c_str());
 
   // parse the config file first
-  aegir::Config *cfg;
-  try {
-    cfg = aegir::Config::instantiate(cfgfile, initcfg);
-  }
-  catch (aegir::Exception &e) {
-    fprintf(stderr, "Error while loading config: %s\n", e.what());
-    return 2;
-  }
-
+  auto cfg = aegir::Config::getInstance();
   if ( initcfg ) {
     try {
-      cfg->save();
+      cfg->save(cfgfile);
     }
-    catch (aegir::Exception &e) {
+    catch(aegir::Exception &e) {
       fprintf(stderr, "Error while saving configuration: %s\n", e.what());
       return 3;
     }
     return 0;
+  } else {
+    try {
+      cfg = cfg->load(cfgfile);
+    }
+    catch (aegir::Exception &e) {
+      fprintf(stderr, "Error while loading config: %s\n", e.what());
+      return 2
+    }
   }
+
 
   // We have the config, now set GPIO up
   aegir::GPIO *gpio;
@@ -122,7 +123,6 @@ int main(int argc, char *argv[]) {
 
   // deallocating stuff here
   delete gpio;
-  delete cfg;
 
   return 0;
 }
