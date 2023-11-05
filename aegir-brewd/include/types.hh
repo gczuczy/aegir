@@ -7,6 +7,8 @@
 
 #include <cstdint>
 #include <string>
+#include <ostream>
+#include <iomanip>
 
 namespace aegir {
 
@@ -44,6 +46,24 @@ namespace aegir {
     float data[ThermoCouple::_SIZE];
     inline float& operator[](std::size_t _idx) {return data[_idx];};
     inline const float& operator[](std::size_t _idx) const {return data[_idx];};
+    friend std::ostream& operator<<(std::ostream& os, const ThermoReadings& r) {
+      os << "ThermoReadings(";
+      for (uint8_t i=0; i<ThermoCouple::_SIZE;++i) {
+	if ( i == 0 ) {
+	  os << ThermoCouple(i).toStr()<< ":"
+	     << std::fixed
+	     << std::setw(5) << std::setprecision(2)
+	     << r.data[i];
+	} else {
+	  os << ", " << ThermoCouple(i).toStr()<< ":"
+	     << std::fixed
+	     << std::setw(5) << std::setprecision(2)
+	     << r.data[i];
+	}
+      }
+      os << ")";
+      return os;
+    }
   };
 
   /*

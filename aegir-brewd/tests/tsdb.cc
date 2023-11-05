@@ -1,9 +1,39 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <cstdlib>
+#include <set>
 
 #include "TSDB.hh"
 
 #include <catch2/catch_test_macros.hpp>
+
+void init() {
+  std::srand(std::time(0));
+}
+
+float randf(const float _min, const float _max) {
+  float r = static_cast<float>(std::rand() / static_cast<float>(RAND_MAX));
+
+  return _min + (_max - _min)*r;
+}
+
+void fill(aegir::TSDB& _db, uint32_t _n, const std::set<time_t>& _gaps = {}) {
+  time_t now = time(0);
+  aegir::ThermoReadings tr;
+  bool skipped=false;
+
+  for (time_t t=now-_n; t<=now; ++t) {
+    time_t gapdt=_n-(now-t);
+    if ( _gaps.find(gapdt) != _gaps.end() ) {
+      skipped=true;
+      continue;
+    }
+    for (std::size_t i=0; i<aegir::ThermoCouple::_SIZE; ++i)
+      tr[i] = randf(25.0, 80.0);
+    int idx = _db.insert(t, tr);
+    skipped=false;
+  }
+}
 
 TEST_CASE("TSDB::entry size", "[TSDB]") {
   auto entrysize = sizeof(aegir::TSDB::entry);
@@ -18,8 +48,8 @@ TEST_CASE("TSDB (de)alloc", "[TSDB]") {
 
 TEST_CASE("TSDB insertion", "[TSDB]") {
   aegir::TSDB db;
-  aegir::ThermoReadings e,f;
-  aegir::TSDB::entry g;
+  aegir::ThermoReadings e;
+  aegir::TSDB::entry g, f;
 
   uint32_t idx;
 
@@ -39,16 +69,16 @@ TEST_CASE("TSDB insertion", "[TSDB]") {
   REQUIRE(db.size() == test_entries);
 
   f = db.last();
-  REQUIRE(e.data[0] == f.data[0]);
-  REQUIRE(e.data[1] == f.data[1]);
-  REQUIRE(e.data[2] == f.data[2]);
-  REQUIRE(e.data[3] == f.data[3]);
+  REQUIRE(e.data[0] == f[0]);
+  REQUIRE(e.data[1] == f[1]);
+  REQUIRE(e.data[2] == f[2]);
+  REQUIRE(e.data[3] == f[3]);
 
-  db.at(idx-1, g);
-  REQUIRE(g.readings.data[0] == 1.0f*(idx-1));
-  REQUIRE(g.readings.data[1] == 1.5f*(idx-1));
-  REQUIRE(g.readings.data[2] == 2.0f*(idx-1));
-  REQUIRE(g.readings.data[3] == 2.5f*(idx-1));
+  g = db.at(idx-1);
+  REQUIRE(g[0] == 1.0f*(idx-1));
+  REQUIRE(g[1] == 1.5f*(idx-1));
+  REQUIRE(g[2] == 2.0f*(idx-1));
+  REQUIRE(g[3] == 2.5f*(idx-1));
 }
 
 TEST_CASE("TSDB from", "[TSDB]") {
@@ -84,5 +114,29 @@ TEST_CASE("TSDB from", "[TSDB]") {
   }
   catch (aegir::Exception &e) {
     INFO("Exception: " << e.what());
+  }
+}
+
+time_t foobar(time_t _x) {
+  return _x;
+}
+
+TEST_CASE("TSDB::Iterator", "[TSDB]") {
+  // fill with data
+  time_t now = time(0);
+  uint32_t duration = 7200;
+  std::set<time_t> gaps{42, 69, 418, 1234};
+  aegir::TSDB db;
+
+  init();
+
+  fill(db, duration, gaps);
+
+  // gaps
+  for (auto g: gaps) {
+    INFO("g: " << g);
+    auto it = db.atTime(now-duration+g);
+    INFO("it: " << it);
+    REQUIRE( (g < it->dt? it->dt - g : g - it->dt) == 1);
   }
 }

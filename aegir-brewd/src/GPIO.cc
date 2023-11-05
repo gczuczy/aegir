@@ -136,7 +136,7 @@ namespace aegir {
 
   GPIO *GPIO::getInstance() {
     if ( !c_instance ) {
-      auto *cfg = Config::getInstance();
+      auto cfg = Config::getInstance();
       c_instance = new GPIO(cfg->getGPIODevice());
     }
     return c_instance;
@@ -167,7 +167,7 @@ namespace aegir {
   // here we already have the device from the ctor
   // so we're only dealing with the pins
   void GPIO::rewire() {
-    auto *cfg = Config::getInstance();
+    auto cfg = Config::getInstance();
 
     // re-do the name-number association first
     c_names.clear();

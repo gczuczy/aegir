@@ -5,6 +5,9 @@
 #include <unistd.h>
 
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
 
 #include <map>
 #include <set>
@@ -14,10 +17,54 @@
 
 namespace aegir {
   /*
+   * Controller::HERratioDB
+   */
+  Controller::HERatioDB::HERatioDB(): c_data(0), c_alloc_size(4096),
+				      c_capacity(0), c_size(0) {
+    c_data = (data*)std::malloc(c_alloc_size);
+    c_capacity = c_alloc_size = sizeof(data);
+    clear();
+  };
+
+  Controller::HERatioDB::~HERatioDB() {
+    if ( c_data ) std::free(c_data);
+  };
+
+  Controller::HERatioDB& Controller::HERatioDB::clear() {
+    std::memset((void*)c_data, 0, c_alloc_size);
+    c_size = 0;
+    return *this;
+  }
+
+  Controller::HERatioDB& Controller::HERatioDB::insert(float _value) {
+    uint32_t idx = c_size++;
+
+    c_data[idx].time = time(0);
+    c_data[idx].ratio = _value;
+    return *this;
+  }
+
+  const Controller::HERatioDB::data& Controller::HERatioDB::operator[](const std::size_t _at) const {
+    if ( _at >= c_size )
+      throw Exception("HERatioDB out of range (size:%lu at:%lu", c_size, _at);
+
+    return c_data[_at];
+  }
+
+  void Controller::HERatioDB::grow() {
+    uint32_t prevsize = c_alloc_size;
+    uint32_t increment = getpagesize();
+    c_alloc_size += increment;
+    c_data = (data*)std::realloc((void*)c_data, c_alloc_size);
+    c_capacity = c_alloc_size / sizeof(data);
+
+    // and finally zero the newly allocated region
+    void *start = (void*)(((uint8_t*)c_data)+prevsize);
+    std::memset(start, 0, increment);
+  }
+  /*
    * Controller
    */
-
-  Controller *Controller::c_instance(0);
 
   Controller::Controller(): PINTracker(), c_mq_io(ZMQ::SocketType::SUB), c_ps(ProcessState::getInstance()),
 			    c_mq_iocmd(ZMQ::SocketType::PUB), c_levelerror(false), c_needcontrol(false),
@@ -78,9 +125,9 @@ namespace aegir {
   Controller::~Controller() {
   }
 
-  Controller *Controller::getInstance() {
-    if ( !c_instance) c_instance = new Controller();
-    return c_instance;
+  std::shared_ptr<Controller> Controller::getInstance() {
+    static std::shared_ptr<Controller> instance{new Controller()};
+    return instance;
   }
 
   void Controller::run() {
@@ -141,14 +188,8 @@ namespace aegir {
 	    }
 	  } else if ( msg->type() == MessageType::THERMOREADING ) {
 	    auto trmsg = std::static_pointer_cast<ThermoReadingMessage>(msg);
-#ifdef AEGIR_DEBUG
-	    printf("Controller: got temp reading: %s/%f/%u\n",
-		   trmsg->getName().c_str(),
-		   trmsg->getTemp(),
-		   trmsg->getTimestamp());
-#endif
 	    // add it to the process state
-	    c_ps.addThermoReading(trmsg->getName(), trmsg->getTimestamp(), trmsg->getTemp());
+	    c_ps.addThermoReadings(trmsg->getTimestamp(), trmsg->getTemps());
 	  } else {
 	    printf("Got unhandled message type: %i\n", (int)msg->type());
 	    continue;
@@ -705,6 +746,7 @@ namespace aegir {
     }
 
     int nextcontrol = 30;
+    TSDB& tsdb = c_ps.getThermoReadings();
 
     time_t now = time(0);
 
@@ -714,21 +756,17 @@ namespace aegir {
     float dt = now - c_lastcontrol;
     c_lastcontrol = now;
 
-    ProcessState::ThermoDataPoints temps_rims, temps_mt;
-    c_ps.getTCReadings("RIMS", temps_rims);
-    c_ps.getTCReadings("MashTun", temps_mt);
-
     float curr_rims(0), curr_mt(0), last_rims(0), last_mt(0);
     float dT_mt(0), dT_rims(0);
     bool nodata(false);
 
     // if we don't have enough data, then wait
-    if ( !getTemps(temps_rims, dt, last_rims, curr_rims, dT_rims) ||
-	 !getTemps(temps_mt, dt, last_mt, curr_mt, dT_mt) ) {
+    if ( !getTemps(ThermoCouple::RIMS, dt, last_rims, curr_rims, dT_rims) ||
+	 !getTemps(ThermoCouple::MT, dt, last_mt, curr_mt, dT_mt) ) {
       setHERatio(c_hecycletime, 0);
       // if we don't have historical data, then simply use the last one
-      curr_rims = c_ps.getSensorTemp("RIMS");
-      curr_mt = c_ps.getSensorTemp("MashTun");
+      curr_rims = c_ps.getSensorTemp(ThermoCouple::RIMS);
+      curr_mt = c_ps.getSensorTemp(ThermoCouple::MT);
       nodata = true;
     }
     if ( curr_mt == 0.0f || curr_rims == 0.0f ) return 3;
@@ -843,14 +881,17 @@ namespace aegir {
 
 	  // adjust the max power. let's see how intensively we're cooling
 	  {
-	    auto it = temps_mt.find(temps_mt.rbegin()->first - 300);
-	    if ( it == temps_mt.end() || it->second < curr_mt) {
+	    int size = tsdb.size();
+	    float mt300 = 0;
+	    if ( size > 300 ) mt300 = tsdb.at(size-300)[ThermoCouple::MT];
+	    else mt300 = tsdb.at(0)[ThermoCouple::MT];
+	    if ( size<300 || mt300 < curr_mt) {
 	      printf("!! RIMS cooling, can't find t-300 or it's cooler than current temp\n");
 	      pwr_max = hepwr * 0.35;
 	      printf("Limiting max power to 35%%: %.2f\n", pwr_max);
 	    } else {
-	      float diff_temp = it->second - curr_mt;
-	      uint32_t diff_time = now - it->first;
+	      float diff_temp = mt300 - curr_mt;
+	      uint32_t diff_time = size > 300 ? 300 : size;
 	      float pwr_cooling = (4.2 * c_ps.getVolume() * diff_temp) / diff_time;
 	      pwr_max = pwr_cooling * 1.5;
 	      printf("Cooling (%.2f C / %i sec) limiting pwr to %.2f\n", diff_temp, diff_time, pwr_max);
@@ -968,25 +1009,14 @@ namespace aegir {
     return (4.2 * _vol * _tempdiff)/_pkw;
   }
 
-  bool Controller::getTemps(const ProcessState::ThermoDataPoints &_tdp, uint32_t _dt, float &_last, float &_curr, float &_dT) {
-    uint32_t size = _tdp.size();
-#if 1
-    printf("tdp size:%u dt:%i\n", size, _dt);
-#endif
+  bool Controller::getTemps(ThermoCouple _tc, uint32_t _dt, float &_last, float &_curr, float &_dT) {
+    TSDB& db(c_ps.getThermoReadings());
+    uint32_t size = db.size();
     if ( size <= _dt || _dt < 3 ) return false;
     try {
-      auto it = _tdp.rbegin();
-      auto it2 = --_tdp.end();
-      if ( it->first == std::numeric_limits<uint32_t>::max() ) ++it;
-      _curr = it->second;
-      _last = _tdp.at(size-1-_dt);
-#if 0
-      printf("size:%u _dt:%i curr:%.2f(%u)/%.2f(%u) last:%.2f\n", size, _dt,
-	     _curr, it->first,
-	     it2->second, it2->first,
-	     _last
-	     );
-#endif
+      ThermoReadings curr,last;
+      _curr = db.last()[_tc];
+      _last = db.at(size-1-_dt)[_tc];
     }
     catch (std::exception &e) {
       printf("getTemps() failed %s\n", e.what());
@@ -1002,7 +1032,7 @@ namespace aegir {
 
   void Controller::setHERatio(float _cycletime, float _ratio) {
     setPIN("mtheat", PINState::Pulsate, _cycletime, _ratio);
-    c_heratiohistory[(uint32_t)time(0)] = _ratio;
+    c_heratiohistory.insert(_ratio);
   }
 
   /* Flow rate calculation
@@ -1013,29 +1043,23 @@ namespace aegir {
    * dT = temperature delta
    */
   float Controller::calcFlowRate() {
-    ProcessState::ThermoDataPoints temps_rims, temps_mt;
+    TSDB& db(c_ps.getThermoReadings());
 
-    c_ps.getTCReadings("RIMS", temps_rims);
-    c_ps.getTCReadings("MashTun", temps_mt);
-
-    if ( temps_rims.size() < 30 || temps_mt.size() < 30 ) return -1;
+    if ( db.size() < 30 ) return -1;
+    uint32_t dbsize = db.size();
 
     uint32_t t_min_rims, t_min_mt;
     uint32_t startedat(0);
+    uint32_t now = time(0);
 
-    startedat= c_ps.getStartat();
+    // started is the start time of the Mashing state
+    startedat = c_ps.getStartat();
+    // if it's 0, then we'll use the temphistory's
+    // last timestamp
+    if ( startedat <= 0 ) startedat = db.last().time;
 
     printf("startedat: %u\n", startedat);
 
-    uint32_t now = time(0);
-    if ( startedat == 0 ) {
-      auto it=temps_rims.rbegin();
-      uint32_t itf = it->first;
-      startedat = now - it->first;
-#if 1
-      printf("Adjusted startedat to %u now:%u itf:%u\n", startedat, now, itf);
-#endif
-    }
 
     uint32_t t_total(0);
     float V_total(0);
@@ -1047,50 +1071,39 @@ namespace aegir {
 #endif
 
     // loop on the heratio history backwards
-    auto tempsit = temps_mt.begin();
-    for (auto it=c_heratiohistory.rbegin(); it!=c_heratiohistory.rend() && t_total < 180; ++it) {
-#if 0
-      printf("heratio it: f:%u s:%.2f\n", it->first, it->second);
-#endif
-      float heratio = it->second;
-      uint32_t t_start = it->first - startedat;
-      uint32_t t_end = last_end;
+    // MashTun
+    for (ssize_t i=c_heratiohistory.size(); i>=0 && t_total < 180; --i) {
+      auto heratiodata = c_heratiohistory[i];
+      float heratio = heratiodata.ratio;
+      uint32_t dt_start = heratiodata.time - startedat;
+      uint32_t dt_end = last_end;
       float T_start;
       float T_end;
 
 #if 0
-      printf("t start:%u end:%u\n", t_start, t_end);
-#endif
+      printf("calcFlowRate()/dt_start:%u\n", dt_start);
 
-      tempsit = temps_mt.find(t_start);
-      if ( tempsit == temps_mt.end() ) {
-	last_end = t_start;
-#if 0
-	printf("temps_mt[%u] not found\n", t_start);
+      printf("calcFlowRate()/dbsize:&u - last_end:%u = %u",
+	     dbsize, last_end, dbsize-last_end);
 #endif
+      auto tr = db.atDeltaTime(dbsize-last_end);
+
+      auto tempsit = db.atDeltaTime(dt_start);
+      if ( tempsit->dt != dt_start ) {
+	printf("%s:%i: db.atDeltaTime(%u) miss: %lu\n",
+	       __FILE__, __LINE__,
+	       dt_start, tempsit->dt);
+	last_end = dt_start;
 	continue;
       }
-      T_start = tempsit->second;
+      T_start = (*tempsit)[ThermoCouple::MT];
+      T_end = (*tempsit)[ThermoCouple::RIMS];
 
-      tempsit = temps_rims.find(t_end);
-      if ( tempsit == temps_rims.end() ) {
-	last_end = t_start;
-#if 0
-	printf("temps_rims[%u] not found\b", t_end);
-#endif
-	continue;
-      }
-      T_end = tempsit->second;
-#ifdef BUG_MAP
-      if ( T_end == std::numeric_limits<uint32_t>::max() )
-	T_end = c_ps.getSensorTemp("RIMS");
-#endif
-
-      float dt = t_end - t_start;
+      float dt = dt_end - dt_start;
       float pwr = hepwr * heratio;
       float dT = T_end - T_start;
 
-      last_end = t_start;
+      last_end = dt_start;
       // if the current cycle cooled down, skip it
       if ( dT < 0 ) continue;
 

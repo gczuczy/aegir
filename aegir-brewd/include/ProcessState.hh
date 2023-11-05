@@ -20,6 +20,7 @@
 #include <ctime>
 
 #include "Program.hh"
+#include "TSDB.hh"
 
 namespace aegir {
 
@@ -53,9 +54,8 @@ namespace aegir {
       Transfer, // transfer from BK to fermenter
       Finished // Brewing process finished
     };
-    // TSDB typedef std::map<uint32_t, float> ThermoDataPoints;
     typedef std::function<void(States, States)> statechange_t;
-  private:
+
   private:
     ProcessState();
     ProcessState(ProcessState&&) = delete;
@@ -79,13 +79,13 @@ namespace aegir {
     inline uint32_t getStartat() const { return c_startat; };
     inline uint32_t getVolume() const { return c_volume; };
     inline ProcessState &setVolume(uint32_t _v) { c_volume = _v; return *this; };
-    ProcessState &addThermoReading(const std::string &_sensor, const uint32_t _time, const float _temp);
-    ProcessState &getThermoCouples(std::set<std::string> &_tcs);
-    // TSDB ProcessState &getTCReadings(const std::string &_sensor, ThermoDataPoints &_tcvals);
-    inline float getSensorTemp(const std::string &_sensor) const {return c_lasttemps.find(_sensor)->second;};
-    //inline time_t getStartedAt() const {return c_startedat;};
-    uint32_t getStartedAt() const;
-    uint32_t getEndSparge() const {uint32_t x=c_t_endsparge; return x;};
+    ProcessState &addThermoReadings(const time_t _time, const ThermoReadings &_temps);
+    inline TSDB& getThermoReadings() { return c_thermoreadings; };
+    inline float getSensorTemp(const ThermoCouple _tc) const {
+      return c_thermoreadings.last()[_tc];
+    };
+    inline uint32_t getStartedAt() const {return c_startedat;};
+    inline uint32_t getEndSparge() const {uint32_t x=c_t_endsparge; return x;};
     // mash steps
     inline ProcessState &setMashStep(int8_t _ms) {c_mashstep=_ms; return *this;};
     inline int8_t getMashStep() const {return c_mashstep;};
@@ -131,12 +131,11 @@ namespace aegir {
     std::atomic<uint32_t> c_volume; //liters
     std::atomic<uint32_t> c_startedat; //when we went from !isactive->isactive
     std::atomic<uint32_t> c_t_endsparge; // when sparging is done
-    // TSDB cache the last readings
-    //std::map<std::string, float> c_lasttemps;
     // states
     std::atomic<States> c_state;
     // TSDB
     //std::map<std::string, ThermoDataPoints> c_thermoreadings;
+    TSDB c_thermoreadings;
     // active mash step
     std::atomic<int8_t> c_mashstep;
     std::atomic<time_t> c_mashstepstart;
