@@ -421,7 +421,7 @@ namespace aegir {
     Program prog(prog_id, prog_starttemp, prog_endtemp, prog_boiltime*60,
 		 prog_nomash, prog_noboil,
 		 prog_mashsteps, prog_hops);
-    Config *cfg = Config::getInstance();
+    auto cfg = Config::getInstance();
     ps.loadProgram(prog, startat, volume)
       .setCoolTemp(cfg->getCoolTemp());
 
@@ -473,7 +473,6 @@ namespace aegir {
 
     Json::Value data, jsval;
     std::set<std::string> tcs;
-    ProcessState::ThermoDataPoints tcvals;
 
     ProcessState &ps(ProcessState::getInstance());
 
@@ -484,10 +483,10 @@ namespace aegir {
       data["state"] = ps.getStringState();
 
       // Thermo readings
-      ps.getThermoCouples(tcs);
-      for ( auto &it: tcs ) {
+      auto& tcvals = ps.getThermoReadings().last();
+      for (uint8_t i=0; ThermoCouple::_SIZE; ++i ) {
 	// Add the current sensor temps
-	data["currtemp"][it] = ps.getSensorTemp(it);
+	data["currtemp"][ThermoCouple(i).toStr()] = tcvals[i];
       }
 
       // Add the current target temperature
@@ -750,11 +749,11 @@ namespace aegir {
       throw Exception("Only valid at state Sparging");
     }
 
-    ProcessState::ThermoDataPoints bk;
-    ps.getTCReadings("BK", bk);
+    float T_bk = ps.getSensorTemp(ThermoCouple::BK);
     // check the last BoilKettle temperature, must be above 100C
-    if ( 0 && bk.rbegin()->second < 100.0 ) {
-      throw Exception("BoilKettle must be above boiling point (%2.fC)", bk.rbegin()->second);
+    // TODO: removed "0 &&" here
+    if ( T_bk < 100.0 ) {
+      throw Exception("BoilKettle must be above boiling point (%2.fC)", T_bk);
     }
 
     ps.setState(ProcessState::States::Hopping);
@@ -845,84 +844,40 @@ namespace aegir {
       from = jsonvalue.asUInt();
     }
 
-    Json::Value retval;
-
-    std::set<std::string> historytcs{"MashTun", "RIMS"};
-
-    // first, get all our TC readings, and calculate the max time we have currently
-    std::map<std::string, ProcessState::ThermoDataPoints> tcvals;
+    Json::Value retval, tcdata;
+    tcdata["dt"] = Json::Value(Json::ValueType::arrayValue);
+    tcdata["rims"] = Json::Value(Json::ValueType::arrayValue);
+    tcdata["mt"] = Json::Value(Json::ValueType::arrayValue);
 
     // fetch the values
     // ProcesState is only locked during this
+    static thread_local TSDB::entry tcvals[512];
+    uint32_t entries;
     {
       std::set<std::string> tcs;
 
       ProcessState::Guard guard_ps(ps);
-      ps.getThermoCouples(tcs);
-      for ( auto &it: tcs ) {
-	// we only return the graphed TCs here
-	if ( historytcs.find(it) == historytcs.end() ) continue;
-	tcvals[it] = ProcessState::ThermoDataPoints();
-	ps.getTCReadings(it, tcvals[it]);
-      }
+      auto& db = ps.getThermoReadings();
+
+      // if from would throw an exception, just error out
+      if ( !(from < db.size()) )
+	throw Exception("Not a fortune teller");
+
+      entries = db.from(from, tcvals, 512);
     }
 
-    // now build up the indexes
-    std::set<uint32_t> indexes;
-    for (auto &tcit: tcvals) {
-      for (auto &valit: tcit.second) {
-	indexes.insert(valit.first);
-      }
+    for (uint32_t i=0; i < entries; ++i) {
+      tcdata["dt"].append(tcvals[i].dt);
+      tcdata["rims"].append(tcvals[i][ThermoCouple::RIMS]);
+      tcdata["mt"].append(tcvals[i][ThermoCouple::MT]);
     }
 
-    // create the structure
-    // one for the timestamps, and under .readings one for each TC
-    Json::Value th;
-    th["timestamps"] = Json::Value(Json::ValueType::arrayValue);
-    th["readings"] = Json::Value(Json::ValueType::objectValue);
-
-    // create the array JSON object type for each returnd TC
-    for ( auto &it: tcvals )
-      th["readings"][it.first] = Json::Value(Json::ValueType::arrayValue);
-
-
-    int maxcnt(512); // max ammount we return in a single call
-    th["maxcount"] = maxcnt;
-    auto it = indexes.begin();
-    if ( from > 0 ) {
-      // start at the point
-      it = indexes.find(from);
-      // if not found, then start at the next available one
-      if ( it == indexes.end() ) {
-	for (it = indexes.begin(); *it <= from; ++it);
-      }
-    }
-    // the index iterator is positioned for the start of the batch
-    uint32_t prevtime(from);
-    uint32_t until(ps.getEndSparge());
-    ProcessState::ThermoDataPoints::iterator tdit;
-    for (int i=0; it != indexes.end() && i < maxcnt && *it <= until; ++it, ++i) {
-      // add the timestamp to the vector
-      uint32_t currtime(*it);
-      if ( currtime == std::numeric_limits<uint32_t>::max() ) {
-	currtime = prevtime +1;
-      }
-      prevtime = currtime;
-      th["timestamps"].append(currtime);
-
-      // look up each TC's data
-      for (auto &tcit: tcvals) {
-	if ( (tdit = tcit.second.find(*it)) != tcit.second.end() ) {
-	  th["readings"][tcit.first].append(tdit->second);
-	} else {
-	  th["readings"][tcit.first].append(Json::Value(Json::ValueType::nullValue));
-	}
-      }
-    }
+    // got a local copy of the temphistory,
+    // now we can assemble the output
 
     // return success
     retval["status"] = "success";
-    retval["data"] = th;
+    retval["data"] = tcdata;
 
     return std::make_shared<Json::Value>(retval);
   }
@@ -1074,7 +1029,7 @@ namespace aegir {
     heatoverhead
    */
   std::shared_ptr<Json::Value> PRWorkerThread::handleGetConfig(const Json::Value &_data) {
-    Config *cfg = Config::getInstance();
+    auto cfg = Config::getInstance();
 
     Json::Value data;
     data["hepower"] = cfg->getHEPower();
@@ -1099,7 +1054,7 @@ namespace aegir {
       throw Exception("Cannot set maintenance options in the current state");
     }
 
-    Config *cfg = Config::getInstance();
+    auto cfg = Config::getInstance();
     Json::Value jsonvalue;
     uint32_t hepwr, hedelay;
     float tempaccuracy, heatoverhead, cooltemp;

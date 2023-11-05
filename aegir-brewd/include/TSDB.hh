@@ -79,10 +79,10 @@ namespace aegir {
     inline uint32_t size() const {return c_size;};
     time_t getStartTime() const;
     inline Iterator begin() const {return Iterator(*this, 0); };
+    void clear();
 
   private:
     uint32_t lookup(time_t _time) const;
-    void clear();
     void grow();
   };
 

@@ -48,16 +48,7 @@ namespace aegir {
   }
 
   ProcessState &ProcessState::reconfigure() {
-    Config *cfg = Config::getInstance();
-
-    std::map<std::string, int> tcs;
-    cfg->getThermocouples(tcs);
     c_thermoreadings.clear();
-    c_lasttemps.clear();
-    for ( auto &it: tcs ) {
-      c_thermoreadings[it.first] = ThermoDataPoints();
-      c_lasttemps[it.first] = 0;
-    }
 
     reset();
 
@@ -86,7 +77,7 @@ namespace aegir {
     c_volume  = _volume;
     c_startedat = 0;
     // clear the thermo readings
-    for ( auto &it: c_thermoreadings )  it.second.clear();
+    c_thermoreadings.clear();
 
     setState(States::Loaded);
     return *this;
@@ -139,9 +130,7 @@ namespace aegir {
     c_startedat = 0;
     c_t_endsparge = std::numeric_limits<uint32_t>::max();
 
-    for (auto &it: c_lasttemps) it.second = 0;
-
-    for (auto &it: c_thermoreadings) it.second.clear();
+    c_thermoreadings.clear();
 
     c_mashstep = -1;
     c_mashstepstart = 0;
@@ -182,7 +171,7 @@ namespace aegir {
   }
 
   ProcessState &ProcessState::addThermoReadings(const time_t _time,
-						const ThermoReadings _temps) {
+						const ThermoReadings& _temps) {
     if ( c_state == States::Empty ||
 	 c_state == States::Finished ) return *this;
     Guard g(*this);

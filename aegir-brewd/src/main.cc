@@ -69,11 +69,11 @@ int main(int argc, char *argv[]) {
     return 0;
   } else {
     try {
-      cfg = cfg->load(cfgfile);
+      cfg->load(cfgfile);
     }
     catch (aegir::Exception &e) {
       fprintf(stderr, "Error while loading config: %s\n", e.what());
-      return 2
+      return 2;
     }
   }
 
@@ -110,7 +110,6 @@ int main(int argc, char *argv[]) {
     /// this is the main loop
     threadmgr->start();
     delete ioh;
-    delete ctrl;
   }
   catch (aegir::Exception &e) {
     fprintf(stderr, "Error starting up: %s\n", e.what());

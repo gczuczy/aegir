@@ -79,7 +79,7 @@ namespace aegir {
     inline uint32_t getStartat() const { return c_startat; };
     inline uint32_t getVolume() const { return c_volume; };
     inline ProcessState &setVolume(uint32_t _v) { c_volume = _v; return *this; };
-    ProcessState &addThermoReadings(const time_t _time, const ThermoReadings &_temps);
+    ProcessState &addThermoReadings(const time_t _time, const ThermoReadings& _temps);
     inline TSDB& getThermoReadings() { return c_thermoreadings; };
     inline float getSensorTemp(const ThermoCouple _tc) const {
       return c_thermoreadings.last()[_tc];
