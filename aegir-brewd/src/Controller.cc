@@ -14,6 +14,7 @@
 #include <string>
 
 #include "Exception.hh"
+#include "Environment.hh"
 
 namespace aegir {
   /*
@@ -227,19 +228,24 @@ namespace aegir {
       } while ( state != oldstate );
 
       // check the tube's temperature, watch for overheating
-      float rimstemp = c_ps.getSensorTemp("RIMS");
-      if ( c_needcontrol && !c_hepause &&
-	   rimstemp >= (c_temptarget+c_cfg->getHeatOverhead()*1.15) ) {
-	printf("Pausing heat: RIMS:%.2f Target:%.2f Overhead:%.2f (%.2f)\n",
-	       rimstemp, c_temptarget, c_cfg->getHeatOverhead(),
-	       c_temptarget+c_cfg->getHeatOverhead());
-	c_hepause = true;
-	setPIN("mtheat", PINState::Pulsate, 5.0f, 0.01f);
-      } else if ( c_needcontrol && c_hepause &&
-		  rimstemp < (c_temptarget+c_cfg->getHeatOverhead()*0.95) ) {
-	printf("hepause:off newtemptarget:true\n");
-	c_hepause = false;
-	c_newtemptarget = true;
+      try {
+	float rimstemp = Environment::getInstance()->getTempRIMS();
+	if ( c_needcontrol && !c_hepause &&
+	     rimstemp >= (c_temptarget+c_cfg->getHeatOverhead()*1.15) ) {
+	  printf("Pausing heat: RIMS:%.2f Target:%.2f Overhead:%.2f (%.2f)\n",
+		 rimstemp, c_temptarget, c_cfg->getHeatOverhead(),
+		 c_temptarget+c_cfg->getHeatOverhead());
+	  c_hepause = true;
+	  setPIN("mtheat", PINState::Pulsate, 5.0f, 0.01f);
+	} else if ( c_needcontrol && c_hepause &&
+		    rimstemp < (c_temptarget+c_cfg->getHeatOverhead()*0.95) ) {
+	  printf("hepause:off newtemptarget:true\n");
+	  c_hepause = false;
+	  c_newtemptarget = true;
+	}
+      }
+      catch (Exception &e) {
+	printf("RIMS safety check failed: %s", e.what());
       }
 
       // the temp control event

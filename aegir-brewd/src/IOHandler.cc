@@ -15,6 +15,7 @@
 #include "ZMQ.hh"
 #include "GPIO.hh"
 #include "Config.hh"
+#include "Environment.hh"
 
 #define KE_LEN 32
 // the oneshot offset for kqueue ident
@@ -100,6 +101,12 @@ namespace aegir {
     }
     catch (Exception &e) {
       printf("IOHandler::readTCs zmq send failed: %s\n", e.what());
+    }
+    try {
+      Environment::getInstance()->setThermoReadings(tr);
+    }
+    catch (Exception &e) {
+      printf("IOHandler::readTCs Environment::setThermoReadings failed: %s\n", e.what());
     }
   }
 

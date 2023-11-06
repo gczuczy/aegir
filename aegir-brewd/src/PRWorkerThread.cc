@@ -14,6 +14,7 @@
 #include "ProcessState.hh"
 #include "ElapsedTime.hh"
 #include "Config.hh"
+#include "Environment.hh"
 
 namespace aegir {
 
@@ -479,15 +480,15 @@ namespace aegir {
     ProcessState::Guard guard_ps(ps);
 
     try {
+      auto env = Environment::getInstance();
       // first get the current state
       data["state"] = ps.getStringState();
 
-      // Thermo readings
-      auto& tcvals = ps.getThermoReadings().last();
-      for (uint8_t i=0; ThermoCouple::_SIZE; ++i ) {
-	// Add the current sensor temps
-	data["currtemp"][ThermoCouple(i).toStr()] = tcvals[i];
-      }
+      // TC readings
+      data["currtemp"]["MT"] = env->getTempMT();
+      data["currtemp"]["RIMS"] = env->getTempRIMS();
+      data["currtemp"]["BK"] = env->getTempBK();
+      data["currtemp"]["HLT"] = env->getTempHLT();
 
       // Add the current target temperature
       data["targettemp"] = ps.getTargetTemp();

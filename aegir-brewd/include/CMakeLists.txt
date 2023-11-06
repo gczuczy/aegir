@@ -20,6 +20,7 @@ list(APPEND brewd_HEADERS
   cmakeconfig.hh
   TSDB.hh
   types.hh
+  Environment.hh
 )
 
 # disabled due to
