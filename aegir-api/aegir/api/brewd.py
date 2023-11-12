@@ -78,7 +78,7 @@ class BrewProgram(flask_restful.Resource):
             return {"status": "error",
                     "errors": "Unknown start mode: {sm}".format(sm = zreq['startmode'])}, 422
 
-        pprint(['loading', zreq])
+        #pprint(['loading', zreq])
         zresp = None
         try:
             zresp = aegir.zmq.prmessage("loadProgram", zreq)
@@ -102,7 +102,7 @@ class BrewConfig(flask_restful.Resource):
             pprint(e)
             return {"status": "error", "errors": [str(e)]}, 422
 
-        pprint(zresp)
+        #pprint(zresp)
         if not 'status' in zresp:
             return {"status": "error", "errors": ['Malformed response']}, 422
 

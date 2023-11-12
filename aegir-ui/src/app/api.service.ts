@@ -1,311 +1,299 @@
 import { Injectable } from '@angular/core';
+
 import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
-import { timer, Observable, Subject } from 'rxjs';
-import {map } from 'rxjs/operators';
 
-import { Program } from './programs/program';
+import { timer, Observable, BehaviorSubject } from 'rxjs';
+import { map } from 'rxjs/operators';
 
-
-export class ApiResponse {
-    constructor(
-	public status: string,
-	public uri: string,
-	public errors: string[]) {
-    }
-}
+import { apiStateResponse, apiStateData,
+	 apiConfigResponse, apiConfig,
+	 apiProgramsResponse, apiProgram,
+	 apiProgramResponse, apiProgramDeleteResponse,
+	 apiAddProgramResponse, apiAddProgramData,
+	 apiSaveProgramResponse, apiSaveProgramData,
+	 apiBrewStateVolume, apiBrewStateVolumeData,
+	 apiBrewTempHistoryResponse, apiBrewTempHistoryData
+       } from './api.types';
 
 @Injectable({
-    providedIn: 'root'
+  providedIn: 'root'
 })
 export class ApiService {
 
-    private static instance: ApiService = null;
+  public updateAnnounce$ = new BehaviorSubject<boolean>(false);
 
-    // Observable resources
-    private updateSource = new Subject<boolean>();
-    // observable streams
-    updateAnnounce$ = this.updateSource.asObservable();
-    // state timer
-    private timer_state;
-    private timer_state_sub;
-    private timer_temphistory;
-    private timer_temphistory_sub;
-    // state observable
-    private state = new Subject();
-    private state_data = 'Empty';
-    private temphistory = new Subject();
-    private temphistory_data = null;
-    private temphistory_running = false;
-
-    constructor(private http: HttpClient) {
-	if ( ApiService.instance != null ) return ApiService.instance;
-	ApiService.instance = this;
-	this.timer_state = timer(1000,1000);
-	this.timer_state_sub = this.timer_state.subscribe(t => {this.updateState(t)});
-
-	this.timer_temphistory = timer(1000,5000);
-	this.timer_temphistory_sub = this.timer_temphistory.subscribe(t => {this.updateTempHistory(t)});
+  // observable state
+  private timer_state;
+  private timer_state_sub;
+  private timer_temphistory;
+  private timer_temphistory_sub;
+  private state_data = 'Empty';
+  public temphistory$ = new BehaviorSubject<apiBrewTempHistoryData|null>(null);
+  private temphistory_last:number = 0;
+  private temphistory_data:apiBrewTempHistoryData|null = null;
+  private state = new BehaviorSubject(<apiStateData>{
+    levelerror: false,
+    state: 'Empty',
+    targettemp: 0,
+    currtemp: {
+      BK: 0,
+      HLT: 0,
+      MT: 0,
+      RIMS: 0
     }
+  });
 
-    getState(): Observable<{}> {
-	return this.state.asObservable();
-    }
+  constructor(private http: HttpClient) {
+    //console.log('ApiService ctor');
+    this.timer_state = timer(1000, 1000);
+    this.timer_state_sub = this.timer_state.subscribe((t:any) => {this.updateState(t)});
+    this.timer_temphistory = timer(1000,5000);
+    this.timer_temphistory_sub = this.timer_temphistory.subscribe(
+      (t:any) => {
+	this.updateTempHistory(t)
+      }
+    );
+  }
 
-    getTempHistory(): Observable<{}> {
-	return this.temphistory.asObservable();
-    }
+  updateState(t:any) {
+    this.http.get('/api/brewd/state')
+      .pipe(
+	map(res => <apiStateResponse>res)
+      )
+      .subscribe((res:apiStateResponse) => {
+	//console.log('ApiService::updateState', res);
+	if ( res.data == null ) return;
 
-    updateState(t) {
-	this.http.get(`/api/brewd/state`)
-	    .subscribe(res => {
-		//let rjson = res.json()['data'];
-		let rjson = res['data'];
-		//console.log('status', rjson);
-		let state = rjson['state'];
-		this.state_data = state;
-		let newstates = new Set(['Empty', 'Loaded', 'PreWait', 'PreHeat', 'NeedMalt']);
-		if ( newstates.has(state) ) {
-		    this.temphistory_data = null;
-		}
-		this.state.next(rjson);
-	    });
-    }
-
-    updateTempHistory(t) {
-	let newstates = new Set(['Maintenance', 'Empty', 'Loaded', 'PreWait', 'PreHeat', 'NeedMalt',
-				 'PreBoil', 'Hopping', 'Cooling', 'Transfer', 'Finished']);
-	if ( newstates.has(this.state_data) ) return;
-	if ( this.temphistory_running && t == -1 ) return;
-	this.temphistory_running = true;
-	//console.log('state data', this.state_data);
-
-	let frm = 0;
-	if ( this.temphistory_data != null ) {
-	    frm = this.temphistory_data['timestamps'][this.temphistory_data['timestamps'].length-1]+1;
+	let state = res.data.state
+	this.state_data = res.data.state;
+	let newstates = new Set(['Empty', 'Loaded', 'PreWait', 'PreHeat', 'NeedMalt']);
+	if ( newstates.has(state) ) {
+	  this.temphistory$.next(null);
+	  this.temphistory_data = null;
+	  this.temphistory_last = 0;
 	}
-	let params = new HttpParams().set('from', frm.toString());
+	this.state.next(res.data);
+      }, (err:any) => {
+	console.log('updateState/err', err);
+      });
+  }
 
-	this.http.get(`/api/brewd/state/temphistory`, {'params': params})
-	    .subscribe(res => {
-		//console.log('temphistory result', res);
-		let rjson = res['data']
-		//console.log('got temphistory', rjson, this.temphistory_data);
-		if ( this.temphistory_data == null ) {
-		    this.temphistory_data = rjson;
-		} else {
-		    // merge it to the temphistory_data
-		    // timestamps
-		    for ( let i of rjson['timestamps'] ) {
-			this.temphistory_data['timestamps'].push(i);
-		    }
-		    // sensors
-		    for ( let sensor in rjson['readings'] ) {
-			for ( let value of rjson['readings'][sensor] ) {
-			    this.temphistory_data['readings'][sensor].push(value);
-			}
-		    }
-		}
-		this.temphistory.next(this.temphistory_data);
+  getState(): BehaviorSubject<apiStateData> {
+    return this.state;
+  }
 
-		if ( rjson['maxcount'] == rjson['timestamps'].length ) {
-		    this.updateTempHistory(0);
-		}
-	    });
-	if ( t >= 0 ) {
-	    this.temphistory_running = false;
-	}
-    }
+  updateTempHistory(t:any) {
+    let newstates = new Set(['Maintenance', 'Empty', 'Loaded', 'PreWait', 'PreHeat', 'NeedMalt',
+			     'PreBoil', 'Hopping', 'Cooling', 'Transfer', 'Finished']);
+    if ( newstates.has(this.state_data) ) return;
+    //console.log('state data', this.state_data);
 
-    announceUpdate() {
-	//console.log('API announcing update');
-	this.updateSource.next(true);
-    }
+    let params = new HttpParams().set('from', this.temphistory_last.toString());
 
-    hasMalt(): Observable<{}> {
-	let body = JSON.stringify({'command': 'hasMalt'});
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+    this.http.get(`/api/brewd/state/temphistory`, {'params': params})
+      .pipe(
+	map(res => (<apiBrewTempHistoryResponse>res).data)
+      )
+      .subscribe(
+	(data:apiBrewTempHistoryData) => {
+	  console.log('temphistory result', data);
+	  this.temphistory_last = data.last;
 
-	//console.log('calling /api/brewd/state', body, options);
+	  if ( this.temphistory_data == null ) {
+	    this.temphistory_data = data;
+	  } else {
+	    // merge it to the temphistory_data
+	    let last:number = this.temphistory_data!.dt[this.temphistory_data!.dt.length];
+	    for (var i in data.dt) {
+	      if ( data.dt[i] <= last ) continue;
+	      this.temphistory_data.dt.push(data.dt[i]);
+	      this.temphistory_data.rims.push(data.rims[i]);
+	      this.temphistory_data.mt.push(data.mt[i]);
+	    }
+	  }
+	  this.temphistory$.next(data);
+	});
+  }
 
-	return this.http.post('/api/brewd/state', body, options);
-    }
+  getAllTempHistory(): apiBrewTempHistoryData {
+    return this.temphistory_data as apiBrewTempHistoryData;
+  }
 
-    spargeDone(): Observable<{}> {
-	let body = JSON.stringify({'command': 'spargeDone'});
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+  startMaintenance(): Observable<any> {
+    let body = JSON.stringify({'mode': 'start'});
+    let headers = new HttpHeaders({'Content-type': 'application/json'});
+    let options = {'headers': headers};
 
-	//console.log('calling /api/brewd/state', body, options);
+    return this.http.put('/api/brewd/maintenance',body, options)
+  }
 
-	return this.http.post('/api/brewd/state', body, options);
-    }
+  stopMaintenance(): Observable<any> {
+    let body = JSON.stringify({'mode': 'stop'});
+    let headers = new HttpHeaders({'Content-type': 'application/json'});
+    let options = {'headers': headers};
 
-    coolingDone(): Observable<{}> {
-	let body = JSON.stringify({'command': 'coolingDone'});
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+    return this.http.put('/api/brewd/maintenance',body, options)
+  }
 
-	//console.log('calling /api/brewd/state', body, options);
+  setMaintenance(mtpump:boolean, heat:boolean, bkpump:boolean, temp:number): Observable<any> {
+    let body = JSON.stringify({'mtpump': mtpump,
+			       'bkpump': bkpump,
+			       'heat': heat,
+			       'temp': temp});
+    let headers = new HttpHeaders({'Content-type': 'application/json'});
+    let options = {'headers': headers};
 
-	return this.http.post('/api/brewd/state', body, options);
-    }
+    return this.http.post('/api/brewd/maintenance',body, options)
+  }
 
-    transferDone(): Observable<{}> {
-	let body = JSON.stringify({'command': 'transferDone'});
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+  getConfig(): Observable<apiConfig> {
+    return this.http.get('/api/brewd/config')
+      .pipe(
+	map(res => (<apiConfigResponse>res).data)
+      );
+  }
 
-	//console.log('calling /api/brewd/state', body, options);
+  announceUpdate() {
+    this.updateAnnounce$.next(true);
+  }
 
-	return this.http.post('/api/brewd/state', body, options);
-    }
+  getPrograms(): Observable<apiProgram[]> {
+    return this.http.get('/api/programs')
+      .pipe(
+	map(res => (<apiProgramsResponse>res).data)
+      );
+  }
 
-    getVolume(): Observable<{}> {
-	return this.http.get('/api/brewd/state/volume');
-    }
+  getProgram(progid: number): Observable<apiProgram> {
+    return this.http.get(`/api/programs/${progid}`)
+      .pipe(
+	map(res => (<apiProgramResponse>res).data)
+      );
+  }
 
-    setVolume(volume): Observable<{}> {
-	let body = JSON.stringify({'volume': volume});
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+  delProgram(progid: number): Observable<apiProgramDeleteResponse> {
+    return this.http.delete(`/api/programs/${progid}`)
+      .pipe(
+	map(res => <apiProgramDeleteResponse>res)
+      );
+  }
 
-	console.log("Setting volume to ", volume, body, headers, options);
+  addProgram(data: apiProgram): Observable<apiAddProgramData> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
 
-	return this.http.post('/api/brewd/state/volume', body, options);
-    }
+    return this.http.post('/api/programs', body, options).
+      pipe(
+	map(res => (<apiAddProgramResponse>res).data)
+      );
+  }
 
-    startBoil(): Observable<{}> {
-	let body = JSON.stringify({'command': 'startBoil'});
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+  saveProgram(data: apiProgram): Observable<apiSaveProgramData> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
 
-	//console.log('calling /api/brewd/state', body, options);
+    return this.http.post(`/api/programs/${data.id}`, body, options).
+      pipe(
+	map(res => (<apiSaveProgramResponse>res).data)
+      );
+  }
 
-	return this.http.post('/api/brewd/state', body, options);
-    }
+  hasMalt(): Observable<{}> {
+    let body = JSON.stringify({'command': 'hasMalt'});
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
 
-    abortBrew(): Observable<{}> {
-	let body = JSON.stringify({'command': 'reset'});
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+    //console.log('calling /api/brewd/state', body, options);
 
-	//console.log('calling /api/brewd/state', body, options);
+    return this.http.post('/api/brewd/state', body, options);
+  }
 
-	return this.http.post('/api/brewd/state', body, options);
-    }
+  spargeDone(): Observable<{}> {
+    let body = JSON.stringify({'command': 'spargeDone'});
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
 
-    getPrograms(): Observable<Program[]> {
-	//return this.http.get<Program[]>('/api/programs');
-	return this.http.get('/api/programs').pipe(
-	    map(resp => {
-		return resp['data'];
-	    }));
-    }
+    //console.log('calling /api/brewd/state', body, options);
 
-    addProgram(data: Object): Observable<ApiResponse> {
-	data['nomash'] = !data['hasmash'];
-	data['noboil'] = !data['hasboil'];
+    return this.http.post('/api/brewd/state', body, options);
+  }
 
-	let body = JSON.stringify(data);
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+  coolingDone(): Observable<{}> {
+    let body = JSON.stringify({'command': 'coolingDone'});
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
 
-	return this.http.post<ApiResponse>('/api/programs', body, options);
-    }
+    //console.log('calling /api/brewd/state', body, options);
 
-    saveProgram(data: Object): Observable<ApiResponse> {
-	data['nomash'] = !data['hasmash'];
-	data['noboil'] = !data['hasboil'];
+    return this.http.post('/api/brewd/state', body, options);
+  }
 
-	let body = JSON.stringify(data);
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+  transferDone(): Observable<{}> {
+    let body = JSON.stringify({'command': 'transferDone'});
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
 
-	return this.http.post<ApiResponse>(`/api/programs/${data['id']}`, body, options);
-    }
+    //console.log('calling /api/brewd/state', body, options);
 
-    delProgram(progid: number): Observable<ApiResponse> {
-	return this.http.delete<ApiResponse>(`/api/programs/${progid}`);
-    }
+    return this.http.post('/api/brewd/state', body, options);
+  }
 
-    getProgram(progid: number): Observable<Program> {
-	return this.http.get<Program>(`/api/programs/${progid}`);
-    }
+  getVolume(): Observable<apiBrewStateVolumeData> {
+    return this.http.get('/api/brewd/state/volume').
+      pipe(
+	map(res => (<apiBrewStateVolume>res).data)
+      );
+  }
 
-    loadProgram(data: Object): Observable<ApiResponse> {
-	let body = JSON.stringify(data);
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+  setVolume(volume: number): Observable<{}> {
+    let body = JSON.stringify({'volume': volume});
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
 
-	return this.http.post<ApiResponse>('/api/brewd/program', body, options);
-    }
+    console.log("Setting volume to ", volume, body, headers, options);
 
-    private handleError(error: Response | any ) {
-	let errMsg: string;
-	/*
-	if (error instanceof Response) {
-	    const body = error.json() || '';
-	    const err = body.error || JSON.stringify(body);
-	    errMsg = `${error.status} - ${error.statusText || ''} ${err}`;
-	} else {
-	    errMsg = error.message ? error.message : error.toString();
-	}
-	console.log(errMsg);
-	return Observable.throw(errMsg);
-	*/
-    }
+    return this.http.post('/api/brewd/state/volume', body, options);
+  }
 
-    startMaintenance(): Observable<{}> {
-	let body = JSON.stringify({'mode': 'start'});
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+  startBoil(): Observable<{}> {
+    let body = JSON.stringify({'command': 'startBoil'});
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
 
-	return this.http.put('/api/brewd/maintenance', body, options);
-    }
+    //console.log('calling /api/brewd/state', body, options);
 
-    stopMaintenance(): Observable<{}> {
-	let body = JSON.stringify({'mode': 'stop'});
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+    return this.http.post('/api/brewd/state', body, options);
+  }
 
-	return this.http.put('/api/brewd/maintenance', body, options);
-    }
+  abortBrew(): Observable<{}> {
+    let body = JSON.stringify({'command': 'reset'});
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
 
-    setMaintenance(mtpump, heat, bkpump, temp): Observable<{}> {
-	let body = JSON.stringify({'mtpump': mtpump,
-				   'bkpump': bkpump,
-				   'heat': heat,
-				   'temp': temp});
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+    //console.log('calling /api/brewd/state', body, options);
 
-	//console.log("Setting maint to ", pump, whirlpool, heat, temp, body, headers, options);
+    return this.http.post('/api/brewd/state', body, options);
+  }
 
-	return this.http.post('/api/brewd/maintenance', body, options);
-    }
+  override(blockheat: boolean, forcemtpump: boolean, bkpump: boolean): Observable<{}> {
+    let body = JSON.stringify({'blockheat': blockheat,
+			       'forcemtpump': forcemtpump,
+			       'bkpump': bkpump});
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
 
-    override(blockheat, forcemtpump, bkpump): Observable<{}> {
-	let body = JSON.stringify({'blockheat': blockheat,
-				   'forcemtpump': forcemtpump,
-				   'bkpump': bkpump});
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
+    return this.http.post('/api/brewd/override', body, options);
+  }
 
-	return this.http.post('/api/brewd/override', body, options);
-    }
+  setCoolTemp(cooltemp: number): Observable<{}> {
+    let body = JSON.stringify({'cooltemp': cooltemp});
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
 
-    getConfig() {
-	return this.http.get<ApiResponse>(`/api/brewd/config`);
-    }
+    //console.log("Setting volume to ", volume, body, headers, options);
 
-    setCoolTemp(cooltemp): Observable<{}> {
-	let body = JSON.stringify({'cooltemp': cooltemp});
-	let headers = new HttpHeaders({'Content-Type': 'application/json'});
-	let options = {'headers': headers};
-
-	//console.log("Setting volume to ", volume, body, headers, options);
-
-	return this.http.post('/api/brewd/state/cooltemp', body, options);
-    }
+    return this.http.post('/api/brewd/state/cooltemp', body, options);
+  }
 }

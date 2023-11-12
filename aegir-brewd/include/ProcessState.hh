@@ -20,6 +20,7 @@
 #include <ctime>
 
 #include "Program.hh"
+#include "TSDB.hh"
 
 namespace aegir {
 
@@ -39,23 +40,22 @@ namespace aegir {
     };
     friend Guard;
     enum class States: uint8_t {
-				Maintenance=0, // Maintenance mode
-				Empty, // initialized, no program loadad
-				Loaded, // program loaded, but not started
-				PreWait, // timed mode, waiting for pre-heat to start
-				PreHeat, // pre-heating to starttemp
-				NeedMalt, // Waiting for the malts to be added, manual interaction required
-				Mashing, // Doing the mash steps
-				Sparging, // keeps on endtemp temperature, and circulates
-				PreBoil, // Heats the BK up to boiling, till the start of the boil timer
-				Hopping, // BK is boiling, hopping timers started
-				Cooling, // The wort is being cooled down
-				Transfer, // transfer from BK to fermenter
-				Finished // Brewing process finished
+      Maintenance=0, // Maintenance mode
+      Empty, // initialized, no program loadad
+      Loaded, // program loaded, but not started
+      PreWait, // timed mode, waiting for pre-heat to start
+      PreHeat, // pre-heating to starttemp
+      NeedMalt, // Waiting for the malts to be added, manual interaction required
+      Mashing, // Doing the mash steps
+      Sparging, // keeps on endtemp temperature, and circulates
+      PreBoil, // Heats the BK up to boiling, till the start of the boil timer
+      Hopping, // BK is boiling, hopping timers started
+      Cooling, // The wort is being cooled down
+      Transfer, // transfer from BK to fermenter
+      Finished // Brewing process finished
     };
-    typedef std::map<uint32_t, float> ThermoDataPoints;
     typedef std::function<void(States, States)> statechange_t;
-  private:
+
   private:
     ProcessState();
     ProcessState(ProcessState&&) = delete;
@@ -79,13 +79,13 @@ namespace aegir {
     inline uint32_t getStartat() const { return c_startat; };
     inline uint32_t getVolume() const { return c_volume; };
     inline ProcessState &setVolume(uint32_t _v) { c_volume = _v; return *this; };
-    ProcessState &addThermoReading(const std::string &_sensor, const uint32_t _time, const float _temp);
-    ProcessState &getThermoCouples(std::set<std::string> &_tcs);
-    ProcessState &getTCReadings(const std::string &_sensor, ThermoDataPoints &_tcvals);
-    inline float getSensorTemp(const std::string &_sensor) const {return c_lasttemps.find(_sensor)->second;};
-    //inline time_t getStartedAt() const {return c_startedat;};
-    uint32_t getStartedAt() const;
-    uint32_t getEndSparge() const {uint32_t x=c_t_endsparge; return x;};
+    ProcessState &addThermoReadings(const time_t _time, const ThermoReadings& _temps);
+    inline TSDB& getThermoReadings() { return c_thermoreadings; };
+    inline float getSensorTemp(const ThermoCouple _tc) const {
+      return c_thermoreadings.last()[_tc];
+    };
+    inline uint32_t getStartedAt() const {return c_startedat;};
+    inline uint32_t getEndSparge() const {uint32_t x=c_t_endsparge; return x;};
     // mash steps
     inline ProcessState &setMashStep(int8_t _ms) {c_mashstep=_ms; return *this;};
     inline int8_t getMashStep() const {return c_mashstep;};
@@ -131,11 +131,11 @@ namespace aegir {
     std::atomic<uint32_t> c_volume; //liters
     std::atomic<uint32_t> c_startedat; //when we went from !isactive->isactive
     std::atomic<uint32_t> c_t_endsparge; // when sparging is done
-    // cache the last readings
-    std::map<std::string, float> c_lasttemps;
     // states
     std::atomic<States> c_state;
-    std::map<std::string, ThermoDataPoints> c_thermoreadings;
+    // TSDB
+    //std::map<std::string, ThermoDataPoints> c_thermoreadings;
+    TSDB c_thermoreadings;
     // active mash step
     std::atomic<int8_t> c_mashstep;
     std::atomic<time_t> c_mashstepstart;

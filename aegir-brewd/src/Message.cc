@@ -2,6 +2,7 @@
 #include "Message.hh"
 
 #include <string.h>
+#include <stdio.h>
 
 #include <algorithm>
 
@@ -171,13 +172,12 @@ namespace aegir {
     // _msg[0] is the type, but we're already here
     int msglen = _msg.length();
     uint8_t *data = (uint8_t*)_msg.data();
+    int offset = 1;
 
-    uint8_t namelen = _msg[1];
-    c_name = std::string((char*)data+2, namelen);
-
-    int offset = 3+namelen;
-    c_temp = *(float*)(data+offset);
-    offset += sizeof(float);
+    for (int i=0; i<ThermoCouple::_SIZE; ++i) {
+      c_data.data[i] = *(float*)(data+offset);
+      offset += sizeof(float);
+    }
 
     c_timestamp = *(uint32_t*)(data+offset);
 
@@ -187,29 +187,24 @@ namespace aegir {
 #endif
   }
 
-  ThermoReadingMessage::ThermoReadingMessage(const std::string &_name, float _temp, uint32_t _timestamp):
-    c_name(_name), c_temp(_temp), c_timestamp(_timestamp) {
+  ThermoReadingMessage::ThermoReadingMessage(const ThermoReadings &_data, uint32_t _timestamp):
+    c_data(_data), c_timestamp(_timestamp) {
   }
 
   ThermoReadingMessage::~ThermoReadingMessage() = default;
 
   msgstring ThermoReadingMessage::serialize() const {
-    uint32_t len(3);
-    uint32_t strsize(std::min((uint32_t)c_name.length(), (uint32_t)255));
-    len += strsize;
-    len += sizeof(float) + sizeof(uint32_t);
+    uint32_t len = 2 + sizeof(c_data) + sizeof(c_timestamp);
 
     msgstring buffer(len, 0);
     uint8_t *data = (uint8_t*)buffer.data();
     data[0] = (uint8_t)type();
-    data[1] = (uint8_t)strsize;
-    memcpy((void*)(data+2), (void*)c_name.data(), strsize);
 
-    int offset = strsize + 3;
-
-    // c_temp is float
-    *(float*)(data+offset) = c_temp;
-    offset += sizeof(float);
+    int offset = 1;
+    for (int i=0; i<ThermoCouple::_SIZE; ++i) {
+      *(float*)(data+offset) = c_data.data[i];
+      offset += sizeof(float);
+    }
 
     // c_timestamp is uint32_t
     *(uint32_t*)(data+offset) = c_timestamp;

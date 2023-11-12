@@ -10,7 +10,7 @@
 #include <memory>
 #include <functional>
 
-#include "GPIO.hh"
+#include "types.hh"
 
 namespace aegir {
 
@@ -18,9 +18,9 @@ namespace aegir {
 
   enum class MessageType:uint8_t {
     UNKNOWN=0,
-      PINSTATE=1,
-      THERMOREADING=2,
-      JSON=3
+    PINSTATE=1,
+    THERMOREADING=2,
+    JSON=3
   };
 
   const std::string hexdump(const msgstring &_msg);
@@ -97,19 +97,17 @@ namespace aegir {
   public:
     ThermoReadingMessage() = delete;
     ThermoReadingMessage(const msgstring &_msg);
-    ThermoReadingMessage(const std::string &_name, float _temp, uint32_t _timestamp);
+    ThermoReadingMessage(const ThermoReadings &_data, uint32_t _timestamp);
     virtual msgstring serialize() const override;
     virtual MessageType type() const override;
-    inline const std::string &getName() const {return c_name;};
-    inline float getTemp() const {return c_temp;};
+    inline const ThermoReadings& getTemps() const {return c_data;};
     inline uint32_t getTimestamp() const {return c_timestamp;};
     virtual ~ThermoReadingMessage();
 
     static std::shared_ptr<Message> create(const msgstring &_msg);
 
   public:
-    std::string c_name;
-    float c_temp;
+    ThermoReadings c_data;
     uint32_t c_timestamp;
   };
 }

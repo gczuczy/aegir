@@ -1,0 +1,193 @@
+<div class="container" *ngIf="editProgramForm">
+  <form [formGroup]="editProgramForm" novalidate (ngSubmit)="save(editProgramForm)">
+    <div class="container">
+      <!-- API errors -->
+      <div class="container" [hidden]="!errors">
+	<div *ngFor="let error of errors"
+	     class="alert alert-danger" role="alert">
+	  <strong>API Error:</strong>&nbsp;{{error}}
+	</div>
+      </div>
+
+      <!-- Form errors -->
+      <div *ngIf="editProgramForm.errors && editProgramForm.errors['mashboil']" class="container">
+	<div class="alert alert-danger" role="alert">At least mash or boil is required</div>
+      </div>
+
+      <!-- program name and boil time-->
+      <div class="row">
+	<!-- program name -->
+	<div class="col form-group">
+	  <label>Name</label>
+	  <small [hidden]="editProgramForm.get('name')!.valid" class="text-danger">
+	    Name is required and must be at least 3 characters long
+	  </small>
+	  <input class="form-control" formControlName="name">
+	</div>
+	<!-- boil time -->
+	<div class="col form-group">
+	  <label>Boil time [min]</label>
+	  <small [hidden]="editProgramForm.get('boiltime')!.valid" class="text-danger">
+	    Boiltime is required and must be between 30 minutes and 5 hours
+	  </small>
+	  <input class="form-control" formControlName="boiltime" type="number">
+	</div>
+      </div>
+
+      <!-- mash start and end temperatures -->
+      <div class="row">
+	<!-- start temp -->
+	<div class="col form-group">
+	  <label>Mashing Start Temparture [C]</label>
+	  <small [hidden]="editProgramForm.get('starttemp')!.valid" class="text-danger">
+	    Required, and must be between 25C and End Temp
+	  </small>
+	  <input class="form-control" formControlName="starttemp" type="number">
+	</div>
+	<!-- end temp -->
+	<div class="col form-group">
+	  <label>Mashing End Temparture [C]</label>
+	  <small [hidden]="editProgramForm.get('endtemp')!.valid" class="text-danger">
+	    Required, and must be between Start Temp and 90 C
+	  </small>
+	  <input class="form-control" formControlName="endtemp" type="number">
+	</div>
+      </div>
+
+      <!-- Mash temperature steps -->
+      <div class="row">
+	<div class="col-9">
+	  <h2>
+	    <mat-slide-toggle
+	      [checked]="hasmash"
+	      (change)="onHasmashChange($event)"	      >
+	      Mashing
+	    </mat-slide-toggle>
+	</h2></div>
+	<div *ngIf="hasmash" class="col-3">
+	  <button type="button" class="btn btn-primary" (click)="addMashStep()">Add step</button>
+	</div>
+      </div>
+      <div *ngIf="hasmash" formArrayName="mashsteps" class="container">
+	<div *ngFor="let mashtemp of mashSteps.controls; let i=index"
+	     class="row" [formGroupName]="i">
+	  <div class="col-1">
+	    <span><strong>Temp {{i+1}}</strong></span>
+	  </div>
+	  <div class="col-1">
+	    <button *ngIf="mashSteps.controls.length > 1" (click)="removeMashStep(i)"
+		    type="button" class="btn btn-danger btn-sm">remove</button>
+	  </div>
+	  <!-- temp -->
+	  <div class="col-5 form-group">
+	    <div class="row">
+	      <div class="col"><label>Temperature [C]</label></div>
+	      <div class="col">
+		<small [hidden]="mashSteps.controls[i].get('temp')!.valid">
+		  Temperature is required and must be between the previous and next/finishing temperatures.
+		</small>
+	      </div>
+	    </div>
+	    <div class="row">
+	      <div class="col">
+		<input type="number" formControlName="temp">
+	      </div>
+	    </div>
+	  </div>
+	  <!-- holdtime -->
+	  <div class="col-5 form-group">
+	    <div class="row">
+	      <div class="col"><label>Hold time [min]</label></div>
+	      <div class="col">
+		<small [hidden]="mashSteps.controls[i].get('holdtime')!.valid">
+		Holdtime is required
+	      </small></div>
+	    </div>
+	    <div class="row">
+	      <div class="col">
+		<input type="number" formControlName="holdtime">
+	      </div>
+	    </div>
+	  </div>
+	</div>
+      </div>
+
+      <!-- Hop schedule -->
+      <div class="row">
+	<div class="col-9">
+	  <h2>
+	    <mat-slide-toggle
+	      [checked]="hasboil"
+	      (change)="onHasboilChange($event)"
+	      >
+	      Hop schedule
+	    </mat-slide-toggle>
+	</h2></div>
+	<div *ngIf="hasboil" class="col-3">
+	  <button type="button" class="btn btn-primary" (click)="addHop()">Add hop</button>
+	</div>
+      </div>
+      <div *ngIf="hasboil" formArrayName="hops" class="container">
+	<div *ngFor="let hop of hops.controls; let i=index"
+	     class="row" [formGroupName]="i">
+	  <!-- Hop name -->
+	  <div class="col-4 form-group">
+	    <div class="row">
+	      <div class="col"><label>Name</label></div>
+	      <div class="col">
+		<small [hidden]="hops.controls[i].get('name')!.valid">
+		  Name is required, and at least 3 characters long
+		</small>
+	      </div>
+	    </div>
+	    <div class="row">
+	      <div class="col">
+		<input type="text" formControlName="name">
+	      </div>
+	    </div>
+	  </div>
+	  <!-- Quantity -->
+	  <div class="col-4 form-group">
+	    <div class="row">
+	      <div class="col"><label>Quantity</label></div>
+	      <div class="col">
+		<small [hidden]="hops.controls[i].get('quantity')!.valid">
+		  Quantity is required, and must be at least 1
+		</small>
+	      </div>
+	    </div>
+	    <div class="row">
+	      <div class="col">
+		<input type="number" formControlName="quantity">
+	      </div>
+	    </div>
+	  </div>
+	  <!-- attime -->
+	  <div class="col-4 form-group">
+	    <div class="row">
+	      <div class="col"><label>Time [T-n, min]</label></div>
+	      <div class="col">
+	      <small [hidden]="hops.controls[i].get('attime')!.valid">
+		Time is required, and must be between 0 and boiltime
+	      </small></div>
+	    </div>
+	    <div class="row">
+	      <div class="col">
+		<input type="number" formControlName="attime">
+	      </div>
+	      <div class="col-1">
+		<button (click)="removeHop(i)"
+			type="button" class="btn btn-danger btn-sm">remove</button>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+      </div>
+
+      <!-- submit -->
+      <div class="row">
+	<button type="submit" [disabled]="!editProgramForm.valid">Save</button>
+      </div>
+    </div>
+  </form>
+</div>

@@ -11,19 +11,19 @@
 namespace aegir {
 
   static std::map<ProcessState::States, std::string> g_strstates{
-								 {ProcessState::States::Maintenance, "Maintenance"},
-								 {ProcessState::States::Empty, "Empty"},
-								 {ProcessState::States::Loaded, "Loaded"},
-								 {ProcessState::States::PreWait, "PreWait"},
-								 {ProcessState::States::PreHeat, "PreHeat"},
-								 {ProcessState::States::NeedMalt, "NeedMalt"},
-								 {ProcessState::States::Mashing, "Mashing"},
-								 {ProcessState::States::Sparging, "Sparging"},
-								 {ProcessState::States::PreBoil, "PreBoil"},
-								 {ProcessState::States::Hopping, "Hopping"},
-								 {ProcessState::States::Cooling, "Cooling"},
-								 {ProcessState::States::Transfer, "Transfer"},
-								 {ProcessState::States::Finished, "Finished"}
+    {ProcessState::States::Maintenance, "Maintenance"},
+    {ProcessState::States::Empty, "Empty"},
+    {ProcessState::States::Loaded, "Loaded"},
+    {ProcessState::States::PreWait, "PreWait"},
+    {ProcessState::States::PreHeat, "PreHeat"},
+    {ProcessState::States::NeedMalt, "NeedMalt"},
+    {ProcessState::States::Mashing, "Mashing"},
+    {ProcessState::States::Sparging, "Sparging"},
+    {ProcessState::States::PreBoil, "PreBoil"},
+    {ProcessState::States::Hopping, "Hopping"},
+    {ProcessState::States::Cooling, "Cooling"},
+    {ProcessState::States::Transfer, "Transfer"},
+    {ProcessState::States::Finished, "Finished"}
   };
 
   ProcessState::Guard::Guard(ProcessState &_ps): c_ps(_ps) {
@@ -48,16 +48,7 @@ namespace aegir {
   }
 
   ProcessState &ProcessState::reconfigure() {
-    Config *cfg = Config::getInstance();
-
-    std::map<std::string, int> tcs;
-    cfg->getThermocouples(tcs);
     c_thermoreadings.clear();
-    c_lasttemps.clear();
-    for ( auto &it: tcs ) {
-      c_thermoreadings[it.first] = ThermoDataPoints();
-      c_lasttemps[it.first] = 0;
-    }
 
     reset();
 
@@ -86,7 +77,7 @@ namespace aegir {
     c_volume  = _volume;
     c_startedat = 0;
     // clear the thermo readings
-    for ( auto &it: c_thermoreadings )  it.second.clear();
+    c_thermoreadings.clear();
 
     setState(States::Loaded);
     return *this;
@@ -139,9 +130,7 @@ namespace aegir {
     c_startedat = 0;
     c_t_endsparge = std::numeric_limits<uint32_t>::max();
 
-    for (auto &it: c_lasttemps) it.second = 0;
-
-    for (auto &it: c_thermoreadings) it.second.clear();
+    c_thermoreadings.clear();
 
     c_mashstep = -1;
     c_mashstepstart = 0;
@@ -181,51 +170,15 @@ namespace aegir {
     c_stcbs.push_back(_stch);
   }
 
-  ProcessState &ProcessState::addThermoReading(const std::string &_sensor, const uint32_t _time, const float _temp) {
-    c_lasttemps[_sensor] = _temp;
+  ProcessState &ProcessState::addThermoReadings(const time_t _time,
+						const ThermoReadings& _temps) {
     if ( c_state == States::Empty ||
 	 c_state == States::Finished ) return *this;
     Guard g(*this);
-    auto it = c_thermoreadings.find(_sensor);
-
-    // see whether we indeed have that TC
-    if ( it == c_thermoreadings.end() )
-      throw Exception("ProcessState::adThermoReading(): No such TC: %s", _sensor.c_str());
 
     // add the reading
-    if ( c_state >= States::Mashing ) {
-      uint32_t reltime = _time - c_startedat;
-      it->second[reltime] = _temp;
-#ifdef AEGIR_DEBUG
-      printf("ProcessState::addThemoReading(): added %s/%u(%u)/%.2f\n", _sensor.c_str(), _time, reltime, _temp);
-#endif
-    }
+    if ( c_state >= States::Mashing )
+      c_thermoreadings.insert(_time, _temps);
     return *this;
-  }
-
-  ProcessState &ProcessState::getThermoCouples(std::set<std::string> &_tcs){
-    _tcs.clear();
-    Guard g(*this);
-    for ( auto &it: c_thermoreadings )
-      _tcs.insert(it.first);
-    return *this;
-  }
-
-  ProcessState &ProcessState::getTCReadings(const std::string &_sensor, ThermoDataPoints &_tcvals){
-    Guard g(*this);
-
-    auto it = c_thermoreadings.find(_sensor);
-    if ( it == c_thermoreadings.end() )
-      throw Exception("ProcessState::getTCReadings(): No such TC: %s", _sensor.c_str());
-
-    _tcvals = it->second;
-
-    return *this;
-  }
-
-  uint32_t ProcessState::getStartedAt() const {
-    uint32_t x = c_startedat;
-    printf("ProcessState::getStartedAt(): %u\n", x);
-    return c_startedat;
   }
 }

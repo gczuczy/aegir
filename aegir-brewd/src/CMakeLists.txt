@@ -1,6 +1,5 @@
 target_sources(brewd
   PRIVATE
-  CMakeLists.txt
   Config.cc
   Controller.cc
   DirectSelect.cc
@@ -20,4 +19,16 @@ target_sources(brewd
   ThreadManager.cc
   ZMQ.cc
   main.cc
+  TSDB.cc
+  types.cc
+  Environment.cc
+)
+
+target_sources(tests
+  PRIVATE
+  TSDB.cc
+  Exception.cc
+  types.cc
+  Config.cc
+  Message.cc
 )

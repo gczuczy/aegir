@@ -1,49 +1,38 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { Program } from './program';
 import { ApiService } from '../api.service';
+import { apiProgram } from '../api.types';
 
 @Component({
-    selector: 'app-programs',
-    templateUrl: './programs.component.html',
-    styleUrls: ['./programs.component.css'],
-    providers: [ ApiService ]
+  selector: 'app-programs',
+  templateUrl: './programs.component.html',
+  styleUrls: ['./programs.component.css']
 })
-export class ProgramsComponent implements OnInit {
-    errorMessage: string;
-    programs: Program[];
+export class ProgramsComponent {
 
-    constructor(private apiService: ApiService,
-		private router: Router) {
-	this.apiService.updateAnnounce$.subscribe(
-	    u => {
-		this.updateList();
-	    }
-	);
-    }
+  programs: apiProgram[] = [];
 
-    ngOnInit() {
+  constructor(private api: ApiService,
+	      private router: Router) {
+    this.api.updateAnnounce$.subscribe(
+      (u:boolean) => {
 	this.getPrograms();
-    }
+      }
+    );
+  }
 
-    getPrograms() {
-	this.updateList();
-    }
+  getPrograms() {
+    this.api.getPrograms()
+      .subscribe(
+	(data:apiProgram[]) => {
+	  //console.log('Programs', data);
+	  this.programs = data;
+	}
+      );
+  }
 
-    updateList() {
-	//console.log('Programs::updateList()');
-	this.apiService.getPrograms()
-	    .subscribe(
-		programs => {
-		    this.programs = programs;
-		},
-		error => this.errorMessage = <any>error);
-    }
-
-    loadProgram(prog: Program) {
-	//console.log('loadProgram ', prog);
-	this.router.navigate(['programs', prog.id, 'view']);
-    }
-
+  loadProgram(prog: apiProgram) {
+    this.router.navigate(['programs', prog.id, 'view']);
+  }
 }

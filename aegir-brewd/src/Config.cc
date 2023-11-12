@@ -1,10 +1,13 @@
-#include <yaml-cpp/yaml.h>
+
+#include "Config.hh"
+
+#include <stdio.h>
 
 #include <iostream>
 #include <fstream>
-#include <map>
 
-#include "Config.hh"
+#include <yaml-cpp/yaml.h>
+
 #include "Exception.hh"
 
 namespace aegir {
@@ -22,7 +25,7 @@ namespace aegir {
     {"buzzer", PinConfig(PinMode::OUT, PinPull::NONE)}
   };
 
-  static std::set<std::string> g_tcnames{"RIMS", "MashTun", "HLT", "BK"};
+  static std::set<std::string> g_tcnames{"HERMS", "MashTun", "HLT", "BK"};
 
   // SPI ChipSelector string translations
   static std::map<ChipSelectors, std::string> g_spi_cs_to_string{
@@ -32,23 +35,23 @@ namespace aegir {
   // ThermoCouple type lookups
   std::map<std::string, MAX31856::TCType> g_string_to_tctype{
     {"B", MAX31856::TCType::B},
-      {"E", MAX31856::TCType::E},
-	{"J", MAX31856::TCType::J},
-	  {"K", MAX31856::TCType::K},
-	    {"N", MAX31856::TCType::N},
-	      {"R", MAX31856::TCType::R},
-		{"S", MAX31856::TCType::S},
-		  {"T", MAX31856::TCType::T}
+    {"E", MAX31856::TCType::E},
+    {"J", MAX31856::TCType::J},
+    {"K", MAX31856::TCType::K},
+    {"N", MAX31856::TCType::N},
+    {"R", MAX31856::TCType::R},
+    {"S", MAX31856::TCType::S},
+    {"T", MAX31856::TCType::T}
   };
   std::map<MAX31856::TCType, std::string> g_tctype_to_string{
     {MAX31856::TCType::B, "B"},
-      {MAX31856::TCType::E, "E"},
-	{MAX31856::TCType::J, "J"},
-	  {MAX31856::TCType::K, "K"},
-	    {MAX31856::TCType::N, "N"},
-	      {MAX31856::TCType::R, "R"},
-		{MAX31856::TCType::S, "S"},
-		  {MAX31856::TCType::T, "T"}
+    {MAX31856::TCType::E, "E"},
+    {MAX31856::TCType::J, "J"},
+    {MAX31856::TCType::K, "K"},
+    {MAX31856::TCType::N, "N"},
+    {MAX31856::TCType::R, "R"},
+    {MAX31856::TCType::S, "S"},
+    {MAX31856::TCType::T, "T"}
   };
   // Noisefilter lookups
   std::map<std::string, NoiseFilters> g_string_to_noisefilter{
@@ -60,26 +63,17 @@ namespace aegir {
       {NoiseFilters::HZ60, "60Hz"}
   };
 
-  // The singleton instance holder
-  Config *Config::c_instance=0;
-
-  Config::Config(const std::string &_cfgfile, bool _noload): c_cfgfile(_cfgfile) {
+  Config::Config() {
     setDefaults();
-    if ( !_noload ) load();
   }
 
   Config::~Config() {
     save();
   }
 
-  Config *Config::instantiate(const std::string &_cfgfile, bool _noload) {
-    if ( !c_instance ) c_instance = new Config(_cfgfile, _noload);
-    return c_instance;
-  }
-
-  // TODO: throw exception when !c_instance
-  Config *Config::getInstance() {
-    return c_instance;
+  std::shared_ptr<Config> Config::getInstance() {
+    static std::shared_ptr<Config> instance{new Config()};
+    return instance;
   }
 
   void Config::setDefaults() {
@@ -107,7 +101,10 @@ namespace aegir {
     c_spi_dschips = {{0, "cs0"}, {1, "cs1"}, {2, "cs2"}, {3, "cs3"}};
 
     // thermocouples
-    c_thermocouples = {{"MashTun", 1}, {"RIMS", 0}, {"HLT", 2}, {"BK", 3}};
+    c_thermocouples.tcs[ThermoCouple::MT] = 1;
+    c_thermocouples.tcs[ThermoCouple::HERMS] = 0;
+    c_thermocouples.tcs[ThermoCouple::BK] = 3;
+    c_thermocouples.tcs[ThermoCouple::HLT] = 2;
 
     // thermocouple reading interval
     c_thermoival = 1;
@@ -137,7 +134,8 @@ namespace aegir {
     c_hedelay = 10;
   }
 
-  void Config::load() {
+  void Config::load(const std::string& _file) {
+    c_cfgfile = _file;
     YAML::Node config;
     try {
       config = YAML::LoadFile(c_cfgfile);
@@ -245,15 +243,14 @@ namespace aegir {
 	      int id = tc[it].as<int>();
 	      if ( id < 0 || id > 3 )
 		throw Exception("Thermocouple id out of range: %i", id);
-	      c_thermocouples[it] = id;
+	      c_thermocouples.tcs[ThermoCouple(it)] = id;
 	    }
 	  }
 	  // now verify whether any of them is on the same id
 	  std::set<int> tmp;
-	  for (auto &it: c_thermocouples) {
-	    if ( tmp.find(it.second) != tmp.end() )
-	      throw Exception("Duplicate thermocouple id: %i", it.second);
-	    tmp.insert(it.second);
+	  for (uint8_t i=0; i < ThermoCouple::_SIZE; ++i) {
+	    if ( tmp.find(c_thermocouples.tcs[i]) != tmp.end() )
+	      throw Exception("Duplicate thermocouple id: %i", i);
 	  }
 	} // thermocouples
 	if ( spi["thermointerval"] && spi["thermointerval"].IsScalar() ) {
@@ -348,7 +345,14 @@ namespace aegir {
     }
   }
 
+  Config &Config::save(const std::string& _file) {
+    c_cfgfile = _file;
+    return save();
+  }
+
   Config &Config::save() {
+    // don't save if we don't have a file but the defaults
+    if ( c_cfgfile.empty() ) return *this;
     YAML::Emitter yout;
 
     yout << YAML::BeginMap;
@@ -379,7 +383,12 @@ namespace aegir {
 
     // Thermocouple layout
     yout << YAML::Key << "thermocouples";
-    yout << YAML::Value << c_thermocouples;
+    {
+      std::map<std::string, int> tcmap;
+      for (uint8_t i=0; i < ThermoCouple::_SIZE; ++i)
+	tcmap[ThermoCouple(i).toStr()] = c_thermocouples.tcs[i];
+      yout << YAML::Value << tcmap;
+    }
 
     // thermocouple reading interval
     yout << YAML::Key << "thermointerval";

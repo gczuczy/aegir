@@ -127,7 +127,7 @@ namespace aegir {
     c_handle = gpio_open_device(_device.c_str());
 
     if ( c_handle == GPIO_INVALID_HANDLE ) {
-      throw Exception("GPIO: gpio_open_device(): invalid handle");
+      throw Exception("GPIO: gpio_open_device(%s): invalid handle", _device.c_str());
     }
 
     fetchpins();
@@ -136,7 +136,7 @@ namespace aegir {
 
   GPIO *GPIO::getInstance() {
     if ( !c_instance ) {
-      Config *cfg = Config::getInstance();
+      auto cfg = Config::getInstance();
       c_instance = new GPIO(cfg->getGPIODevice());
     }
     return c_instance;
@@ -167,7 +167,7 @@ namespace aegir {
   // here we already have the device from the ctor
   // so we're only dealing with the pins
   void GPIO::rewire() {
-    Config *cfg = Config::getInstance();
+    auto cfg = Config::getInstance();
 
     // re-do the name-number association first
     c_names.clear();

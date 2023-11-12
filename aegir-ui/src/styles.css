@@ -1,29 +1,4 @@
 /* You can add global styles to this file, and also import other style files */
-/*
-//body { padding-top: 70px; }
-*/
-@import '~@angular/material/prebuilt-themes/deeppurple-amber.css';
-.vfill {
-    min-height: 100%;
-    height: 100%;
-}
 
-.vscroll {
-    overflow-y: scroll;
-}
-
-.height-80 {
-    height: 80vh;
-}
-
-.table-pad-2px>tbody>tr>td, .table-pad-2px>tbody>tr>th, .table-pad-2px>tfoot>tr>td, .table-pad-2px>tfoot>tr>th, .table-pad-2px>thead>tr>td, .table-pad-2px>thead>tr>th {
-    padding: 2px;
-}
-
-.input-editprogram {
-    width: 60px;
-}
-
-.table-editprogram>tbody>tr>td {
-    width: 60px;
-}
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }

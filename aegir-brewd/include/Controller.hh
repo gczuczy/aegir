@@ -13,6 +13,7 @@
 #include <thread>
 #include <list>
 #include <utility>
+#include <memory>
 
 #include "ThreadManager.hh"
 #include "PINTracker.hh"
@@ -24,6 +25,36 @@ namespace aegir {
 
   class Controller: public ThreadBase, public PINTracker {
   private:
+    class HERatioDB {
+    public:
+      struct alignas(sizeof(long)) data {
+	time_t time;
+	float ratio;
+      };
+    public:
+      HERatioDB();
+      HERatioDB(HERatioDB&) = delete;
+      HERatioDB(const HERatioDB&) = delete;
+      HERatioDB(HERatioDB&&) = delete;
+      ~HERatioDB();
+
+      HERatioDB& clear();
+      HERatioDB& insert(float _value);
+
+      const data& operator[](const std::size_t) const;
+      inline const uint32_t size() const {return c_size;};
+
+    private:
+      void grow();
+
+    private:
+      std::uint32_t c_alloc_size;
+      std::uint32_t c_capacity;
+      std::uint32_t c_size;
+      data *c_data;
+    };
+
+  private:
     Controller();
     Controller(Controller &&) = delete;
     Controller(const Controller &) = delete;
@@ -32,7 +63,7 @@ namespace aegir {
 
   public:
     virtual ~Controller();
-    static Controller *getInstance();
+    static std::shared_ptr<Controller> getInstance();
     virtual void run() override;
 
   private:
@@ -63,12 +94,11 @@ namespace aegir {
     // tempareture control
     void setTempTarget(float _target, float _maxoverheat);
     int tempControl();
-    bool getTemps(const ProcessState::ThermoDataPoints &_tdp, uint32_t _dt, float &_last, float &_curr, float &_dT);
+    bool getTemps(ThermoCouple _tc, uint32_t _dt, float &_last, float &_curr, float &_dT);
     void setHERatio(float _cycletime, float _ratio);
     float calcFlowRate();
 
   private:
-    static Controller *c_instance;
     ZMQ::Socket c_mq_io, c_mq_iocmd;
     std::thread::id c_mythread;
     std::mutex c_mtx_stchqueue;
@@ -78,13 +108,13 @@ namespace aegir {
     float c_last_flow_volume;
     ProcessState &c_ps;
     std::shared_ptr<Program> c_prog;
-    Config *c_cfg;
+    std::shared_ptr<Config> c_cfg;
     float c_hecycletime;
     bool c_needcontrol; // whether to do tempcontrols
     float c_temptarget;
     bool c_newtemptarget;
     float c_tempoverheat;
-    std::map<uint32_t, float> c_heratiohistory;
+    HERatioDB c_heratiohistory;
     int32_t c_hestartdelay;
     bool c_hepause;
   };

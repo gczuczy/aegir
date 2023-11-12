@@ -20,7 +20,7 @@
 	  <label>Temperature accuracy [C]</label>
 	</div>
 	<div class="col form-group">
-	  <small [hidden]="settingsForm.controls.tempaccuracy.valid" class="text-danger">
+	  <small [hidden]="settingsForm.controls['tempaccuracy'].valid" class="text-danger">
 	    Must be between 0.0 and 1.0
 	  </small>
 	  <input class="form-control" formControlName="tempaccuracy">
@@ -33,7 +33,7 @@
 	  <label>Cooling target temperature [C]</label>
 	</div>
 	<div class="col form-group">
-	  <small [hidden]="settingsForm.controls.cooltemp.valid" class="text-danger">
+	  <small [hidden]="settingsForm.controls['cooltemp'].valid" class="text-danger">
 	    Must be between 20 and 30
 	  </small>
 	  <input class="form-control" formControlName="cooltemp">
@@ -46,23 +46,23 @@
 	  <label>Heating Element's power [W]</label>
 	</div>
 	<div class="col form-group">
-	  <small [hidden]="settingsForm.controls.hepower.valid" class="text-danger">
+	  <small [hidden]="settingsForm.controls['hepower'].valid" class="text-danger">
 	    Must be between 1000 and 10000
 	  </small>
 	  <input class="form-control" formControlName="hepower">
 	</div>
       </div>
 
-      <!-- HE overhead -->
+      <!-- HE heat overhead -->
       <div class="row">
 	<div class="col form-group">
 	  <label>Heating overhead [C]</label>
 	</div>
 	<div class="col form-group">
-	  <small [hidden]="settingsForm.controls.heoverhead.valid" class="text-danger">
+	  <small [hidden]="settingsForm.controls['heatoverhead'].valid" class="text-danger">
 	    Must be between 0.1 and 5
 	  </small>
-	  <input class="form-control" formControlName="heoverhead">
+	  <input class="form-control" formControlName="heatoverhead">
 	</div>
       </div>
 

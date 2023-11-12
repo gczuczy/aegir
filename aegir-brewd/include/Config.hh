@@ -10,8 +10,10 @@
 #include <string>
 #include <map>
 #include <set>
+#include <memory>
 
 #include "MAX31856.hh"
+#include "types.hh"
 
 namespace aegir {
 
@@ -34,20 +36,21 @@ namespace aegir {
   extern pinconfig_t g_pinconfig;
 
   class Config {
-    Config() = delete;
-    Config(const Config&) = delete;
+    Config();
     Config(Config&&) = delete;
     Config &operator=(const Config&) = delete;
     Config &operator=(Config&&) = delete;
 
+  public:
+    struct tcids {
+      int tcs[ThermoCouple::_SIZE];
+    };
+
   private:
-    Config(const std::string &_cfgfile, bool _noload=false);
     void setDefaults();
-    void load();
     void checkPinConfig(std::map<std::string, int> &_layout);
 
   private:
-    static Config *c_instance;
     std::string c_cfgfile;
     // Config parameters
     // The device for the GPIO controller
@@ -63,7 +66,8 @@ namespace aegir {
     // SPI / DirectSelect pin layout
     std::map<int, std::string> c_spi_dschips;
     // thermocouple layout
-    std::map<std::string, int> c_thermocouples;
+    // std::map<std::string, int> c_thermocouples;
+    tcids c_thermocouples;
     // thermocouple reading interval in seconds
     uint32_t c_thermoival;
     // PR ZMQ address
@@ -84,9 +88,11 @@ namespace aegir {
     uint32_t c_hedelay;
 
   public:
+    Config(const Config&) = delete;
     ~Config();
-    static Config *instantiate(const std::string &_cfgfile, bool _noload=false);
-    static Config *getInstance();
+    static std::shared_ptr<Config> getInstance();
+    void load(const std::string& _file);
+    Config &save(const std::string& _file);
     Config &save();
 
     // retrieve config elements
@@ -97,7 +103,7 @@ namespace aegir {
     inline const MAX31856::TCType getMAX31856TCType() const {return c_spi_max31856_tctype;};
     inline const NoiseFilters getMAX31856NoiseFilter() const { return c_spi_max31856_noisefilter;};
     inline const void getSPIDSChips(std::map<int, std::string> &_chips) const {_chips = c_spi_dschips;};
-    inline const void getThermocouples(std::map<std::string, int> &_tcs) const {_tcs = c_thermocouples;};
+    inline const tcids& getThermocouples() const { return c_thermocouples; };
     inline const uint32_t getTCival() const { return c_thermoival;};
     inline const uint16_t getPRPort() const { return c_zmq_pr_port; };
     inline const uint32_t getHEPower() const { return c_hepower; };

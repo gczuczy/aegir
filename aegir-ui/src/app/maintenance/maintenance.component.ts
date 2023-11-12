@@ -1,83 +1,87 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 
 import { ApiService } from '../api.service';
+
+import { apiStateData } from '../api.types';
+
+interface sensorData {
+  sensor: string,
+  temp: string
+};
 
 @Component({
   selector: 'app-maintenance',
   templateUrl: './maintenance.component.html',
   styleUrls: ['./maintenance.component.css']
 })
-export class MaintenanceComponent implements OnInit {
+export class MaintenanceComponent {
 
-    canmaint:boolean = false;
-    inmaint:boolean = false;
+  public sensors: sensorData[] = [];
 
-    pumpon:boolean = false;
-    bkpumpon:boolean = false;
-    heaton:boolean = false;
-    heattemp:number = 37.0;
+  canmaint:boolean = false;
+  inmaint:boolean = false;
 
-    public sensors = [];
+  pumpon:boolean = false;
+  bkpumpon:boolean = false;
+  heaton:boolean = false;
+  heattemp:number = 37.0;
 
-    constructor(private api: ApiService) {
+  constructor(private api: ApiService) {
+  }
+
+  ngOnInit() {
+    this.api.getState().subscribe(
+      (data:apiStateData) => {
+	this.updateState(data);
+      }
+    );
+  }
+
+  updateState(data: apiStateData) {
+    let state = data.state;
+
+    this.canmaint = (state == "Empty" || state == "Finished" || state == "Maintenance");
+    this.inmaint = (state == "Maintenance");
+
+    let newsensors : sensorData[] = []
+
+    for (const [key, value] of Object.entries(data.currtemp)) {
+      let temp = parseFloat(value);
+      if ( temp > 1000 ) temp = 0.0;
+      newsensors.push({'sensor': key,
+		       'temp': temp.toFixed(2)});
     }
+    this.sensors = newsensors;
+  }
 
-    ngOnInit() {
-	this.api.getState().subscribe(data => {
-	    this.updateState(data);
-	});
-    }
+  startMaintenance() {
+    this.api.startMaintenance().subscribe();
+  }
 
-    updateState(data) {
-	let state = data['state'];
-	this.sensors = [];
+  stopMaintenance() {
+    this.api.stopMaintenance().subscribe();
+  }
 
-	this.canmaint = (state == "Empty" || state == "Finished" || state == "Maintenance");
-	this.inmaint = (state == "Maintenance");
-	for (let key in data['currtemp']) {
-	    let temp = data['currtemp'][key];
-	    if ( temp > 1000 ) temp = 0.0;
-	    this.sensors.push({'sensor': key, 'temp': parseFloat(temp).toFixed(2)});
-	}
-	//console.log(data, this.canmaint);
-    }
+  onPumpChange(event:any) {
+    this.pumpon = event['checked'];
 
-    startMaintenance() {
-	this.api.startMaintenance().subscribe();
-    }
+    if ( this.heaton ) this.pumpon = true;
 
-    stopMaintenance() {
-	this.api.stopMaintenance().subscribe();
-    }
+    this.api.setMaintenance(this.pumpon, this.heaton, this.bkpumpon, this.heattemp).subscribe();
+  }
 
-    onPumpChange(event) {
-	// event is the new value
-	//console.log('onPumpChange', event);
-	this.pumpon = event['checked'];
-	if ( !this.pumpon ) {
-	    this.heaton = false;
-	}
-	this.api.setMaintenance(this.pumpon, this.heaton, this.bkpumpon, this.heattemp).subscribe();
-    }
+  onBKPumpChange(event:any) {
+    this.bkpumpon = event['checked'];
+    this.api.setMaintenance(this.pumpon, this.heaton, this.bkpumpon, this.heattemp).subscribe();
+  }
 
-    onBKPumpChange(event) {
-	// event is the new value
-	//console.log('onPumpChange', event);
-	this.bkpumpon = event['checked'];
-	this.api.setMaintenance(this.pumpon, this.heaton, this.bkpumpon, this.heattemp).subscribe();
-    }
+  onHeatChange(event:any) {
+    this.heaton = event['checked'];
+    if ( this.heaton ) this.pumpon = true;
+    this.api.setMaintenance(this.pumpon, this.heaton, this.bkpumpon, this.heattemp).subscribe();
+  }
 
-    onHeatChange(event) {
-	// event is the new value
-	//console.log('onHeatChange', event);
-	this.heaton = event['checked'];
-	if ( this.heaton ) {
-	    this.pumpon = true;
-	}
-	this.api.setMaintenance(this.pumpon, this.heaton, this.bkpumpon, this.heattemp).subscribe();
-    }
-
-    onTempSet() {
-	this.api.setMaintenance(this.pumpon, this.heaton, this.bkpumpon, this.heattemp).subscribe();
-    }
+  onTempSet() {
+    this.api.setMaintenance(this.pumpon, this.heaton, this.bkpumpon, this.heattemp).subscribe();
+  }
 }
