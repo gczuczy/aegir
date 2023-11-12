@@ -873,6 +873,8 @@ namespace aegir {
       tcdata["mt"].append(tcvals[i][ThermoCouple::MT]);
     }
 
+    tcdata["last"] = from + entries;
+
     // got a local copy of the temphistory,
     // now we can assemble the output
 

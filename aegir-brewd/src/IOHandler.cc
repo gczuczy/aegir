@@ -94,7 +94,7 @@ namespace aegir {
     gettimeofday(&tv, 0);
     ThermoReadings tr;
     for (int i=0; i < ThermoCouple::_SIZE; ++i) {
-      tr[0] = c_tcs[c_tcmap.tcs[i]]->readTCTemp();
+      tr[i] = c_tcs[c_tcmap.tcs[i]]->readTCTemp();
     }
     try {
       c_mq_pub.send(ThermoReadingMessage(tr, tv.tv_sec));
