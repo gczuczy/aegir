@@ -252,7 +252,7 @@ namespace aegir {
       if ( !c_hepause &&
 	   (events.find(kq_id_temp) != events.end() ||
 	    (c_needcontrol && c_newtemptarget)) ) {
-	printf("Rnning tempcontrol...\n");
+	printf("Running tempcontrol...\n");
 	nexttempcontrol = tempControl();
 	printf("Tempcontrol said %i secs\n", nexttempcontrol);
 	if ( nexttempcontrol < 3 ) nexttempcontrol = 3;
@@ -753,6 +753,7 @@ namespace aegir {
 
     int nextcontrol = 30;
     TSDB& tsdb = c_ps.getThermoReadings();
+    auto env = Environment::getInstance();
 
     time_t now = time(0);
 
@@ -771,8 +772,8 @@ namespace aegir {
 	 !getTemps(ThermoCouple::MT, dt, last_mt, curr_mt, dT_mt) ) {
       setHERatio(c_hecycletime, 0);
       // if we don't have historical data, then simply use the last one
-      curr_rims = c_ps.getSensorTemp(ThermoCouple::RIMS);
-      curr_mt = c_ps.getSensorTemp(ThermoCouple::MT);
+      curr_rims = env->getTempRIMS();
+      curr_mt = env->getTempMT();
       nodata = true;
     }
     if ( curr_mt == 0.0f || curr_rims == 0.0f ) return 3;
@@ -785,7 +786,7 @@ namespace aegir {
       T_target_rims = c_temptarget + std::min(c_tempoverheat, 0.2f+(c_temptarget - curr_mt)*2.3f);
     }
 
-    printf("Controller::tempControl(): %li RIMS: dt:%.2f last:%.2f curr:%.2f dT:%.4f target:%.2f\n",
+    printf("Controller::tempControl(): %li RIMS: dt:%.2f last:%.2f curr:%.2f dT:%.4f RIMS_target:%.2f\n",
 	   now, dt, last_rims, curr_rims, dT_rims, T_target_rims);
     printf("Controller::tempControl(): %li MT: dt:%.2f last:%.2f curr:%.2f dT:%.4f\n",
 	   now, dt, last_mt, curr_mt, dT_mt);
