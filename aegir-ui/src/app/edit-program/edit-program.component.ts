@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 
 import { Validators, FormGroup, FormArray, FormControl,
-	 FormBuilder, AbstractControl, ValidatorFn, ValidationErrors } from '@angular/forms';
+	 FormBuilder, AbstractControl } from '@angular/forms';
 import { ActivatedRoute, Params, Router } from '@angular/router';
 import { switchMap } from 'rxjs/operators';
 
