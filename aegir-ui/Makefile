@@ -1,5 +1,5 @@
 
-NG=node_modules/@angular/cli/bin/ng
+NG=node_modules/@angular/cli/bin/ng.js
 NODE=/usr/local/bin/node
 MODULEDIR=node_modules
 DISTDIR=dist
@@ -9,10 +9,10 @@ DISTDIR=dist
 .MAIN: devserver
 
 devserver: $(NG)
-	$(NODE) $(NG) serve --host 0.0.0.0 --disable-host-check
+	$(NG) serve --host 0.0.0.0 --disable-host-check
 
 build: $(NG)
-	$(NG) build --prod
+	$(NG) build -c production
 
 clean:
 	rm -rf $(MODULEDIR) $(DISTDIR)

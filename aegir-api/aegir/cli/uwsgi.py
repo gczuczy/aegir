@@ -8,4 +8,4 @@ from aegir.cli import parse_args
 
 args = parse_args()
 
-app = aegir.init(args.configfile)
+application = aegir.init(args.configfile)
