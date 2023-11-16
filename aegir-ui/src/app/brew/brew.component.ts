@@ -36,6 +36,7 @@ export class BrewComponent implements OnInit {
   public state: string | null = null;
   public needmalt: boolean = false;
   public targettemp: number = 0;
+  public brewtime?: string;
   public mashstep: apiStateMashStep | null = null;
   public bktemp:number | null = null;
   public hopping: apiStateHopping | null = null;
@@ -251,6 +252,8 @@ export class BrewComponent implements OnInit {
 	dtdata.push(minute + 'm' + second + 's');
       }
     }
+
+    this.brewtime = dtdata[dtdata.length-1];
 
     this.brewChartData.datasets = [
       {data: mtdata,

@@ -79,6 +79,10 @@
 	      <th>Temp target</th>
 	      <td>{{targettemp}} C</td>
 	    </tr>
+	    <tr *ngIf="brewtime">
+	      <th>Brew time</th>
+	      <td>{{brewtime}}</td>
+	    </tr>
 	    <tr *ngIf="state == 'Cooling'">
 	      <th>Cooling target</th>
 	      <td>{{cooltemp}} C</td>
