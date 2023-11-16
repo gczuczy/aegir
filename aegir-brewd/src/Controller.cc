@@ -507,7 +507,8 @@ namespace aegir {
   }
 
   void Controller::stagePreWait(PINTracker &_pt) {
-    float mttemp = c_ps.getSensorTemp("MashTun");
+    auto env = Environment::getInstance();
+    float mttemp = env->getTempMT();
     if ( mttemp == 0 ) return;
     // let's see how much time do we have till we have to start pre-heating
     uint32_t now = time(0);
@@ -529,8 +530,9 @@ namespace aegir {
   }
 
   void Controller::stagePreHeat(PINTracker &_pt) {
-    float mttemp = c_ps.getSensorTemp("MashTun");
-    float rimstemp = c_ps.getSensorTemp("RIMS");
+    auto env = Environment::getInstance();
+    float mttemp = env->getTempMT();
+    float rimstemp = env->getTempRIMS();
     float targettemp = c_prog->getStartTemp();
     //    float tempdiff = targettemp - mttemp;
 
@@ -554,8 +556,9 @@ namespace aegir {
 
     c_needcontrol = true;
 
+    auto env = Environment::getInstance();
     int8_t msno = c_ps.getMashStep();
-    float mttemp = c_ps.getSensorTemp("MashTun");
+    float mttemp = env->getTempMT();
     int nsteps = steps.size();
     if ( msno >= nsteps ) {
       // we'll go to sparging here, but first we go up to endtemp
@@ -1079,13 +1082,15 @@ namespace aegir {
 
     // loop on the heratio history backwards
     // MashTun
-    for (ssize_t i=c_heratiohistory.size(); i>=0 && t_total < 180; --i) {
+    for (ssize_t i=c_heratiohistory.size()-1; i>=0 && t_total < 180; --i) {
       auto heratiodata = c_heratiohistory[i];
       float heratio = heratiodata.ratio;
-      uint32_t dt_start = heratiodata.time - startedat;
+      uint32_t dt_start = std::abs(heratiodata.time - startedat);
       uint32_t dt_end = last_end;
       float T_start;
       float T_end;
+
+      if ( dt_start >= db.size() ) continue;
 
 #if 0
       printf("calcFlowRate()/dt_start:%u\n", dt_start);

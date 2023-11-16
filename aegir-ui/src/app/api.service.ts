@@ -97,7 +97,7 @@ export class ApiService {
       )
       .subscribe(
 	(data:apiBrewTempHistoryData) => {
-	  console.log('temphistory result', data);
+	  //console.log('temphistory result', data);
 	  this.temphistory_last = data.last;
 
 	  if ( this.temphistory_data == null ) {
