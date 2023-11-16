@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
-import { ChartConfiguration, ChartOptions, ChartType  } from 'chart.js';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
 
 import { ApiService } from '../api.service';
 
@@ -25,6 +26,8 @@ interface ChartData {
   styleUrls: ['./brew.component.css']
 })
 export class BrewComponent implements OnInit {
+  @ViewChild(BaseChartDirective)
+  public chart?: BaseChartDirective;
 
   public program: apiProgram | null = null;
 
@@ -33,6 +36,7 @@ export class BrewComponent implements OnInit {
   public state: string | null = null;
   public needmalt: boolean = false;
   public targettemp: number = 0;
+  public brewtime?: string;
   public mashstep: apiStateMashStep | null = null;
   public bktemp:number | null = null;
   public hopping: apiStateHopping | null = null;
@@ -48,47 +52,24 @@ export class BrewComponent implements OnInit {
   // volume
   public volume: number = 42;
 
-  // chart
-  /*
-  public brewChartData: Array<ChartData> = [
-    {data: [], label: 'Mash Tun'},
-    {data: [], label: 'RIMS Tube'}];
-  public brewChartLabels: Array<any> = [];
-  public brewChartOptions: ChartOptions = {
-    responsive: true,
-    spanGaps: true,
-    title: {
-      display: true,
-      text: 'RIMS and MashTun temperature'
-    },
-    scales: {
-      x: [{
-	ticks: {
-	  callback: function (value:number, index:number, values:any) {
-	    let second = value % 60;
-	    let minute = (value-second) / 60;
-	    return minute + 'm' + second + 's';
-	  }
-	}
-      }],
-      y: [{
-	ticks: {
-	  beginAtZero: true
-	}
-      }]
-    }
-  };
-  public brewChartType: ChartType = 'line';
-  public brewChartColors: Array<any> = [
-    'blue', 'red'
-    ];
-    */
+  // Chart
   public brewChartLegend:boolean = true;
   public brewChartData: ChartConfiguration<'line'>['data'] = {
     labels: [],
     datasets: []
   };
   public brewChartOptions: ChartOptions<'line'> = {
+    animation: false,
+    animations: {
+      colors: false,
+    },
+    transitions: {
+      active: {
+	animation: {
+	  duration: 0,
+	},
+      },
+    },
     responsive: true,
     spanGaps: true,
     scales: {
@@ -254,6 +235,7 @@ export class BrewComponent implements OnInit {
 
     // get the merged data from the apiService
     let th = this.api.getAllTempHistory();
+    //console.log('brew::updateTempHistroy alldata', th);
 
     let mt = this.swissCheese(th.mt);
     let rims = this.swissCheese(th.rims);
@@ -271,6 +253,8 @@ export class BrewComponent implements OnInit {
       }
     }
 
+    this.brewtime = dtdata[dtdata.length-1];
+
     this.brewChartData.datasets = [
       {data: mtdata,
        tension: 0.4,
@@ -282,6 +266,7 @@ export class BrewComponent implements OnInit {
        label: 'RIMS Tube'}
     ];
     this.brewChartData.labels = dtdata;
+    this.chart!.chart!.update('resize')
     //console.log('chartdata', this.brewChartData);
   }
 

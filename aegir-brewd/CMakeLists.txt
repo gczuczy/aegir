@@ -8,6 +8,10 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
 
 project(brewd VERSION 0.1.0 LANGUAGES CXX)
 
+if (NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES "")
+  set(CMAKE_BUILD_TYPE "Debug")
+endif()
+
 add_executable(brewd)
 
 find_package(Catch2 3 REQUIRED)

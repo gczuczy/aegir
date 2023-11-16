@@ -12,7 +12,8 @@ import { apiStateResponse, apiStateData,
 	 apiAddProgramResponse, apiAddProgramData,
 	 apiSaveProgramResponse, apiSaveProgramData,
 	 apiBrewStateVolume, apiBrewStateVolumeData,
-	 apiBrewTempHistoryResponse, apiBrewTempHistoryData
+	 apiBrewTempHistoryResponse, apiBrewTempHistoryData,
+	 apiBrewLoadProgramRequest
        } from './api.types';
 
 @Injectable({
@@ -96,7 +97,7 @@ export class ApiService {
       )
       .subscribe(
 	(data:apiBrewTempHistoryData) => {
-	  console.log('temphistory result', data);
+	  //console.log('temphistory result', data);
 	  this.temphistory_last = data.last;
 
 	  if ( this.temphistory_data == null ) {
@@ -296,4 +297,13 @@ export class ApiService {
 
     return this.http.post('/api/brewd/state/cooltemp', body, options);
   }
+
+  loadProgram(data: apiBrewLoadProgramRequest): Observable<{}> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+
+    return this.http.post('/api/brewd/program', body, options);
+  }
+
 }

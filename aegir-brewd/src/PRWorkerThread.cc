@@ -936,9 +936,9 @@ namespace aegir {
       throw Exception("Cannot set maintenance options in the current state");
     }
 
-    bool mtpump(false), heat(false), bkpump(false);
+    bool mtpump(false), heat(false), hasbkpump(false);
     float temp(37);
-    bool haspump(false), hasheat(false), hastemp(false);
+    bool haspump(false), hasheat(false), hastemp(false), bkpump(false);
     Json::Value jsonvalue;
 
     // verify the input
@@ -957,6 +957,7 @@ namespace aegir {
       heat = jsonvalue.asBool();
     }
     if ( _data.isMember("bkpump") ) {
+      hasbkpump = true;
       jsonvalue = _data["bkpump"];
       if ( !jsonvalue.isBool() )
 	throw Exception("heat must be of the type bool");
@@ -973,13 +974,35 @@ namespace aegir {
     if ( !haspump && !hasheat && !hastemp )
       throw Exception("At least one of the fields must be supplied");
 
-    // we're defensive. Do not turn on the heat without the pump
-    //if ( heat && !mtpump ) heat = false;
+#if 0
+    printf("handleSetMaintenance() mtpump has:%c set:%c\n",
+	   haspump ? 't' : 'f', mtpump ? 't' : 'f');
+    printf("handleSetMaintenance() has:%c temp:%.2f\n", hastemp?'t':'f', temp);
+    printf("handleSetMaintenance() heat has:%c set:%c\n",
+	   hasheat ? 't' : 'f', heat ? 't' : 'f');
+    printf("handleSetMaintenance() bkpump has:%c set:%c\n",
+	   hasbkpump ? 't' : 'f', bkpump ? 't' : 'f');
+#endif
 
-    ps.setMaintPump(mtpump)
-      .setMaintTemp(temp)
-      .setMaintHeat(heat)
-      .setMaintBKPump(bkpump);
+    if ( hasheat ) {
+      if ( heat ) {
+	ps.setMaintPump(true);
+	ps.setMaintHeat(heat);
+      } else if ( haspump && !mtpump ) {
+	ps.setMaintPump(false);
+	ps.setMaintHeat(false);
+      } else {
+	ps.setMaintHeat(heat);
+      }
+    }
+    if ( !hasheat || !heat && haspump ) {
+      if ( !mtpump ) {
+	ps.setMaintHeat(false);
+      }
+      ps.setMaintPump(mtpump);
+    }
+    if ( hasbkpump ) ps.setMaintBKPump(bkpump);
+    if ( hastemp ) ps.setMaintTemp(temp);
 
     // return success
     Json::Value retval;

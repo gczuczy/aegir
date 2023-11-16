@@ -252,7 +252,7 @@ namespace aegir {
       if ( !c_hepause &&
 	   (events.find(kq_id_temp) != events.end() ||
 	    (c_needcontrol && c_newtemptarget)) ) {
-	printf("Rnning tempcontrol...\n");
+	printf("Running tempcontrol...\n");
 	nexttempcontrol = tempControl();
 	printf("Tempcontrol said %i secs\n", nexttempcontrol);
 	if ( nexttempcontrol < 3 ) nexttempcontrol = 3;
@@ -507,7 +507,8 @@ namespace aegir {
   }
 
   void Controller::stagePreWait(PINTracker &_pt) {
-    float mttemp = c_ps.getSensorTemp("MashTun");
+    auto env = Environment::getInstance();
+    float mttemp = env->getTempMT();
     if ( mttemp == 0 ) return;
     // let's see how much time do we have till we have to start pre-heating
     uint32_t now = time(0);
@@ -529,8 +530,9 @@ namespace aegir {
   }
 
   void Controller::stagePreHeat(PINTracker &_pt) {
-    float mttemp = c_ps.getSensorTemp("MashTun");
-    float rimstemp = c_ps.getSensorTemp("RIMS");
+    auto env = Environment::getInstance();
+    float mttemp = env->getTempMT();
+    float rimstemp = env->getTempRIMS();
     float targettemp = c_prog->getStartTemp();
     //    float tempdiff = targettemp - mttemp;
 
@@ -554,8 +556,9 @@ namespace aegir {
 
     c_needcontrol = true;
 
+    auto env = Environment::getInstance();
     int8_t msno = c_ps.getMashStep();
-    float mttemp = c_ps.getSensorTemp("MashTun");
+    float mttemp = env->getTempMT();
     int nsteps = steps.size();
     if ( msno >= nsteps ) {
       // we'll go to sparging here, but first we go up to endtemp
@@ -753,6 +756,7 @@ namespace aegir {
 
     int nextcontrol = 30;
     TSDB& tsdb = c_ps.getThermoReadings();
+    auto env = Environment::getInstance();
 
     time_t now = time(0);
 
@@ -771,8 +775,8 @@ namespace aegir {
 	 !getTemps(ThermoCouple::MT, dt, last_mt, curr_mt, dT_mt) ) {
       setHERatio(c_hecycletime, 0);
       // if we don't have historical data, then simply use the last one
-      curr_rims = c_ps.getSensorTemp(ThermoCouple::RIMS);
-      curr_mt = c_ps.getSensorTemp(ThermoCouple::MT);
+      curr_rims = env->getTempRIMS();
+      curr_mt = env->getTempMT();
       nodata = true;
     }
     if ( curr_mt == 0.0f || curr_rims == 0.0f ) return 3;
@@ -785,7 +789,7 @@ namespace aegir {
       T_target_rims = c_temptarget + std::min(c_tempoverheat, 0.2f+(c_temptarget - curr_mt)*2.3f);
     }
 
-    printf("Controller::tempControl(): %li RIMS: dt:%.2f last:%.2f curr:%.2f dT:%.4f target:%.2f\n",
+    printf("Controller::tempControl(): %li RIMS: dt:%.2f last:%.2f curr:%.2f dT:%.4f RIMS_target:%.2f\n",
 	   now, dt, last_rims, curr_rims, dT_rims, T_target_rims);
     printf("Controller::tempControl(): %li MT: dt:%.2f last:%.2f curr:%.2f dT:%.4f\n",
 	   now, dt, last_mt, curr_mt, dT_mt);
@@ -1078,13 +1082,15 @@ namespace aegir {
 
     // loop on the heratio history backwards
     // MashTun
-    for (ssize_t i=c_heratiohistory.size(); i>=0 && t_total < 180; --i) {
+    for (ssize_t i=c_heratiohistory.size()-1; i>=0 && t_total < 180; --i) {
       auto heratiodata = c_heratiohistory[i];
       float heratio = heratiodata.ratio;
-      uint32_t dt_start = heratiodata.time - startedat;
+      uint32_t dt_start = std::abs(heratiodata.time - startedat);
       uint32_t dt_end = last_end;
       float T_start;
       float T_end;
+
+      if ( dt_start >= db.size() ) continue;
 
 #if 0
       printf("calcFlowRate()/dt_start:%u\n", dt_start);

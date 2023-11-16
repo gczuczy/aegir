@@ -1,1 +1,56 @@
-<p>load-program works!</p>
+<div class="container" *ngIf="!loadProgramForm">
+  <p>Loading form ...</p>
+</div>
+<div class="container" *ngIf="loadProgramForm">
+  <!-- API errors -->
+  <div class="container" [hidden]="!errors">
+    <div *ngFor="let error of errors"
+	 class="alert alert-danger" role="alert">
+      <strong>API Error:</strong>&nbsp;{{error}}
+    </div>
+  </div>
+  <div class="container">
+    <form [formGroup]="loadProgramForm" novalidate (ngSubmit)="submit(loadProgramForm)">
+      <div class="row">
+	<div class="col">
+	  <h1>Load program: {{program!.name}}</h1>
+	</div>
+      </div>
+      <div class="row"><div class="col"><br/></div></div>
+      <!-- start time -->
+      <fieldset class="form-group">
+	<legend>Start time</legend>
+	<div class="form-check">
+	  <label class="form-check-label">
+	    <input class="form-check-input" formControlName="startmode" type="radio" value="now"/>
+	    Now
+	  </label>
+	</div>
+	<div class="form-check">
+	  <label class="form-check-label">
+	    <input class="form-check-input" formControlName="startmode" type="radio" value="timed"/>
+	    <input class="form-control form-control-sm" formControlName="startat" type="datetime-local" min="{{mindate}}" max="{{maxdate}}"/>
+	  </label>
+	</div>
+      </fieldset>
+      <!-- Volume -->
+      <fieldset class="form-group">
+	<legend>Brew parameters</legend>
+	<div class="form-group row">
+	  <label class="col form-col-label">
+	    Volume
+	  </label>
+	  <div class="col">
+	    <input class="form-control form-control-sm" formControlName="volume" type="number"/>
+	  </div>
+	</div>
+      </fieldset>
+      <!-- submit -->
+      <div class="row">
+	<div class="col">
+	  <button type="submit" [disabled]="!loadProgramForm.valid" class="btn btn-primary">Submit</button>
+	</div>
+      </div>
+    </form>
+  </div>
+</div>

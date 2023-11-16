@@ -65,7 +65,7 @@ export class MaintenanceComponent {
   onPumpChange(event:any) {
     this.pumpon = event['checked'];
 
-    if ( this.heaton ) this.pumpon = true;
+    if ( !this.pumpon ) this.heaton = false;
 
     this.api.setMaintenance(this.pumpon, this.heaton, this.bkpumpon, this.heattemp).subscribe();
   }

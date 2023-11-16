@@ -142,3 +142,15 @@ export interface apiBrewTempHistoryResponse {
   data: apiBrewTempHistoryData,
   errors: string[]
 }
+
+export enum LoadProgramStartMode {
+  Now = "now",
+  Timed = "timed",
+}
+
+export interface apiBrewLoadProgramRequest {
+  id: number,
+  startat: string,
+  startmode: LoadProgramStartMode,
+  volume: number
+}
