@@ -10,6 +10,8 @@
 #include <map>
 #include <atomic>
 
+#include "LogChannel.hh"
+
 namespace aegir {
 
   class ThreadManager;
@@ -45,6 +47,7 @@ namespace aegir {
   private:
     std::atomic<bool> c_started;
     std::map<std::string, thread> c_threads;
+    LogChannel c_log;
 
   private:
     static ThreadManager *c_instance;

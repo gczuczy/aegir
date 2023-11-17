@@ -1,5 +1,6 @@
 target_sources(brewd
   PRIVATE
+  LogChannel.cc
   Config.cc
   Controller.cc
   DirectSelect.cc
@@ -23,7 +24,6 @@ target_sources(brewd
   types.cc
   Environment.cc
   logging.cc
-  LogChannel.cc
 )
 
 target_sources(tests

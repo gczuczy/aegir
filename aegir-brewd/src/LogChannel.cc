@@ -63,6 +63,14 @@ namespace aegir {
     va_end(args);
   }
 
+  void LogChannel::warn(const char* _fmt, ...) {
+    std::va_list args;
+
+    va_start(args, _fmt);
+    log(blt::severity_level::warning, _fmt, args);
+    va_end(args);
+  }
+
   void LogChannel::warning(const char* _fmt, ...) {
     std::va_list args;
 

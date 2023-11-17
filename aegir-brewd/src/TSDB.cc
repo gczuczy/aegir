@@ -4,7 +4,6 @@
  */
 
 #include <unistd.h>
-#include <stdio.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -68,7 +67,6 @@ namespace aegir {
 
   const TSDB::entry TSDB::last() const {
     std::shared_lock l(c_mutex);
-    printf("TSDB::last() c_size:%u\n", 0+c_size);
     if ( !c_size )
       throw Exception("No data in TSDB");
     return c_db[c_size-1];

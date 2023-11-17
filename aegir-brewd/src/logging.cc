@@ -4,6 +4,8 @@
 
 #include "logging.hh"
 
+#include <map>
+
 #define BOOST_LOG_USE_NATIVE_SYSLOG
 
 #include <boost/log/core.hpp>
@@ -14,6 +16,7 @@
 #include <boost/log/sinks/syslog_backend.hpp>
 #include <boost/log/sinks/sync_frontend.hpp>
 
+
 #ifdef BOOST_LOG_WITHOUT_SYSLOG
 #error "BOOST_LOG_WITHOUT_SYSLOG is set"
 #endif
@@ -21,6 +24,9 @@
 #ifndef BOOST_LOG_USE_NATIVE_SYSLOG
 #error "BOOST_LOG_USE_NATIVE_SYSLOG is unset"
 #endif
+
+#include "Config.hh"
+#include "Exception.hh"
 
 namespace bl = ::boost::log;
 namespace blt = ::boost::log::trivial;
@@ -35,8 +41,6 @@ namespace aegir {
     typedef bls::synchronous_sink<bls::syslog_backend> syslog_sink_t;
 
     static bool filter(const boost::log::attribute_value_set&);
-
-    static blt::severity_level g_severity = blt::info;
 
     void init() {
       auto blcore = bl::core::get();
@@ -69,12 +73,25 @@ namespace aegir {
       }
     }
 
-    void setSeverity(blt::severity_level _level) {
-      g_severity = _level;
+    std::string str(blt::severity_level _level) {
+      static std::map<blt::severity_level, std::string> levelmap{
+	{blt::severity_level::trace, "trace"},
+	{blt::severity_level::debug, "debug"},
+	{blt::severity_level::info, "info"},
+	{blt::severity_level::warning, "warning"},
+	{blt::severity_level::error, "error"},
+	{blt::severity_level::fatal, "fatal"},
+      };
+
+      auto it = levelmap.find(_level);
+      if ( it == levelmap.end() )
+	throw Exception("Unknown severity");
+
+      return it->second;
     }
 
     bool filter(const boost::log::attribute_value_set& attr_set) {
-      return attr_set["Severity"].extract<blt::severity_level>() >= g_severity;
+      return attr_set["Severity"].extract<blt::severity_level>() >= Config::getInstance()->getLogLevel();
     }
   } // ns lggoging
 } // ns aegir

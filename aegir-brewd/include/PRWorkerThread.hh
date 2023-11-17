@@ -14,6 +14,7 @@
 
 #include "ThreadManager.hh"
 #include "ZMQ.hh"
+#include "LogChannel.hh"
 
 namespace aegir {
 
@@ -34,6 +35,7 @@ namespace aegir {
     std::string c_name;
     ZMQ::Socket c_mq_prw, c_mq_iocmd;
     std::map<std::string, std::function<std::shared_ptr<Json::Value> (const Json::Value&) > > c_handlers;
+    LogChannel c_log;
 
   private:
     std::shared_ptr<Json::Value> handleJSONMessage(const Json::Value &_msg);

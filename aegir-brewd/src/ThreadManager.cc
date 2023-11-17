@@ -15,8 +15,8 @@
 namespace aegir {
 
   static void sighandler(int _sig) {
-    if ( _sig == SIGSEGV ) {
-      printf("Got a SIGSEGV\n");
+    if ( _sig == SIGSEGV || _sig == SIGABRT) {
+      printf("Got a SIGSEGV/ABRT\n");
       GPIO &gpio = *GPIO::getInstance();
       try {
 	gpio["mtheat"].low();
@@ -49,7 +49,7 @@ namespace aegir {
 
   ThreadManager *ThreadManager::c_instance = 0;
 
-  ThreadManager::ThreadManager(): c_started(false) {
+  ThreadManager::ThreadManager(): c_started(false), c_log("ThreadManager") {
   }
 
   ThreadManager::~ThreadManager() {
@@ -66,7 +66,7 @@ namespace aegir {
     // if threads are already started, then late-start it
     if ( c_started ) {
       auto it = c_threads.find(_name);
-      printf("Late-starting thread named %s\n", it->first.c_str());
+      c_log.info("Late-starting thread named %s", it->first.c_str());
       std::function<void()> f = std::bind(&ThreadManager::wrapper, this, &it->second.base);
       it->second.thr = std::thread(f);
     }
@@ -102,7 +102,7 @@ namespace aegir {
 
     // start the threads
     for (auto &it: c_threads) {
-      printf("Starting thread named %s\n", it.first.c_str());
+      c_log.info("Starting thread named %s", it.first.c_str());
       std::function<void()> f = std::bind(&ThreadManager::wrapper, this, &it.second.base);
       it.second.thr = std::thread(f);
     }
@@ -120,7 +120,7 @@ namespace aegir {
     EV_SET(&evlist[0], SIGINT, EVFILT_SIGNAL, EV_ADD|EV_CLEAR|EV_ENABLE, 0, 0, 0);
     EV_SET(&evlist[1], SIGKILL, EVFILT_SIGNAL, EV_ADD|EV_CLEAR|EV_ENABLE, 0, 0, 0);
     n = kevent(kq, evlist, 2, 0, 0, 0);
-    printf("Starting loop\n");
+    c_log.trace("Starting loop");
     while (run) {
       n = kevent(kq, 0, 0, evlist, 16, 0);
       if ( n < 0 ) continue;
@@ -136,13 +136,13 @@ namespace aegir {
 
     // waiting for thread executions to finish
     for ( auto &it: c_threads ) {
-      printf("Stopping thread %s\n", it.second.name.c_str());
+      c_log.info("Stopping thread %s", it.second.name.c_str());
       it.second.base.stop();
     }
 
     // wait for the threads to finish
     for ( auto &it: c_threads ) {
-      printf("Waiting for thread %s\n\n", it.second.name.c_str());
+      c_log.info("Waiting for thread %s", it.second.name.c_str());
       it.second.thr.join();
     }
     // close the ZMQ context

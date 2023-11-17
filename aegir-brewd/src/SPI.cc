@@ -100,7 +100,8 @@ namespace aegir {
    * SPI
    */
 
-  SPI::SPI(ChipSelector &_cs, GPIO &_gpio, const std::string &_spidev): c_cs(_cs), c_gpio(_gpio), c_spifd(-1) {
+  SPI::SPI(ChipSelector &_cs, GPIO &_gpio, const std::string &_spidev):
+    c_cs(_cs), c_gpio(_gpio), c_spifd(-1), c_log("SPI") {
     if ((c_spifd = open(_spidev.c_str(), O_RDWR)) < 0) {
       //printf("Unable to open spidev %s: %s\n", _spidev.c_str(), strerror(errno));
       throw Exception("Unable to open spidev %s: %s", _spidev.c_str(), strerror(errno));
@@ -149,7 +150,7 @@ namespace aegir {
 #endif
     CSGuard g(c_cs, _chipid);
     if ( (err = ioctl(c_spifd, SPIGENIOC_TRANSFER, &tx)) < 0 ) {
-      printf("Error during transfer: %i\n", err);
+      c_log.error("Error during transfer: %i\n", err);
       return;
     }
 #ifdef SPI_DEBUG

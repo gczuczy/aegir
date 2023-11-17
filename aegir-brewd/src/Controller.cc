@@ -67,19 +67,23 @@ namespace aegir {
    * Controller
    */
 
-  Controller::Controller(): PINTracker(), c_mq_io(ZMQ::SocketType::SUB), c_ps(ProcessState::getInstance()),
-			    c_mq_iocmd(ZMQ::SocketType::PUB), c_levelerror(false), c_needcontrol(false),
-			    c_hestartdelay(-1), c_hepause(false) {
+  Controller::Controller(): PINTracker(),
+			    c_mq_io(ZMQ::SocketType::SUB),
+			    c_ps(ProcessState::getInstance()),
+			    c_mq_iocmd(ZMQ::SocketType::PUB),
+			    c_levelerror(false), c_needcontrol(false),
+			    c_hestartdelay(-1), c_hepause(false),
+			    c_log("Controller") {
     // subscribe to our publisher for IO events
     try {
       c_mq_io.connect("inproc://iopub").subscribe("");
       c_mq_iocmd.connect("inproc://iocmd");
     }
     catch (std::exception &e) {
-      printf("Sub failed: %s\n", e.what());
+      c_log.error("Sub failed: %s", e.what());
     }
     catch (...) {
-      printf("Sub failed: unknown exception\n");
+      c_log.error("Sub failed: unknown exception");
     }
 
     c_cfg = Config::getInstance();
@@ -132,7 +136,7 @@ namespace aegir {
   }
 
   void Controller::run() {
-    printf("Controller started\n");
+    c_log.info("Controller started");
 
     c_mythread = std::this_thread::get_id();
 
@@ -184,7 +188,7 @@ namespace aegir {
 	      setPIN(psmsg->getName(), psmsg->getState());
 	    }
 	    catch (Exception &e) {
-	      printf("Error on PIN '%s'/%lu: %s\n", psmsg->getName().c_str(), psmsg->getName().length(), e.what());
+	      c_log.warn("Error on PIN '%s'/%lu: %s", psmsg->getName().c_str(), psmsg->getName().length(), e.what());
 	      continue;
 	    }
 	  } else if ( msg->type() == MessageType::THERMOREADING ) {
@@ -192,13 +196,13 @@ namespace aegir {
 	    // add it to the process state
 	    c_ps.addThermoReadings(trmsg->getTimestamp(), trmsg->getTemps());
 	  } else {
-	    printf("Got unhandled message type: %i\n", (int)msg->type());
+	    c_log.warn("Got unhandled message type: %i", (int)msg->type());
 	    continue;
 	  }
 	}
       } // End of pin and sensor readings
       catch (Exception &e) {
-	printf("Controller::run exception: %s\n", e.what());
+	c_log.error("Controller::run exception: %s", e.what());
       }
 
       // state changes and controlling goes hand-in-hand
@@ -232,29 +236,29 @@ namespace aegir {
 	float rimstemp = Environment::getInstance()->getTempRIMS();
 	if ( c_needcontrol && !c_hepause &&
 	     rimstemp >= (c_temptarget+c_cfg->getHeatOverhead()*1.15) ) {
-	  printf("Pausing heat: RIMS:%.2f Target:%.2f Overhead:%.2f (%.2f)\n",
-		 rimstemp, c_temptarget, c_cfg->getHeatOverhead(),
-		 c_temptarget+c_cfg->getHeatOverhead());
+	  c_log.info("Pausing heat: RIMS:%.2f Target:%.2f Overhead:%.2f (%.2f)",
+		     rimstemp, c_temptarget, c_cfg->getHeatOverhead(),
+		     c_temptarget+c_cfg->getHeatOverhead());
 	  c_hepause = true;
 	  setPIN("mtheat", PINState::Pulsate, 5.0f, 0.01f);
 	} else if ( c_needcontrol && c_hepause &&
 		    rimstemp < (c_temptarget+c_cfg->getHeatOverhead()*0.95) ) {
-	  printf("hepause:off newtemptarget:true\n");
+	  c_log.info("hepause:off newtemptarget:true");
 	  c_hepause = false;
 	  c_newtemptarget = true;
 	}
       }
       catch (Exception &e) {
-	printf("RIMS safety check failed: %s", e.what());
+	c_log.error("RIMS safety check failed: %s", e.what());
       }
 
       // the temp control event
       if ( !c_hepause &&
 	   (events.find(kq_id_temp) != events.end() ||
 	    (c_needcontrol && c_newtemptarget)) ) {
-	printf("Running tempcontrol...\n");
+	c_log.debug("Running tempcontrol...");
 	nexttempcontrol = tempControl();
-	printf("Tempcontrol said %i secs\n", nexttempcontrol);
+	c_log.trace("Tempcontrol said %i secs", nexttempcontrol);
 	if ( nexttempcontrol < 3 ) nexttempcontrol = 3;
 	else if ( nexttempcontrol > 30 ) nexttempcontrol = 30;
 	tc_installed = false;	// oneshot fired, needs reinstall
@@ -268,7 +272,7 @@ namespace aegir {
 
 	// register the events
 	kqerr = kevent(kq, kevchanges, 1, 0, 0, 0);
-	printf("Installed tempcontrol for %i secs\n", nexttempcontrol);
+	c_log.debug("Installed tempcontrol for %i secs", nexttempcontrol);
 	tc_installed = true;
       }
 
@@ -280,16 +284,13 @@ namespace aegir {
 
 	// register the events
 	kqerr = kevent(kq, kevchanges, 1, 0, 0, 0);
-	printf("Removed tempcontrol\n");
+	c_log.debug("Removed tempcontrol");
 	tc_installed = false;
       }
 
       // TODO: REVISE, seprate the level error case
       // if the recirc button is pushed, or we don't need tempcontrol anymore
       // stop the pump and the heating element
-#if 0
-      printf("c_levelerror: %c needcontrol: %c\n", c_levelerror?'t':'f', c_needcontrol?'t':'f');
-#endif
       if ( c_levelerror || !c_needcontrol ) {
 	if ( c_ps.getState() != ProcessState::States::Maintenance  ) {
 	  if ( c_ps.getForceMTPump() ) {
@@ -302,7 +303,7 @@ namespace aegir {
 	setPIN("mtheat", PINState::Off);
       } // stop recirculation if we don't need control anymore, OR there's level error
       if ( c_needcontrol && c_ps.getBlockHeat() ) {
-	printf("Setting mtheat off %i\n", __LINE__);
+	c_log.warn("Setting mtheat off");
 	setPIN("mtheat", PINState::Off);
       }
 
@@ -327,7 +328,7 @@ namespace aegir {
 
     c_mq_io.close();
     c_mq_iocmd.close();
-    printf("Controller stopped\n");
+    c_log.info("Controller stopped");
   }
 
   void Controller::reconfigure() {
@@ -357,7 +358,7 @@ namespace aegir {
     if ( it != c_stagehandlers.end() ) {
       it->second(this, _pt);
     } else {
-      printf("No function found for state %hhu\n", state);
+      c_log.warn("No function found for state %hhu", state);
     }
 
   } // controlProcess
@@ -521,7 +522,7 @@ namespace aegir {
     if ( tempdiff > 0 )
       phtime = calcHeatTime(c_ps.getVolume(), tempdiff, 0.001*c_cfg->getHEPower());
 
-    printf("Controller::controllProcess() td:%.2f PreHeatTime:%u\n", tempdiff, phtime);
+    c_log.trace("Controller::controllProcess() td:%.2f PreHeatTime:%u", tempdiff, phtime);
     uint32_t startat = c_ps.getStartat();
     if ( (now + phtime*1.15) > startat ) {
       c_ps.setState(ProcessState::States::PreHeat);
@@ -582,7 +583,7 @@ namespace aegir {
       if ( mttemp >= ms.temp - c_cfg->getTempAccuracy() ) {
 	c_ps.setMashStep(0);
 	c_ps.setMashStepStart(now);
-	printf("Controller::stageMashing(): starting step 0 at %.2f/%.2f\n", mttemp, ms.temp);
+	c_log.info("Controller::stageMashing(): starting step 0 at %.2f/%.2f", mttemp, ms.temp);
 	return;
       }
     } else {
@@ -789,9 +790,9 @@ namespace aegir {
       T_target_rims = c_temptarget + std::min(c_tempoverheat, 0.2f+(c_temptarget - curr_mt)*2.3f);
     }
 
-    printf("Controller::tempControl(): %li RIMS: dt:%.2f last:%.2f curr:%.2f dT:%.4f RIMS_target:%.2f\n",
+    c_log.debug("Controller::tempControl(): %li RIMS: dt:%.2f last:%.2f curr:%.2f dT:%.4f RIMS_target:%.2f",
 	   now, dt, last_rims, curr_rims, dT_rims, T_target_rims);
-    printf("Controller::tempControl(): %li MT: dt:%.2f last:%.2f curr:%.2f dT:%.4f\n",
+    c_log.debug("Controller::tempControl(): %li MT: dt:%.2f last:%.2f curr:%.2f dT:%.4f",
 	   now, dt, last_mt, curr_mt, dT_mt);
 
     float last_ratio = getPIN("mtheat")->getOldOnratio();
@@ -832,7 +833,7 @@ namespace aegir {
       }
       float heratio = std::pow(coeff_tgt * coeff_rt, 0.71);
 
-      printf("Controller::tempControl(): nodata heratio:%.2f\n", heratio);
+      c_log.debug("Controller::tempControl(): nodata heratio:%.2f", heratio);
       setHERatio(c_hecycletime, heratio);
       return 3;
     }
@@ -896,24 +897,25 @@ namespace aegir {
 	    if ( size > 300 ) mt300 = tsdb.at(size-300)[ThermoCouple::MT];
 	    else mt300 = tsdb.at(0)[ThermoCouple::MT];
 	    if ( size<300 || mt300 < curr_mt) {
-	      printf("!! RIMS cooling, can't find t-300 or it's cooler than current temp\n");
+	      c_log.warn("!! RIMS cooling, can't find t-300 or it's cooler than current temp");
 	      pwr_max = hepwr * 0.35;
-	      printf("Limiting max power to 35%%: %.2f\n", pwr_max);
+	      c_log.warn("Limiting max power to 35%%: %.2f", pwr_max);
 	    } else {
 	      float diff_temp = mt300 - curr_mt;
 	      uint32_t diff_time = size > 300 ? 300 : size;
 	      float pwr_cooling = (4.2 * c_ps.getVolume() * diff_temp) / diff_time;
 	      pwr_max = pwr_cooling * 1.5;
-	      printf("Cooling (%.2f C / %i sec) limiting pwr to %.2f\n", diff_temp, diff_time, pwr_max);
+	      c_log.warn("Cooling (%.2f C / %i sec) limiting pwr to %.2f",
+			 diff_temp, diff_time, pwr_max);
 	    }
 	  }
 	}
       }	// if ( dT_mt > 0 ) else
     }	// if ( nodata ) else
 
-    printf("Controller::tempControl(): MT: dTc_temptarget:%.2f dt:%.2f hepwr:%.2f pwr_mt:%.2f nodata:%c\n",
-	   dT_mtc_temptarget, dt_mt, hepwr, pwr_mt,
-	   nodata ? 't' : 'f');
+    c_log.debug("Controller::tempControl(): MT: dTc_temptarget:%.2f dt:%.2f hepwr:%.2f pwr_mt:%.2f nodata:%c",
+		dT_mtc_temptarget, dt_mt, hepwr, pwr_mt,
+		nodata ? 't' : 'f');
 
     // adjust the next control time
     if ( dt_mt < 60 ) {
@@ -934,10 +936,10 @@ namespace aegir {
 
       if ( pwr_last_effective < 0 && (curr_mt + dt*30)<c_temptarget)
 	pwr_abs_min = std::fabs(pwr_last_effective);
-      printf("Controller::tempControl(): pwr last:%.2f eff:%.2f diff:%.5f\n",
-	     pwr_last, pwr_last_effective, diff);
-      printf("Controller::tempControl(): dissipation: %.3f pwr_abs_min:%.2f\n",
-	     pwr_dissipation, pwr_abs_min);
+      c_log.debug("Controller::tempControl(): pwr last:%.2f eff:%.2f diff:%.5f",
+		  pwr_last, pwr_last_effective, diff);
+      c_log.debug("Controller::tempControl(): dissipation: %.3f pwr_abs_min:%.2f",
+		  pwr_dissipation, pwr_abs_min);
     }
 
     /* The RIMS tube has a min a max value limiting its power,
@@ -956,7 +958,7 @@ namespace aegir {
     // without data, the RIMS tube is practically not adjustable
     if ( !nodata ) {
       float flowrate = calcFlowRate();
-      printf("Flowrate: %.6f\n", flowrate);
+      c_log.trace("Flowrate: %.6f", flowrate);
 
       if ( flowrate > 0  ) {
 	// again, time would be on both sides of the equation
@@ -965,8 +967,8 @@ namespace aegir {
 	if ( curr_rims < (T_target_rims - 1.5f) )
 	  pwr_rims = (pwr_rims + hepwr)/2;
 
-	printf("pwr_rms(%.2f) = (4.2 * flowrate(%.5f) * (T_target_rims(%.2f) - curr_mt(%.2f)))/1\n",
-	       pwr_rims, flowrate, T_target_rims, curr_mt);
+	c_log.info("pwr_rms(%.2f) = (4.2 * flowrate(%.5f) * (T_target_rims(%.2f) - curr_mt(%.2f)))/1",
+		   pwr_rims, flowrate, T_target_rims, curr_mt);
       }
 
       if ( dT_mtc_temptarget < 0.5 ) {
@@ -992,8 +994,8 @@ namespace aegir {
     // apply min/max boundaries
     // Controller::tempControl(): RIMS pwr: final:0.00 min:0.06 max:3.00 calc:1.93 max:0.00
     pwr_rims_final = std::min({std::max(pwr_rims_min, pwr_rims)+ pwr_dissipation_rims, pwr_rims_max, pwr_max});
-    printf("Controller::tempControl(): RIMS pwr: final:%.2f min:%.2f max:%.2f calc:%.2f max:%.2f\n",
-	   pwr_rims_final, pwr_rims_min, pwr_rims_max, pwr_rims, pwr_max);
+    c_log.debug("Controller::tempControl(): RIMS pwr: final:%.2f min:%.2f max:%.2f calc:%.2f max:%.2f",
+		pwr_rims_final, pwr_rims_min, pwr_rims_max, pwr_rims, pwr_max);
     float her_rims = pwr_rims_final / hepwr;
 
     // MashTun heating element on-ratio
@@ -1005,11 +1007,11 @@ namespace aegir {
     float heratio = pwr_final / hepwr;
     if ( heratio < 0.004f && curr_mt < c_temptarget && curr_rims < c_temptarget)
       heratio = 0.05f;
-    printf("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.3f(MT:%.2f / RIMS:%.2f)\n",
-	   c_temptarget, c_tempoverheat,
-	   dT_rims, dT_mtc_temptarget,
-	   hepwr, pwr_mt, pwr_rims_final,
-	   heratio, her_mt, her_rims);
+    c_log.debug("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.3f(MT:%.2f / RIMS:%.2f)",
+		c_temptarget, c_tempoverheat,
+		dT_rims, dT_mtc_temptarget,
+		hepwr, pwr_mt, pwr_rims_final,
+		heratio, her_mt, her_rims);
 
     setHERatio(c_hecycletime, heratio);
     return nextcontrol;
@@ -1029,11 +1031,11 @@ namespace aegir {
       _last = db.at(size-1-_dt)[_tc];
     }
     catch (std::exception &e) {
-      printf("getTemps() failed %s\n", e.what());
+      c_log.error("getTemps() failed %s", e.what());
       return false;
     }
     catch ( ... ) {
-      printf("getTemps() failed with unknown exception\n");
+      c_log.error("getTemps() failed with unknown exception");
       return false;
     }
     _dT = (_curr - _last)/(1.0*_dt);
@@ -1068,7 +1070,7 @@ namespace aegir {
     // last timestamp
     if ( startedat <= 0 ) startedat = db.last().time;
 
-    printf("startedat: %u\n", startedat);
+    c_log.trace("calcFlowRate(): startedat: %u", startedat);
 
 
     uint32_t t_total(0);
@@ -1102,9 +1104,9 @@ namespace aegir {
 
       auto tempsit = db.atDeltaTime(dt_start);
       if ( tempsit->dt != dt_start ) {
-	printf("%s:%i: db.atDeltaTime(%u) miss: %lu\n",
-	       __FILE__, __LINE__,
-	       dt_start, tempsit->dt);
+	c_log.trace("%s:%i: db.atDeltaTime(%u) miss: %lu",
+		    __FILE__, __LINE__,
+		    dt_start, tempsit->dt);
 	last_end = dt_start;
 	continue;
       }

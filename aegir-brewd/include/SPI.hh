@@ -12,6 +12,8 @@
 #include <string>
 #include <initializer_list>
 
+#include "LogChannel.hh"
+
 namespace aegir {
 
   class ChipSelector {
@@ -55,6 +57,7 @@ namespace aegir {
     ChipSelector &c_cs;
     GPIO &c_gpio;
     int c_spifd;
+    LogChannel c_log;
   };
 
 }

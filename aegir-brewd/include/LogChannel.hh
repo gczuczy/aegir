@@ -28,6 +28,7 @@ namespace aegir {
     void trace(const char* _fmt, ...);
     void debug(const char* _fmt, ...);
     void info(const char* _fmt, ...);
+    void warn(const char* _fmt, ...);
     void warning(const char* _fmt, ...);
     void error(const char* _fmt, ...);
     void fatal(const char* _fmt, ...);

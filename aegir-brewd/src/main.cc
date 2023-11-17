@@ -36,11 +36,11 @@ int main(int argc, char *argv[]) {
     po::notify(vm);
   }
   catch (std::exception &e) {
-    fprintf(stderr, "Exception while parsing arguments: %s\n", e.what());
+    fprintf(stderr, "Exception while parsing arguments: %s", e.what());
     return 1;
   }
   catch (...) {
-    fprintf(stderr, "Unknown exception while parsing arguments\n");
+    fprintf(stderr, "Unknown exception while parsing arguments");
     return 1;
   }
 
@@ -61,8 +61,6 @@ int main(int argc, char *argv[]) {
   //BOOST_LOG_TRIVIAL(info) << "Aegir starting up..";
   log.log("Aegir starting up...");
 
-  //printf("Config file: %s\n", cfgfile.c_str());
-
   // parse the config file first
   auto cfg = aegir::Config::getInstance();
   if ( initcfg ) {
@@ -70,7 +68,7 @@ int main(int argc, char *argv[]) {
       cfg->save(cfgfile);
     }
     catch(aegir::Exception &e) {
-      fprintf(stderr, "Error while saving configuration: %s\n", e.what());
+      log.fatal("Error while saving configuration: %s", e.what());
       return 3;
     }
     return 0;
@@ -79,7 +77,7 @@ int main(int argc, char *argv[]) {
       cfg->load(cfgfile);
     }
     catch (aegir::Exception &e) {
-      fprintf(stderr, "Error while loading config: %s\n", e.what());
+      log.fatal("Error while loading config: %s", e.what());
       return 2;
     }
   }
@@ -92,7 +90,7 @@ int main(int argc, char *argv[]) {
     gpio = aegir::GPIO::getInstance();
   }
   catch (aegir::Exception &e) {
-    fprintf(stderr, "Error initializing GPIO interface: %s\n", e.what());
+    log.fatal("Error initializing GPIO interface: %s", e.what());
     return 1;
   }
 
@@ -119,16 +117,17 @@ int main(int argc, char *argv[]) {
     delete ioh;
   }
   catch (aegir::Exception &e) {
-    fprintf(stderr, "Error starting up: %s\n", e.what());
+    log.fatal("Error starting up: %s", e.what());
     return 2;
   }
   catch (std::exception &e) {
-    fprintf(stderr, "Error/std starting up: %s\n", e.what());
+    log.fatal("Error/std starting up: %s", e.what());
     return 2;
   }
 
   // deallocating stuff here
   delete gpio;
 
+  log.info("Exitting...");
   return 0;
 }
