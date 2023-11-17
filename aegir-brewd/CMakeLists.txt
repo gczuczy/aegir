@@ -4,7 +4,8 @@ set(default_build_type "Release")
 set(CMAKE_CXX_STANDARD 20)
 set(Boost_NO_WARN_NEW_VERSIONS 1)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
-
+set(Boost_NO_BOOST_CMAKE OFF)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 
 project(brewd VERSION 0.1.0 LANGUAGES CXX)
 
@@ -59,6 +60,8 @@ find_package(Threads)
 if(NOT Threads_FOUND)
   message(FATAL_ERROR "threading is required")
 endif()
+message(STATUS "Thread library to use: ${CMAKE_THREAD_LIBS_INIT}")
+message(STATUS "Thread library pthread compatible: ${CMAKE_USE_PTHREAD}")
 
 # boost
 find_package(Boost
@@ -121,32 +124,32 @@ target_link_options(brewd
   PRIVATE
   -L/usr/local/lib
   -L${Boost_LIBRARY_DIRS}
-  -pthread
-  -lgpio
-  -lyaml-cpp
-  -lzmq
-  -ljsoncpp
+  Threads::Threads
 )
 
 target_link_libraries(brewd
   PRIVATE
   Boost::program_options
   Boost::log
+  gpio
+  yaml-cpp
+  zmq
+  jsoncpp
 )
 
 target_link_options(tests
   PRIVATE
   -L/usr/local/lib
   -L${Boost_LIBRARY_DIRS}
-  -pthread
-  -lyaml-cpp
-  -lzmq
-  -ljsoncpp
+  Threads::Threads
 )
 
 target_link_libraries(tests
   PRIVATE
   Catch2::Catch2WithMain
+  yaml-cpp
+  zmq
+  jsoncpp
 )
 
 add_subdirectory(src)
@@ -164,6 +167,8 @@ set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
 set_property(TARGET tests PROPERTY CXX_EXTENSIONS False)
 
 target_compile_features(tests PRIVATE cxx_std_20)
+
+# and finally enable testing
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Generated with config types: ${CMAKE_CONFIGURATION_TYPES}")
