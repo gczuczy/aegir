@@ -65,7 +65,8 @@ endif()
 find_package(Boost
   1.83.0
   REQUIRED
-  COMPONENTS program_options
+  CONFIG
+  COMPONENTS program_options log
 )
 if(NOT Boost_FOUND)
   message(FATAL_ERROR "Boost program options is required")
@@ -121,11 +122,16 @@ target_link_options(brewd
   -L/usr/local/lib
   -L${Boost_LIBRARY_DIRS}
   -pthread
-  -lboost_program_options
   -lgpio
   -lyaml-cpp
   -lzmq
   -ljsoncpp
+)
+
+target_link_libraries(brewd
+  PRIVATE
+  Boost::program_options
+  Boost::log
 )
 
 target_link_options(tests
