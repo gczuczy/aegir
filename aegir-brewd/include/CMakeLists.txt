@@ -22,6 +22,7 @@ list(APPEND brewd_HEADERS
   types.hh
   Environment.hh
   logging.hh
+  LogChannel.hh
 )
 
 # disabled due to

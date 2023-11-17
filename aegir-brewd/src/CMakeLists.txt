@@ -23,6 +23,7 @@ target_sources(brewd
   types.cc
   Environment.cc
   logging.cc
+  LogChannel.cc
 )
 
 target_sources(tests

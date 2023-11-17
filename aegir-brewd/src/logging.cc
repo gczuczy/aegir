@@ -27,7 +27,7 @@ namespace blt = ::boost::log::trivial;
 namespace bla = ::boost::log::attributes;
 namespace bls = ::boost::log::sinks;
 namespace blk = ::boost::log::keywords;
-//namespace blf = boost::log::filters;
+namespace ble = ::boost::log::expressions;
 
 namespace aegir {
   namespace logging {
@@ -54,7 +54,18 @@ namespace aegir {
 ));
 	backend->set_severity_mapper(bls::syslog::direct_severity_mapping<int>("Severity"));
 
-	blcore->add_sink(boost::make_shared<syslog_sink_t>(backend));
+	auto frontend = boost::make_shared<syslog_sink_t>(backend);
+
+	frontend->set_formatter(
+				ble::stream
+				<< ble::attr<std::string>("Channel")
+				<< ":"
+				<< ble::attr<blt::severity_level>("Severity")
+				<< " "
+				<< ble::smessage
+				);
+
+	blcore->add_sink(frontend);
       }
     }
 
