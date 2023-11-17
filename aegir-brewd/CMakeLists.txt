@@ -16,7 +16,6 @@ add_executable(brewd)
 
 find_package(Catch2 3 REQUIRED)
 add_executable(tests)
-target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 include(CTest)
 include(Catch)
 catch_discover_tests(tests)
@@ -107,6 +106,7 @@ check_ipo_supported(RESULT LTO_supported OUTPUT error)
 if(LTO_supported)
   message(STATUS "Enabling IPO/LTO")
   set_property(TARGET brewd PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+  set_property(TARGET tests PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 else()
   message(STATUS "IPO/LTO not supported: <${error}>")
 endif()
@@ -144,6 +144,11 @@ target_link_options(tests
   -ljsoncpp
 )
 
+target_link_libraries(tests
+  PRIVATE
+  Catch2::Catch2WithMain
+)
+
 add_subdirectory(src)
 add_subdirectory(include)
 add_subdirectory(tests)
@@ -153,6 +158,12 @@ set_property(TARGET brewd PROPERTY CXX_STANDARD_REQUIRED True)
 set_property(TARGET brewd PROPERTY CXX_EXTENSIONS False)
 
 target_compile_features(brewd PRIVATE cxx_std_20)
+
+set_property(TARGET tests PROPERTY CXX_STANDARD 20)
+set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
+set_property(TARGET tests PROPERTY CXX_EXTENSIONS False)
+
+target_compile_features(tests PRIVATE cxx_std_20)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Generated with config types: ${CMAKE_CONFIGURATION_TYPES}")
