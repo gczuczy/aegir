@@ -132,7 +132,7 @@ target_link_libraries(brewd
   Boost::program_options
   Boost::log
   gpio
-  yaml-cpp
+  yaml-cpp::yaml-cpp
   zmq
   jsoncpp
 )
@@ -147,7 +147,7 @@ target_link_options(tests
 target_link_libraries(tests
   PRIVATE
   Catch2::Catch2WithMain
-  yaml-cpp
+  yaml-cpp::yaml-cpp
   zmq
   jsoncpp
 )
