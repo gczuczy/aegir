@@ -22,6 +22,7 @@ target_sources(brewd
   TSDB.cc
   types.cc
   Environment.cc
+  logging.cc
 )
 
 target_sources(tests

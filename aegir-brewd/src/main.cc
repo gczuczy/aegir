@@ -5,6 +5,7 @@
 
 #include <boost/program_options.hpp>
 
+#include "logging.hh"
 #include "Config.hh"
 #include "Exception.hh"
 #include "GPIO.hh"
@@ -53,6 +54,9 @@ int main(int argc, char *argv[]) {
   }
 
   if ( vm.count("init-config") ) initcfg = true;
+
+  aegir::logging::init();
+  BOOST_LOG_TRIVIAL(info) << "Aegir starting up..";
 
   //printf("Config file: %s\n", cfgfile.c_str());
 
