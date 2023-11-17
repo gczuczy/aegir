@@ -15,6 +15,7 @@
 #include "ElapsedTime.hh"
 #include "Config.hh"
 #include "Environment.hh"
+#include "logging.hh"
 
 namespace aegir {
 
@@ -258,13 +259,13 @@ namespace aegir {
     catch (Exception &e) {
       Json::Value root;
       root["status"] = "error";
-      root["message"] = e.what();
+      root["message"] = std::string("Exception: ") + std::string(e.what());
       return std::make_shared<Json::Value>(root);
     }
     catch (std::exception &e) {
       Json::Value root;
       root["status"] = "error";
-      root["message"] = e.what();
+      root["message"] = std::string("std::exception: ") + std::string(e.what());
       return std::make_shared<Json::Value>(root);
     }
     catch (...) {
@@ -1065,6 +1066,7 @@ namespace aegir {
     data["cooltemp"] = cfg->getCoolTemp();
     data["heatoverhead"] = cfg->getHeatOverhead();
     data["hedelay"] = cfg->getHEDelay();
+    data["loglevel"] = logging::str(cfg->getLogLevel());
 
     // return success
     Json::Value retval;
@@ -1086,12 +1088,14 @@ namespace aegir {
     Json::Value jsonvalue;
     uint32_t hepwr, hedelay;
     float tempaccuracy, heatoverhead, cooltemp;
+    std::string loglevel;
 
     hepwr = cfg->getHEPower();
     tempaccuracy = cfg->getTempAccuracy();
     heatoverhead = cfg->getHeatOverhead();
     cooltemp = cfg->getCoolTemp();
     hedelay = cfg->getHEDelay();
+    loglevel = logging::str(cfg->getLogLevel());
 
     // he power
     if ( _data.isMember("hepower") ) {
@@ -1120,7 +1124,7 @@ namespace aegir {
 	throw Exception("heatoverhead must be a float");
 
       heatoverhead = _data["heatoverhead"].asFloat();
-      if ( heatoverhead <= 0.5 || heatoverhead >= 2.0 )
+      if ( heatoverhead <= 0.5 || heatoverhead >= 5.0 )
 	throw Exception("heatoverhead is out of range");
     }
 
@@ -1145,11 +1149,20 @@ namespace aegir {
 	throw Exception("hedelay is out of range");
     }
 
+    // he startup delay
+    if ( _data.isMember("loglevel") ) {
+      if ( !_data["loglevel"].isConvertibleTo(Json::ValueType::stringValue) )
+	throw Exception("loglevel must be a string");
+
+      loglevel = _data["loglevel"].asString();
+    }
+
     cfg->setHEPower(hepwr).
       setTempAccuracy(tempaccuracy).
       setHeatOverhead(heatoverhead).
       setCoolTemp(cooltemp).
       setHEDelay(hedelay).
+      setLogLevel(loglevel).
       save();
 
     // return success

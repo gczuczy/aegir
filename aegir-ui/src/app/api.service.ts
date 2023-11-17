@@ -154,6 +154,16 @@ export class ApiService {
       );
   }
 
+  setConfig(cfg: apiConfig): Observable<{}> {
+    let body = JSON.stringify(cfg);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+
+    //console.log('calling /api/brewd/state', body, options);
+
+    return this.http.post('/api/brewd/config', body, options);
+  }
+
   announceUpdate() {
     this.updateAnnounce$.next(true);
   }

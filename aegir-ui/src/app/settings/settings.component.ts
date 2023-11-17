@@ -26,6 +26,10 @@ export class SettingsComponent {
     heatoverhead: new FormControl("", [Validators.required,
       (control: AbstractControl) => Validators.min(0.1)(control),
       (control: AbstractControl) => Validators.max(5)(control)]),
+    hedelay: new FormControl("", [Validators.required,
+      (control: AbstractControl) => Validators.min(5)(control),
+      (control: AbstractControl) => Validators.max(30)(control)]),
+    loglevel: new FormControl("info", [Validators.required]),
   });
 
   public errors: string[] = [];
@@ -34,20 +38,44 @@ export class SettingsComponent {
   }
 
   ngOnInit() {
+    this.updateConfig();
+  }
+
+  updateConfig() {
     this.api.getConfig().subscribe(
       (res:apiConfig) => {
 	this.settingsForm.patchValue({
 	  hepower: res.hepower,
 	  tempaccuracy: res.tempaccuracy.toFixed(2),
+	  cooltemp: res.cooltemp,
 	  heatoverhead: res.heatoverhead.toFixed(2),
-	  cooltemp: res.cooltemp
+	  hedelay: res.hedelay,
+	  loglevel: res.loglevel,
 	});
       }
     );
   }
 
+  save(model: FormGroup) {
+    let data: apiConfig = {
+      hepower: model.get('hepower')!.value,
+      tempaccuracy: model.get('tempaccuracy')!.value,
+      cooltemp: model.get('cooltemp')!.value,
+      heatoverhead: model.get('heatoverhead')!.value,
+      hedelay: model.get('hedelay')!.value,
+      loglevel: model.get('loglevel')!.value,
+    };
 
-  save(x:any) {
+    this.api.setConfig(data).subscribe(
+      (resp:any) => {
+	console.log('setConfig resp', resp);
+	this.updateConfig();
+      },
+      (err: any) => {
+	console.log('setConfig error', err);
+	this.updateConfig();
+      }
+    );
   }
 
 }

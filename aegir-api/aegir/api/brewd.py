@@ -107,7 +107,7 @@ class BrewConfig(flask_restful.Resource):
             return {"status": "error", "errors": ['Malformed response']}, 422
 
         if zresp['status'] != 'success':
-            return {"status": "error", "errors": ['Error in response']}, 422
+            return {"status": "error", "errors": [zresp.get('message', 'Unknown error')]}, 422
 
         return {'status': 'success', 'data': zresp['data']}
 
@@ -120,11 +120,18 @@ class BrewConfig(flask_restful.Resource):
         zresp = None
         zdata = {}
 
-        for var in ['hepower', 'tempaccuracy', 'heatoverhead', 'cooltemp']:
+        floats = ['tempaccuracy', 'heatoverhead', 'cooltemp']
+
+        for var in ['hepower', 'tempaccuracy', 'heatoverhead',
+                    'cooltemp', 'loglevel']:
             if var in data:
-                zdata = data[var]
+                if var in floats:
+                    zdata[var] = float(data[var])
+                else:
+                    zdata[var] = data[var]
                 pass
             pass
+
 
         try:
             zresp = aegir.zmq.prmessage('setConfig', zdata)
@@ -137,7 +144,7 @@ class BrewConfig(flask_restful.Resource):
 
         if zresp['status'] != 'success':
             #pprint(['error in zresp', zresp])
-            return {"status": "error", "errors": ['Error in response']}, 422
+            return {"status": "error", "errors": [zresp.get('message', 'Unknown error')]}, 422
 
         return {'status': 'success'}
 
@@ -160,7 +167,7 @@ class BrewState(flask_restful.Resource):
             return {"status": "error", "errors": ['Malformed response']}, 422
 
         if zresp['status'] != 'success':
-            return {"status": "error", "errors": ['Error in response']}, 422
+            return {"status": "error", "errors": [zresp.get('message', 'Unknown error')]}, 422
 
         return {'status': 'success', 'data': zresp['data']}
 
@@ -203,7 +210,7 @@ class BrewState(flask_restful.Resource):
 
         if zresp['status'] != 'success':
             #pprint(['error in zresp', zresp])
-            return {"status": "error", "errors": ['Error in response']}, 422
+            return {"status": "error", "errors": [zresp.get('message', 'Unknown error')]}, 422
 
         return {'status': 'success'}
 

@@ -9,7 +9,7 @@ import aegir.api
 import aegir.zmq
 import aegir.db
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 _app = None
 _api = None
