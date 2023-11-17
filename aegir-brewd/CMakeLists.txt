@@ -169,6 +169,7 @@ set_property(TARGET tests PROPERTY CXX_EXTENSIONS False)
 target_compile_features(tests PRIVATE cxx_std_20)
 
 # and finally enable testing
+enable_testing()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Generated with config types: ${CMAKE_CONFIGURATION_TYPES}")
