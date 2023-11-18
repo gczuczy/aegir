@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# PROVIDE: aegir-brewd
+# REQUIRE: DAEMON
+# BEFORE: LOGIN cleanvar
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name=aegir_brewd
+rcvar=aegir_brewd_enable
+command=/usr/local/sbin/aegir-brewd
+pidfile=/var/run/aegir-brewd.pid
+
+aegir_brewd_flags="-d -p ${pidfile}"
+
+load_rc_config $name
+: ${aegir_brewd_enable:="no"}
+
+run_rc_command "$1"
+
