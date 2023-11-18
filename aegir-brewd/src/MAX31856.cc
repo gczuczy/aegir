@@ -7,6 +7,8 @@
 #include <thread>
 #include <list>
 
+#include "Exception.hh"
+
 namespace aegir {
 
   MAX31856::MAX31856(SPI &_spi, int _chipid): c_spi(_spi), c_chipid(_chipid), c_convmode(false) {
@@ -83,8 +85,7 @@ namespace aegir {
 
   MAX31856 &MAX31856::setAvgMode(MAX31856::AvgMode _mode) {
     if ( c_convmode ) {
-      printf("Don't set AvgMode while conversion mode is on");
-      throw std::exception();
+      throw Exception("Don't set AvgMode while conversion mode is on");
     }
 
     SPI::Data cmd{(uint8_t)Register::CR1}, data(1);
@@ -140,7 +141,9 @@ namespace aegir {
     uint8_t mask = 0b11110000;
     uint8_t offset = ((_offset<0)?1<<8:0)|(uint8_t)(_offset*16);
 
+#ifdef MAX31856_DEBUG
     printf("setCJOffset(%i, %.4f): offset:%u\n", c_chipid, _offset, offset);
+#endif
 
     data[0] = offset;
 #ifdef MAX31856_DEBUG

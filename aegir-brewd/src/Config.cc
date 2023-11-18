@@ -9,6 +9,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include "Exception.hh"
+#include "logging.hh"
 
 namespace aegir {
 
@@ -132,6 +133,9 @@ namespace aegir {
 
     // HE startup delay
     c_hedelay = 10;
+
+    // loglevel
+    c_loglevel = blt::severity_level::info;
   }
 
   void Config::load(const std::string& _file) {
@@ -323,6 +327,12 @@ namespace aegir {
 	  throw Exception("HE startup delay must be less than 30");
       }
 
+      // LogLevel
+      if ( config["loglevel"] && config["loglevel"].IsScalar() ) {
+	std::string level = config["loglevel"].as<std::string>();
+	setLogLevel(level);
+      }
+
     }
     catch (std::exception &e) {
       throw Exception("Error during parsing config: %s", e.what());
@@ -420,6 +430,10 @@ namespace aegir {
     // cooling temperature
     yout << YAML::Key << "hedelay" << YAML::Value << c_hedelay;
 
+    // loglevel
+    yout << YAML::Key << "loglevel"
+	 << YAML::Value << logging::str(c_loglevel);
+
     // End the config
     yout << YAML::EndMap;
 
@@ -463,6 +477,29 @@ namespace aegir {
 
   Config &Config::setHEDelay(uint32_t _v) {
     c_hedelay = _v;
+    return *this;
+  }
+
+  Config &Config::setLogLevel(const std::string& _level) {
+    static std::map<std::string, blt::severity_level> levelmap{
+      {"trace", blt::severity_level::trace},
+      {"debug", blt::severity_level::debug},
+      {"info", blt::severity_level::info},
+      {"warn", blt::severity_level::warning},
+      {"warning", blt::severity_level::warning},
+      {"error", blt::severity_level::error},
+      {"fatal", blt::severity_level::fatal},
+    };
+
+    auto it = levelmap.find(_level);
+    if ( it == levelmap.end() )
+      throw Exception("Unknown loglevel %s", _level.c_str());
+
+    return setLogLevel(it->second);
+  }
+
+  Config &Config::setLogLevel(blt::severity_level _level) {
+    c_loglevel = _level;
     return *this;
   }
 }

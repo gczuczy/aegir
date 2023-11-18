@@ -20,6 +20,7 @@
 #include "ZMQ.hh"
 #include "ProcessState.hh"
 #include "Config.hh"
+#include "LogChannel.hh"
 
 namespace aegir {
 
@@ -117,6 +118,7 @@ namespace aegir {
     HERatioDB c_heratiohistory;
     int32_t c_hestartdelay;
     bool c_hepause;
+    LogChannel c_log;
   };
 }
 

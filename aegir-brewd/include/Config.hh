@@ -12,8 +12,12 @@
 #include <set>
 #include <memory>
 
+#include <boost/log/trivial.hpp>
+
 #include "MAX31856.hh"
 #include "types.hh"
+
+namespace blt = ::boost::log::trivial;
 
 namespace aegir {
 
@@ -86,6 +90,8 @@ namespace aegir {
     float c_cooltemp;
     // heating start delay time, circ pump is not instant, seconds
     uint32_t c_hedelay;
+    // loglevel
+    blt::severity_level c_loglevel;
 
   public:
     Config(const Config&) = delete;
@@ -113,6 +119,7 @@ namespace aegir {
     inline const float getHECycleTime() const { return c_hecycletime; };
     inline const float getCoolTemp() const { return c_cooltemp; };
     inline const uint32_t getHEDelay() const { return c_hedelay; };
+    inline const blt::severity_level getLogLevel() const { return c_loglevel; };
 
     // Setting config elements
     Config &setHEPower(uint32_t _v);
@@ -120,6 +127,8 @@ namespace aegir {
     Config &setHeatOverhead(float _v);
     Config &setCoolTemp(float _v);
     Config &setHEDelay(uint32_t _v);
+    Config &setLogLevel(const std::string& _level);
+    Config &setLogLevel(blt::severity_level _level);
   };
 }
 

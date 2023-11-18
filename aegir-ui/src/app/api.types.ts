@@ -46,12 +46,13 @@ export interface apiStateResponse {
 };
 
 export interface apiConfig {
-  status: string,
+  status?: string,
   hepower: string,
   tempaccuracy: number,
   cooltemp: number,
   heatoverhead: number,
-  hedelay: number
+  hedelay: number,
+  loglevel: string,
 };
 
 export interface apiConfigResponse {

@@ -3,12 +3,13 @@ cmake_minimum_required(VERSION 3.26)
 set(default_build_type "Release")
 set(CMAKE_CXX_STANDARD 20)
 set(Boost_NO_WARN_NEW_VERSIONS 1)
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
-
+#set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
+set(Boost_NO_BOOST_CMAKE OFF)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 
 project(brewd VERSION 0.1.0 LANGUAGES CXX)
 
-if (NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES "")
+if ( (NOT DEFINED CMAKE_BUILD_TYPE) OR CMAKE_BUILD_TYPE STREQUAL "")
   set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
@@ -16,7 +17,6 @@ add_executable(brewd)
 
 find_package(Catch2 3 REQUIRED)
 add_executable(tests)
-target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 include(CTest)
 include(Catch)
 catch_discover_tests(tests)
@@ -60,12 +60,15 @@ find_package(Threads)
 if(NOT Threads_FOUND)
   message(FATAL_ERROR "threading is required")
 endif()
+message(STATUS "Thread library to use: ${CMAKE_THREAD_LIBS_INIT}")
+message(STATUS "Thread library pthread compatible: ${CMAKE_USE_PTHREAD}")
 
 # boost
 find_package(Boost
   1.83.0
   REQUIRED
-  COMPONENTS program_options
+  CONFIG
+  COMPONENTS program_options log
 )
 if(NOT Boost_FOUND)
   message(FATAL_ERROR "Boost program options is required")
@@ -106,6 +109,7 @@ check_ipo_supported(RESULT LTO_supported OUTPUT error)
 if(LTO_supported)
   message(STATUS "Enabling IPO/LTO")
   set_property(TARGET brewd PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+  set_property(TARGET tests PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 else()
   message(STATUS "IPO/LTO not supported: <${error}>")
 endif()
@@ -120,22 +124,32 @@ target_link_options(brewd
   PRIVATE
   -L/usr/local/lib
   -L${Boost_LIBRARY_DIRS}
-  -pthread
-  -lboost_program_options
-  -lgpio
-  -lyaml-cpp
-  -lzmq
-  -ljsoncpp
+  Threads::Threads
+)
+
+target_link_libraries(brewd
+  PRIVATE
+  Boost::program_options
+  Boost::log
+  gpio
+  yaml-cpp::yaml-cpp
+  zmq
+  jsoncpp
 )
 
 target_link_options(tests
   PRIVATE
   -L/usr/local/lib
   -L${Boost_LIBRARY_DIRS}
-  -pthread
-  -lyaml-cpp
-  -lzmq
-  -ljsoncpp
+  Threads::Threads
+)
+
+target_link_libraries(tests
+  PRIVATE
+  Catch2::Catch2WithMain
+  yaml-cpp::yaml-cpp
+  zmq
+  jsoncpp
 )
 
 add_subdirectory(src)
@@ -148,5 +162,34 @@ set_property(TARGET brewd PROPERTY CXX_EXTENSIONS False)
 
 target_compile_features(brewd PRIVATE cxx_std_20)
 
+set_property(TARGET tests PROPERTY CXX_STANDARD 20)
+set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
+set_property(TARGET tests PROPERTY CXX_EXTENSIONS False)
+
+target_compile_features(tests PRIVATE cxx_std_20)
+
+# and finally enable testing
+enable_testing()
+
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Generated with config types: ${CMAKE_CONFIGURATION_TYPES}")
+
+# install locations
+install(FILES rc.d/aegir-brewd
+  DESTINATION etc/rc.d
+  PERMISSIONS
+  OWNER_EXECUTE OWNER_WRITE OWNER_READ
+  GROUP_EXECUTE GROUP_READ
+  WORLD_EXECUTE WORLD_READ
+  CONFIGURATIONS Release
+)
+
+install(TARGETS brewd
+  DESTINATION sbin
+  PERMISSIONS
+  OWNER_EXECUTE OWNER_WRITE OWNER_READ
+  GROUP_EXECUTE GROUP_READ
+  WORLD_EXECUTE WORLD_READ
+  CONFIGURATIONS Release
+)
+

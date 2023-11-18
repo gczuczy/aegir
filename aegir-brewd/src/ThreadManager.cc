@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <sys/event.h>
 #include <string.h>
+#include <pthread.h>
 
 #include <functional>
 #include <chrono>
@@ -15,8 +16,7 @@
 namespace aegir {
 
   static void sighandler(int _sig) {
-    if ( _sig == SIGSEGV ) {
-      printf("Got a SIGSEGV\n");
+    if ( _sig == SIGSEGV || _sig == SIGABRT) {
       GPIO &gpio = *GPIO::getInstance();
       try {
 	gpio["mtheat"].low();
@@ -27,6 +27,17 @@ namespace aegir {
       }
     }
   }
+
+  static int g_sigs_blocked[] = {
+    SIGINT,
+    SIGHUP,
+    SIGKILL,
+    SIGPIPE,
+    SIGALRM,
+    SIGTERM,
+    SIGUSR1,
+    SIGUSR2
+  };
 
   /*
    * ThreadBase definition
@@ -44,12 +55,13 @@ namespace aegir {
    * ThreadManager definition
    */
 
-  ThreadManager::thread::thread(const std::string &_name, ThreadBase &_base): name(_name), base(_base) {
+  ThreadManager::thread::thread(const std::string &_name, ThreadBase &_base):
+    name(_name), base(_base) {
   }
 
   ThreadManager *ThreadManager::c_instance = 0;
 
-  ThreadManager::ThreadManager(): c_started(false) {
+  ThreadManager::ThreadManager(): c_started(false), c_log("ThreadManager") {
   }
 
   ThreadManager::~ThreadManager() {
@@ -66,7 +78,7 @@ namespace aegir {
     // if threads are already started, then late-start it
     if ( c_started ) {
       auto it = c_threads.find(_name);
-      printf("Late-starting thread named %s\n", it->first.c_str());
+      c_log.info("Late-starting thread named %s", it->first.c_str());
       std::function<void()> f = std::bind(&ThreadManager::wrapper, this, &it->second.base);
       it->second.thr = std::thread(f);
     }
@@ -74,35 +86,38 @@ namespace aegir {
   }
 
   ThreadManager &ThreadManager::start() {
-    // signal handling with a dummy handler, stuff will be
-    // taken care of from kevent() later
+    int signals[] = {
+      SIGINT,
+      SIGHUP,
+      SIGPIPE,
+      SIGALRM,
+      SIGTERM,
+      SIGUSR1,
+      SIGUSR2
+    };
     struct sigaction sa;
     sigemptyset(&sa.sa_mask);
-    sigemptyset(&sa.sa_mask);
-    //sigaddset(&sa.sa_mask, SIGSEGV);
-    sigaddset(&sa.sa_mask, SIGINT);
-    sigaddset(&sa.sa_mask, SIGHUP);
-    sigaddset(&sa.sa_mask, SIGKILL);
-    sigaddset(&sa.sa_mask, SIGPIPE);
-    sigaddset(&sa.sa_mask, SIGALRM);
-    sigaddset(&sa.sa_mask, SIGTERM);
-    sigaddset(&sa.sa_mask, SIGUSR1);
-    sigaddset(&sa.sa_mask, SIGUSR2);
-    sa.sa_handler = sighandler;
+    for (int i=0; i<sizeof(signals)/sizeof(int); ++i) {
+      if ( sigaddset(&sa.sa_mask, signals[i])!=0 ) {
+	c_log.error("Unable to add signal %i to set", signals[i]);
+	fprintf(stderr, "Unable to add signal %i to set\n", signals[i]);
+      }
+    }
+
+    //sa.sa_handler = SIG_IGN;
+    sa.sa_handler = &sighandler;
+    sa.sa_sigaction = 0;
     sa.sa_flags = SA_RESTART;
-    //sigaction(SIGSEGV, &sa, 0);
-    sigaction(SIGINT, &sa, 0);
-    sigaction(SIGHUP, &sa, 0);
-    sigaction(SIGKILL, &sa, 0);
-    sigaction(SIGPIPE, &sa, 0);
-    sigaction(SIGALRM, &sa, 0);
-    sigaction(SIGTERM, &sa, 0);
-    sigaction(SIGUSR1, &sa, 0);
-    sigaction(SIGUSR2, &sa, 0);
+    for (int i=0; i<sizeof(signals)/sizeof(int); ++i) {
+      if ( sigaction(signals[i], &sa, 0) != 0 ) {
+ 	c_log.error("sigaction(%i) failed: %s", signals[i], strerror(errno));
+ 	fprintf(stderr, "sigaction(%i) failed: %s\n", signals[i], strerror(errno));
+      }
+    }
 
     // start the threads
     for (auto &it: c_threads) {
-      printf("Starting thread named %s\n", it.first.c_str());
+      c_log.info("Starting thread named %s", it.first.c_str());
       std::function<void()> f = std::bind(&ThreadManager::wrapper, this, &it.second.base);
       it.second.thr = std::thread(f);
     }
@@ -120,13 +135,14 @@ namespace aegir {
     EV_SET(&evlist[0], SIGINT, EVFILT_SIGNAL, EV_ADD|EV_CLEAR|EV_ENABLE, 0, 0, 0);
     EV_SET(&evlist[1], SIGKILL, EVFILT_SIGNAL, EV_ADD|EV_CLEAR|EV_ENABLE, 0, 0, 0);
     n = kevent(kq, evlist, 2, 0, 0, 0);
-    printf("Starting loop\n");
+    c_log.trace("Starting loop");
     while (run) {
       n = kevent(kq, 0, 0, evlist, 16, 0);
       if ( n < 0 ) continue;
 
       for ( int i=0; i < n; ++i ) {
 	if ( evlist[i].filter == EVFILT_SIGNAL ) {
+	  c_log.info("Received signal %i", evlist[i].ident);
 	  if ( evlist[i].ident == SIGINT || evlist[i].ident == SIGKILL ) {
 	    run = 0;
 	  }
@@ -136,13 +152,13 @@ namespace aegir {
 
     // waiting for thread executions to finish
     for ( auto &it: c_threads ) {
-      printf("Stopping thread %s\n", it.second.name.c_str());
+      c_log.info("Stopping thread %s", it.second.name.c_str());
       it.second.base.stop();
     }
 
     // wait for the threads to finish
     for ( auto &it: c_threads ) {
-      printf("Waiting for thread %s\n\n", it.second.name.c_str());
+      c_log.info("Waiting for thread %s", it.second.name.c_str());
       it.second.thr.join();
     }
     // close the ZMQ context
@@ -152,6 +168,15 @@ namespace aegir {
   }
 
   void ThreadManager::wrapper(ThreadBase *_b) {
+    sigset_t ss;
+    sigemptyset(&ss);
+
+    for (int i=0; i<sizeof(g_sigs_blocked)/sizeof(int); ++i)
+      sigaddset(&ss, g_sigs_blocked[i]);
+
+    if (int err = pthread_sigmask(SIG_SETMASK, &ss, 0); err != 0 ) {
+      c_log.error("pthread_sigmask failed: %s", strerror(err));
+    }
     _b->run();
   }
 }

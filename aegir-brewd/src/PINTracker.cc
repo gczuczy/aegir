@@ -211,7 +211,7 @@ namespace aegir {
 	sppin->setValue(_value);
       }
     } else {
-      printf("PINTracker::setPIN(%s): not found\n", _name.c_str());
+      throw Exception("PINTracker::setPIN(%s): not found\n", _name.c_str());
     }
   }
 

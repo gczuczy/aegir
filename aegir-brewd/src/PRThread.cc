@@ -15,7 +15,8 @@ namespace aegir {
   PRThread::PRThread(): c_mq_pr(ZMQ::SocketType::ROUTER),
 			c_mq_prw(ZMQ::SocketType::DEALER),
 			c_mq_prctrl(ZMQ::SocketType::SUB),
-			c_mq_prdbg(ZMQ::SocketType::PUB) {
+			c_mq_prdbg(ZMQ::SocketType::PUB),
+			c_log("PRThread") {
     auto cfg = Config::getInstance();
 
     // bind the PR socket / ROUTER
@@ -40,7 +41,7 @@ namespace aegir {
   }
 
   void PRThread::run() {
-    printf("PRThread started\n");
+    c_log.info("PRThread started");
 
     // start the workers first
     // FIXME: later this has to be dynamic, now it's a fixed 3 threads
@@ -64,7 +65,7 @@ namespace aegir {
     c_mq_prw.close();
     c_mq_prctrl.close();
     c_mq_prdbg.close();
-    printf("PRThread stopped\n");
+    c_log.info("PRThread stopped");
   }
 
   void PRThread::stop() noexcept {
@@ -77,7 +78,7 @@ namespace aegir {
       ctrl.send("TERMINATE");
     }
     catch (Exception &e) {
-      printf("PRThread::stop() ZMQ failed: %s\n", e.what());
+      c_log.error("PRThread::stop() ZMQ failed: %s", e.what());
     }
 #else
     c_mq_pr.close();

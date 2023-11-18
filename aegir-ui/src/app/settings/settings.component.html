@@ -66,9 +66,39 @@
 	</div>
       </div>
 
+      <!-- HE heat overhead -->
+      <div class="row">
+	<div class="col form-group">
+	  <label>HE delay [s]</label>
+	</div>
+	<div class="col form-group">
+	  <small [hidden]="settingsForm.controls['hedelay'].valid" class="text-danger">
+	    Must be between 0.1 and 5
+	  </small>
+	  <input class="form-control" formControlName="hedelay">
+	</div>
+      </div>
+
+      <!-- loglevel -->
+      <div class="row">
+	<div class="col form-group">
+	  <label>Log level</label>
+	</div>
+	<div class="col form-group">
+	  <select class="form-control form-control-sm" formControlName="loglevel">
+	    <option value="trace">trace</option>
+	    <option value="debug">debug</option>
+	    <option value="info">info</option>
+	    <option value="warning">warning</option>
+	    <option value="error">error</option>
+	    <option value="fatal">fatal</option>
+	  </select>
+	</div>
+      </div>
+
       <!-- submit -->
       <div class="row">
-	<button type="submit" [disabled]="!settingsForm.valid">Save</button>
+	<button type="submit" class="btn-warning" [disabled]="!settingsForm.valid">Save</button>
       </div>
     </div>
   </form>

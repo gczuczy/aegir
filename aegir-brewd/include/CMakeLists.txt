@@ -21,6 +21,8 @@ list(APPEND brewd_HEADERS
   TSDB.hh
   types.hh
   Environment.hh
+  logging.hh
+  LogChannel.hh
 )
 
 # disabled due to

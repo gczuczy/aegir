@@ -26,8 +26,9 @@
 namespace aegir {
 
   IOHandler::IOHandler(GPIO &_gpio, SPI &_spi): c_gpio(_gpio), c_spi(_spi),
-    c_mq_pub(ZMQ::SocketType::PUB),
-    c_mq_iocmd(ZMQ::SocketType::SUB) {
+						c_mq_pub(ZMQ::SocketType::PUB),
+						c_mq_iocmd(ZMQ::SocketType::SUB),
+						c_log("IOHandler") {
     auto cfg = Config::getInstance();
 
     // first initialize the sensors
@@ -100,13 +101,13 @@ namespace aegir {
       c_mq_pub.send(ThermoReadingMessage(tr, tv.tv_sec));
     }
     catch (Exception &e) {
-      printf("IOHandler::readTCs zmq send failed: %s\n", e.what());
+      c_log.error("IOHandler::readTCs zmq send failed: %s", e.what());
     }
     try {
       Environment::getInstance()->setThermoReadings(tr);
     }
     catch (Exception &e) {
-      printf("IOHandler::readTCs Environment::setThermoReadings failed: %s\n", e.what());
+      c_log.error("IOHandler::readTCs Environment::setThermoReadings failed: %s", e.what());
     }
   }
 
@@ -128,7 +129,7 @@ namespace aegir {
 	  c_mq_pub.send(msg);
 	}
 	catch (Exception &e) {
-	  printf("IOHandler::handlePins() zmq send failure: %s\n", e.what());
+	  c_log.error("IOHandler::handlePins() zmq send failure: %s", e.what());
 	}
       }
     }
@@ -188,15 +189,15 @@ namespace aegir {
 	    EV_SET(&ke[0], ID_PULSE_OFFSET+2*id+1, EVFILT_TIMER, EV_ADD|EV_ENABLE, NOTE_MSECONDS, ctms, udata);
 	    EV_SET(&ke[1], ID_OS_OFFSET+id, EVFILT_TIMER, EV_ADD|EV_ENABLE|EV_ONESHOT, NOTE_MSECONDS, offsetms, udata);
 	    if ( kevent(c_kq, ke, 2, 0, 0, 0) < 0 ) {
-	      printf("kevent failed: %i/%s\n", errno, strerror(errno));
+	      c_log.error("kevent failed: %i/%s\n", errno, strerror(errno));
 	    }
 	    c_gpio[psmsg->getName()].high();
 	    c_outpins[psmsg->getName()].state = PINState::Pulsate;
 	  } else {
-	    printf("IOHandler:%i: Unhandled pinstate %hhu\n", __LINE__, psmsg->getState());
+	    c_log.error("IOHandler:%i: Unhandled pinstate %hhu", __LINE__, psmsg->getState());
 	  }
 	} else {
-	  printf("IOHandler: can't set %s to %hhu: no such pin\n", psmsg->getName().c_str(), psmsg->getState());
+	  c_log.error("IOHandler: can't set %s to %hhu: no such pin", psmsg->getName().c_str(), psmsg->getState());
 	}
       }
     }
@@ -213,7 +214,7 @@ namespace aegir {
   }
 
   void IOHandler::run() {
-    printf("IOHandler started\n");
+    c_log.info("IOHandler started");
 
     // set our kqueue up
     struct kevent ke[KE_LEN];
@@ -225,7 +226,7 @@ namespace aegir {
     EV_SET(&ke[0], 0, EVFILT_TIMER, EV_ADD|EV_ENABLE, NOTE_SECONDS, c_thermoival, 0);
     EV_SET(&ke[1], 1, EVFILT_TIMER, EV_ADD|EV_ENABLE, NOTE_MSECONDS, c_pinival, 0);
     if ( kevent(c_kq, ke, 2, 0, 0, 0) < 0 ) {
-      printf("kevent failed: %i/%s\n", errno, strerror(errno));
+      c_log.error("kevent failed: %i/%s", errno, strerror(errno));
     }
 
     while ( c_run ) {
@@ -250,7 +251,7 @@ namespace aegir {
 	    EV_SET(&oske, ID_PULSE_OFFSET+2*pindent+0, EVFILT_TIMER, EV_ADD|EV_ENABLE, NOTE_MSECONDS, opd->cycletime, (void*)opd);
 	    c_gpio[opd->name].low();
 	    if ( kevent(c_kq, &oske, 1, 0, 0, 0) < 0 ) {
-	      printf("kevent failed: %i/%s\n", errno, strerror(errno));
+	      c_log.error("kevent failed: %i/%s", errno, strerror(errno));
 	    }
 
 	  } else if ( filter == EVFILT_TIMER && ident >= ID_PULSE_OFFSET ) {
@@ -278,6 +279,6 @@ namespace aegir {
     // these are in the dtor
     //c_gpio;
     //c_spi;
-    printf("IOHandler stopped\n");
+    c_log.info("IOHandler stopped");
   }
 }

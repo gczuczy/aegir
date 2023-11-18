@@ -11,6 +11,7 @@
 
 #include "ThreadManager.hh"
 #include "ZMQ.hh"
+#include "LogChannel.hh"
 
 namespace aegir {
 
@@ -32,6 +33,7 @@ namespace aegir {
   private:
     ZMQ::Socket c_mq_pr, c_mq_prw, c_mq_prctrl, c_mq_prdbg;
     std::set<PRWorkerThread*> c_workers;
+    LogChannel c_log;
   };
 }
 

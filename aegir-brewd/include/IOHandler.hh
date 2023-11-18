@@ -15,6 +15,7 @@
 #include "SPI.hh"
 #include "MAX31856.hh"
 #include "Config.hh"
+#include "LogChannel.hh"
 
 namespace aegir {
 
@@ -48,6 +49,7 @@ namespace aegir {
     std::map<std::string, outpindata> c_outpins;
     // the kqueue socket
     int c_kq;
+    LogChannel c_log;
 
   private:
     void readTCs();

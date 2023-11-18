@@ -15,6 +15,7 @@
 #include "ElapsedTime.hh"
 #include "Config.hh"
 #include "Environment.hh"
+#include "logging.hh"
 
 namespace aegir {
 
@@ -63,7 +64,8 @@ namespace aegir {
 
   PRWorkerThread::PRWorkerThread(std::string _name): c_name(_name),
 						     c_mq_prw(ZMQ::SocketType::REP),
-						     c_mq_iocmd(ZMQ::SocketType::PUB) {
+						     c_mq_iocmd(ZMQ::SocketType::PUB),
+						     c_log("PRWorkerThread") {
     // Load the JSON Message handlers
     c_handlers["loadProgram"] = std::bind(&PRWorkerThread::handleLoadProgram, this, std::placeholders::_1);
     c_handlers["getProgram"] = std::bind(&PRWorkerThread::handleGetLoadedProgram, this, std::placeholders::_1);
@@ -101,7 +103,7 @@ namespace aegir {
   }
 
   void PRWorkerThread::run() {
-    printf("PRWorkerThread %s started\n", c_name.c_str());
+    c_log.info("PRWorkerThread %s started", c_name.c_str());
 
     std::chrono::microseconds ival(20000);
     std::shared_ptr<Message> msg;
@@ -124,21 +126,23 @@ namespace aegir {
 	    c_mq_prw.send(JSONMessage(*reply));
 	  }
 	  catch (Exception &e) {
-	    printf("PRWorkerThread: Exception while handling zmq message: %s\n", e.what());
+	    c_log.error("PRWorkerThread: Exception while handling zmq message: %s",
+			e.what());
 	    Json::Value root;
 	    root["status"] = "error";
 	    root["message"] = e.what();
 	    c_mq_prw.send(JSONMessage(root));
 	  }
 	  catch (std::exception &e) {
-	    printf("PRWorkerThread: Exception while handling zmq message: %s\n", e.what());
+	    c_log.error("PRWorkerThread: Exception while handling zmq message: %s",
+			e.what());
 	    Json::Value root;
 	    root["status"] = "error";
 	    root["message"] = e.what();
 	    c_mq_prw.send(JSONMessage(root));
 	  }
 	  catch (...) {
-	    printf("PRWorkerThread: unknown exception while recv zmq message\n");
+	    c_log.error("PRWorkerThread: unknown exception while recv zmq message");
 	    Json::Value root;
 	    root["status"] = "error";
 	    root["message"] = "Unknown exception";
@@ -147,21 +151,23 @@ namespace aegir {
 	} // c_mq_recv
       } // try { while
       catch (Exception &e) {
-	printf("PRWorkerThread: Exception while handling zmq message: %s\n", e.what());
+	c_log.error("PRWorkerThread: Exception while handling zmq message: %s",
+		    e.what());
 	Json::Value root;
 	root["status"] = "error";
 	root["message"] = e.what();
 	c_mq_prw.send(JSONMessage(root));
       }
       catch (std::exception &e) {
-	printf("PRWorkerThread: Exception while handling zmq message: %s\n", e.what());
+	c_log.error("PRWorkerThread: Exception while handling zmq message: %s",
+		    e.what());
 	Json::Value root;
 	root["status"] = "error";
 	root["message"] = e.what();
 	c_mq_prw.send(JSONMessage(root));
       }
       catch (...) {
-	printf("PRWorkerThread: unknown exception while recv zmq message\n");
+	c_log.error("PRWorkerThread: unknown exception while recv zmq message");
 	Json::Value root;
 	root["status"] = "error";
 	root["message"] = "Unknown exception";
@@ -171,7 +177,6 @@ namespace aegir {
     }
     c_mq_iocmd.close();
     c_mq_prw.close();
-    printf("PRWorkerThread %s stopped\n", c_name.c_str());
   }
 
   std::shared_ptr<Json::Value> PRWorkerThread::handleJSONMessage(const Json::Value &_msg) {
@@ -254,13 +259,13 @@ namespace aegir {
     catch (Exception &e) {
       Json::Value root;
       root["status"] = "error";
-      root["message"] = e.what();
+      root["message"] = std::string("Exception: ") + std::string(e.what());
       return std::make_shared<Json::Value>(root);
     }
     catch (std::exception &e) {
       Json::Value root;
       root["status"] = "error";
-      root["message"] = e.what();
+      root["message"] = std::string("std::exception: ") + std::string(e.what());
       return std::make_shared<Json::Value>(root);
     }
     catch (...) {
@@ -519,8 +524,6 @@ namespace aegir {
 	Json::Value cooling;
 	float bktemp =  ps.getSensorTemp("BK");
 	float cooltemp = ps.getCoolTemp();
-
-	printf("GetState cooltemp: %.2f\n", cooltemp);
 
 	cooling["ready"] = (bktemp < cooltemp);
 	cooling["cooltemp"] = cooltemp;
@@ -1063,6 +1066,7 @@ namespace aegir {
     data["cooltemp"] = cfg->getCoolTemp();
     data["heatoverhead"] = cfg->getHeatOverhead();
     data["hedelay"] = cfg->getHEDelay();
+    data["loglevel"] = logging::str(cfg->getLogLevel());
 
     // return success
     Json::Value retval;
@@ -1084,12 +1088,14 @@ namespace aegir {
     Json::Value jsonvalue;
     uint32_t hepwr, hedelay;
     float tempaccuracy, heatoverhead, cooltemp;
+    std::string loglevel;
 
     hepwr = cfg->getHEPower();
     tempaccuracy = cfg->getTempAccuracy();
     heatoverhead = cfg->getHeatOverhead();
     cooltemp = cfg->getCoolTemp();
     hedelay = cfg->getHEDelay();
+    loglevel = logging::str(cfg->getLogLevel());
 
     // he power
     if ( _data.isMember("hepower") ) {
@@ -1118,7 +1124,7 @@ namespace aegir {
 	throw Exception("heatoverhead must be a float");
 
       heatoverhead = _data["heatoverhead"].asFloat();
-      if ( heatoverhead <= 0.5 || heatoverhead >= 2.0 )
+      if ( heatoverhead <= 0.5 || heatoverhead >= 5.0 )
 	throw Exception("heatoverhead is out of range");
     }
 
@@ -1143,11 +1149,20 @@ namespace aegir {
 	throw Exception("hedelay is out of range");
     }
 
+    // he startup delay
+    if ( _data.isMember("loglevel") ) {
+      if ( !_data["loglevel"].isConvertibleTo(Json::ValueType::stringValue) )
+	throw Exception("loglevel must be a string");
+
+      loglevel = _data["loglevel"].asString();
+    }
+
     cfg->setHEPower(hepwr).
       setTempAccuracy(tempaccuracy).
       setHeatOverhead(heatoverhead).
       setCoolTemp(cooltemp).
       setHEDelay(hedelay).
+      setLogLevel(loglevel).
       save();
 
     // return success
