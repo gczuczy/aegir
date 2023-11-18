@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <sys/event.h>
 #include <string.h>
+#include <pthread.h>
 
 #include <functional>
 #include <chrono>
@@ -16,7 +17,6 @@ namespace aegir {
 
   static void sighandler(int _sig) {
     if ( _sig == SIGSEGV || _sig == SIGABRT) {
-      printf("Got a SIGSEGV/ABRT\n");
       GPIO &gpio = *GPIO::getInstance();
       try {
 	gpio["mtheat"].low();
@@ -27,6 +27,17 @@ namespace aegir {
       }
     }
   }
+
+  static int g_sigs_blocked[] = {
+    SIGINT,
+    SIGHUP,
+    SIGKILL,
+    SIGPIPE,
+    SIGALRM,
+    SIGTERM,
+    SIGUSR1,
+    SIGUSR2
+  };
 
   /*
    * ThreadBase definition
@@ -44,7 +55,8 @@ namespace aegir {
    * ThreadManager definition
    */
 
-  ThreadManager::thread::thread(const std::string &_name, ThreadBase &_base): name(_name), base(_base) {
+  ThreadManager::thread::thread(const std::string &_name, ThreadBase &_base):
+    name(_name), base(_base) {
   }
 
   ThreadManager *ThreadManager::c_instance = 0;
@@ -74,31 +86,34 @@ namespace aegir {
   }
 
   ThreadManager &ThreadManager::start() {
-    // signal handling with a dummy handler, stuff will be
-    // taken care of from kevent() later
+    int signals[] = {
+      SIGINT,
+      SIGHUP,
+      SIGPIPE,
+      SIGALRM,
+      SIGTERM,
+      SIGUSR1,
+      SIGUSR2
+    };
     struct sigaction sa;
     sigemptyset(&sa.sa_mask);
-    sigemptyset(&sa.sa_mask);
-    //sigaddset(&sa.sa_mask, SIGSEGV);
-    sigaddset(&sa.sa_mask, SIGINT);
-    sigaddset(&sa.sa_mask, SIGHUP);
-    sigaddset(&sa.sa_mask, SIGKILL);
-    sigaddset(&sa.sa_mask, SIGPIPE);
-    sigaddset(&sa.sa_mask, SIGALRM);
-    sigaddset(&sa.sa_mask, SIGTERM);
-    sigaddset(&sa.sa_mask, SIGUSR1);
-    sigaddset(&sa.sa_mask, SIGUSR2);
-    sa.sa_handler = sighandler;
+    for (int i=0; i<sizeof(signals)/sizeof(int); ++i) {
+      if ( sigaddset(&sa.sa_mask, signals[i])!=0 ) {
+	c_log.error("Unable to add signal %i to set", signals[i]);
+	fprintf(stderr, "Unable to add signal %i to set\n", signals[i]);
+      }
+    }
+
+    //sa.sa_handler = SIG_IGN;
+    sa.sa_handler = &sighandler;
+    sa.sa_sigaction = 0;
     sa.sa_flags = SA_RESTART;
-    //sigaction(SIGSEGV, &sa, 0);
-    sigaction(SIGINT, &sa, 0);
-    sigaction(SIGHUP, &sa, 0);
-    sigaction(SIGKILL, &sa, 0);
-    sigaction(SIGPIPE, &sa, 0);
-    sigaction(SIGALRM, &sa, 0);
-    sigaction(SIGTERM, &sa, 0);
-    sigaction(SIGUSR1, &sa, 0);
-    sigaction(SIGUSR2, &sa, 0);
+    for (int i=0; i<sizeof(signals)/sizeof(int); ++i) {
+      if ( sigaction(signals[i], &sa, 0) != 0 ) {
+ 	c_log.error("sigaction(%i) failed: %s", signals[i], strerror(errno));
+ 	fprintf(stderr, "sigaction(%i) failed: %s\n", signals[i], strerror(errno));
+      }
+    }
 
     // start the threads
     for (auto &it: c_threads) {
@@ -127,6 +142,7 @@ namespace aegir {
 
       for ( int i=0; i < n; ++i ) {
 	if ( evlist[i].filter == EVFILT_SIGNAL ) {
+	  c_log.info("Received signal %i", evlist[i].ident);
 	  if ( evlist[i].ident == SIGINT || evlist[i].ident == SIGKILL ) {
 	    run = 0;
 	  }
@@ -152,6 +168,15 @@ namespace aegir {
   }
 
   void ThreadManager::wrapper(ThreadBase *_b) {
+    sigset_t ss;
+    sigemptyset(&ss);
+
+    for (int i=0; i<sizeof(g_sigs_blocked)/sizeof(int); ++i)
+      sigaddset(&ss, g_sigs_blocked[i]);
+
+    if (int err = pthread_sigmask(SIG_SETMASK, &ss, 0); err != 0 ) {
+      c_log.error("pthread_sigmask failed: %s", strerror(err));
+    }
     _b->run();
   }
 }

@@ -55,11 +55,11 @@ int main(int argc, char *argv[]) {
     po::notify(vm);
   }
   catch (std::exception &e) {
-    fprintf(stderr, "Exception while parsing arguments: %s", e.what());
+    fprintf(stderr, "Exception while parsing arguments: %s\n", e.what());
     return 1;
   }
   catch (...) {
-    fprintf(stderr, "Unknown exception while parsing arguments");
+    fprintf(stderr, "Unknown exception while parsing arguments\n");
     return 1;
   }
 
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
       cfg->save(cfgfile);
     }
     catch(aegir::Exception &e) {
-      fprintf(stderr, "Error while saving configuration: %s", e.what());
+      fprintf(stderr, "Error while saving configuration: %s\n", e.what());
       log.fatal("Error while saving configuration: %s", e.what());
       return 3;
     }
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
     log.debug("Translated group %s to %i", group.c_str(), groupid);
   }
   catch (aegir::Exception& e) {
-    fprintf(stderr, "Error while looking up user and group: %s", e.what());
+    fprintf(stderr, "Error while looking up user and group: %s\n", e.what());
     log.fatal("Error while looking up user and group: %s", e.what());
     return 4;
   }
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
   if ( daemonize ) {
     log.info("Daemonizing...");
     if ( daemon(0, 0)<0 ) {
-      fprintf(stderr, "Error while calling daemon(): %s", strerror(errno));
+      fprintf(stderr, "Error while calling daemon(): %s\n", strerror(errno));
       log.fatal("Error while calling daemon(): %s", strerror(errno));
       return 5;
     }
