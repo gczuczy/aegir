@@ -12,12 +12,16 @@ import { apiProgram, apiProgramHopStep, apiProgramMashStep,
 import { initMashStep, initHop, defineValidators,
 	 programForm, toApiProgram } from '../programs.common';
 
+import { Enzyme, EnzymeList } from '../enzymes';
+
 @Component({
   selector: 'app-edit-program',
   templateUrl: './edit-program.component.html',
   styleUrls: ['./edit-program.component.css']
 })
 export class EditProgramComponent implements OnInit, programForm {
+
+  public enzymes = JSON.parse(JSON.stringify(EnzymeList)) as Enzyme[];
 
   errors: string[] | null = null;
 
@@ -70,9 +74,32 @@ export class EditProgramComponent implements OnInit, programForm {
 	    hops: this.fb.array(this.initHops(this.program.hops, this.program.boiltime))
 	  });
 	  defineValidators(this.editProgramForm, this);
+	  this.editProgramForm.valueChanges.subscribe(
+	    (data:FormGroup) => {
+	      if ( this.hasmash ) this.recalcEnzymeDuration(data);
+	    }
+	  );
+	  if ( this.hasmash ) this.recalcEnzymeDuration(this.editProgramForm.value);
 	}
       );
+
   } // ngOnInit
+
+  recalcEnzymeDuration(data: any) {
+    if ( !this.hasmash ) return;
+
+    for ( let rest of this.enzymes ) {
+      rest.duration = 0;
+    }
+
+    for ( let step of data.mashsteps!  ) {
+      for ( let rest of this.enzymes ) {
+	if ( rest.min <= step.temp && rest.max >= step.temp ) {
+	  rest.duration! += step.holdtime as number;
+	}
+      }
+    }
+  }
 
   initMashSteps(steps: apiProgramMashStep[], endtemp: number) {
     let fbsteps = [];

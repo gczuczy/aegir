@@ -12,6 +12,8 @@ import { apiProgram,
 	 apiStateMashStep, apiStateHopping
        } from '../api.types';
 
+import { Enzyme, activeEnzymes } from '../enzymes';
+
 interface sensorValue {
   sensor: string,
   temp: string
@@ -49,6 +51,7 @@ export class BrewComponent implements OnInit {
   public mashstep: apiStateMashStep | null = null;
   public bktemp:number | null = null;
   public hopping: apiStateHopping | null = null;
+  public rest: string | null = null;
 
   public coolingdone: boolean = false;
   public forcepump: boolean = false;
@@ -162,6 +165,18 @@ export class BrewComponent implements OnInit {
 	  }
 	}
       );
+
+    // active enzyme
+    if ( this.bktemp != null ) {
+      let ae = activeEnzymes(this.bktemp);
+      if ( ae.length>0 ) {
+	this.rest = ae.map(
+	  (data:Enzyme) => data.name
+	).join(', ');
+      } else {
+	this.rest = null;
+      }
+    }
 
     // if we have the programid, then load the program as well
     if ( 'programid' in data && this.program == null) {
