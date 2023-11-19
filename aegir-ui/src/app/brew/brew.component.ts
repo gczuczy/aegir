@@ -180,14 +180,13 @@ export class BrewComponent implements OnInit {
 	let second = tth % 60;
 	let minute = (tth-second) / 60;
 	let tthstr =  minute + 'm' + second + 's';
-	this.hopping.schedule = [];
-	this.hopping.schedule.push({'id': hop.id as number,
-				    'name': hop.hopname,
-				    'qty': hop.hopqty,
-				    'done': hopdone,
-				    'tth': tthstr})
+	this.hopping!.schedule!.push({'id': hop.id as number,
+				      'name': hop.hopname,
+				      'qty': hop.hopqty,
+				      'done': hopdone,
+				      'tth': tthstr})
       }
-      //console.log(this.hopping, this.program);
+      console.log('hopping', this.hopping, this.program);
     } else {
       //console.log('No hopping', data, this.program);
       this.hopping = null;
