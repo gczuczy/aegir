@@ -186,7 +186,7 @@ export class BrewComponent implements OnInit {
 				      'done': hopdone,
 				      'tth': tthstr})
       }
-      console.log('hopping', this.hopping, this.program);
+      //console.log('hopping', this.hopping, this.program);
     } else {
       //console.log('No hopping', data, this.program);
       this.hopping = null;
