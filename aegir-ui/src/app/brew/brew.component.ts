@@ -1,6 +1,8 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faRefresh, faCheck, faHourglass, faEllipsisH } from '@fortawesome/free-solid-svg-icons';
 
 import { ApiService } from '../api.service';
 
@@ -26,6 +28,13 @@ interface ChartData {
   styleUrls: ['./brew.component.css']
 })
 export class BrewComponent implements OnInit {
+  // fontawesome
+  faRefresh = faRefresh;
+  faCheck = faCheck;
+  faHourglass = faHourglass;
+  faEllipsisH = faEllipsisH;
+
+
   @ViewChild(BaseChartDirective)
   public chart?: BaseChartDirective;
 

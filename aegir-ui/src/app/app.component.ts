@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faGear } from '@fortawesome/free-solid-svg-icons';
 
 import { ApiService } from './api.service';
 
@@ -11,6 +13,7 @@ import { apiStateData} from './api.types';
 })
 export class AppComponent {
   title = 'Aegir';
+  faGear = faGear;
 
   canmaint:boolean = true;
 
