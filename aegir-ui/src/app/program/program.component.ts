@@ -12,7 +12,7 @@ import { apiProgram, apiProgramDeleteResponse } from '../api.types';
 })
 export class ProgramComponent {
 
-  program: apiProgram|null = null;
+  public program: apiProgram|null = null;
 
   constructor(private api: ApiService,
 	      private route: ActivatedRoute,

@@ -904,7 +904,17 @@ namespace aegir {
 	      float diff_temp = mt300 - curr_mt;
 	      uint32_t diff_time = size > 300 ? 300 : size;
 	      float pwr_cooling = (4.2 * c_ps.getVolume() * diff_temp) / diff_time;
-	      pwr_max = pwr_cooling * 1.5;
+
+	      float currpwr = 3;
+
+	      if ( c_heratiohistory.size()>0 ) {
+		auto herd = c_heratiohistory[c_heratiohistory.size()-1];
+
+		currpwr = herd.ratio * hepwr;
+	      }
+
+	      pwr_max = std::min(float(currpwr+(pwr_cooling*3)), hepwr);
+
 	      c_log.warn("Cooling (%.2f C / %i sec) limiting pwr to %.2f",
 			 diff_temp, diff_time, pwr_max);
 	    }
@@ -1007,7 +1017,7 @@ namespace aegir {
     float heratio = pwr_final / hepwr;
     if ( heratio < 0.004f && curr_mt < c_temptarget && curr_rims < c_temptarget)
       heratio = 0.05f;
-    c_log.debug("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.3f(MT:%.2f / RIMS:%.2f)",
+    c_log.info("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.3f(MT:%.2f / RIMS:%.2f)",
 		c_temptarget, c_tempoverheat,
 		dT_rims, dT_mtc_temptarget,
 		hepwr, pwr_mt, pwr_rims_final,

@@ -58,7 +58,7 @@
 	<div class="card-header bg-light">Volume</div>
 	<div class="card-body input-group">
 	  <button class="btn btn-default" type="reset" (click)="onVolumeReset()">
-	    <i class="fa fa-refresh"></i>
+	    <fa-icon [icon]="faRefresh"></fa-icon>
 	  </button>
 	  <input id="volume" class="form-control" type="number" value="{{volume}}" [(ngModel)]="volume">
 	  <button class="btn btn-primary" type="submit" (click)="onVolumeSet()">Set</button>
@@ -76,7 +76,7 @@
 	      <td>{{state}}</td>
 	    </tr>
 	    <tr>
-	      <th>Temp target</th>
+	      <th>T<sub>target</sub></th>
 	      <td>{{targettemp}} C</td>
 	    </tr>
 	    <tr *ngIf="brewtime">
@@ -110,9 +110,15 @@
 	    <ng-template ngFor let-step [ngForOf]="program.mashsteps">
 	      <tr>
 		<td>
-		  <i class="fa fa-check" *ngIf="step.orderno < mashstep!.orderno || step.orderno == mashstep!.orderno && mashstep!.time > step.holdtime*60"></i>
-		  <i class="fa fa-hourglass" *ngIf="step.orderno == mashstep!.orderno && mashstep!.time < step.holdtime*60"></i>
-		  <i class="fa fa-ellipsis-h" *ngIf="step.orderno > mashstep!.orderno"></i>
+		  <fa-icon [icon]="faCheck"
+			   *ngIf="step.orderno < mashstep!.orderno || step.orderno == mashstep!.orderno && mashstep!.time > step.holdtime*60">
+		  </fa-icon>
+		  <fa-icon [icon]="faHourglass"
+			   *ngIf="step.orderno == mashstep!.orderno && mashstep!.time < step.holdtime*60">
+		  </fa-icon>
+		  <fa-icon [icon]="faEllipsisH"
+			   *ngIf="step.orderno > mashstep!.orderno">
+		  </fa-icon>
 		</td>
 		<td>
 		  <i *ngIf="step.orderno == mashstep!.orderno && mashstep!.time < step.holdtime*60">

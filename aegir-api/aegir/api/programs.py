@@ -81,7 +81,7 @@ def validateProgram(prog):
     return errors
 
 def fixProgramData(p):
-    return {'builtime': p['boiltime'],
+    return {'boiltime': p['boiltime'],
             'endtemp': p['endtemp'],
             'hops': p['hops'],
             'id': p['id'],
