@@ -10,12 +10,16 @@ import { apiAddProgramData,
 import { initMashStep, initHop, defineValidators,
 	 programForm, toApiProgram } from '../programs.common';
 
+import { Enzyme, EnzymeList } from '../enzymes';
+
 @Component({
   selector: 'app-add-program',
   templateUrl: './add-program.component.html',
   styleUrls: ['./add-program.component.css']
 })
 export class AddProgramComponent implements OnInit, programForm {
+
+  public enzymes = JSON.parse(JSON.stringify(EnzymeList)) as Enzyme[];
 
   errors: string[] | null = null;
 
@@ -55,7 +59,29 @@ export class AddProgramComponent implements OnInit, programForm {
     this.hasboil = true;
 
     defineValidators(this.addProgramForm, this);
+    this.addProgramForm.valueChanges.subscribe(
+      (data:FormGroup) => {
+	if ( this.hasmash ) this.recalcEnzymeDuration(data);
+      }
+    );
+    if ( this.hasmash ) this.recalcEnzymeDuration(this.addProgramForm.value);
   } // ngOnInit
+
+  recalcEnzymeDuration(data: any) {
+    if ( !this.hasmash ) return;
+
+    for ( let rest of this.enzymes ) {
+      rest.duration = 0;
+    }
+
+    for ( let step of data.mashsteps!  ) {
+      for ( let rest of this.enzymes ) {
+	if ( rest.min <= step.temp && rest.max >= step.temp ) {
+	  rest.duration! += step.holdtime as number;
+	}
+      }
+    }
+  }
 
   public addMashStep() {
     const control = this.addProgramForm.get('mashsteps')! as FormArray;

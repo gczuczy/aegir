@@ -68,6 +68,28 @@
 	  <button type="button" class="btn btn-primary" (click)="addMashStep()">Add step</button>
 	</div>
       </div>
+      <div *ngIf="hasmash" class="container">
+	<table class="table table-sm table-striped">
+	  <thead>
+	    <tr>
+	      <th>Temp [C]</th>
+	      <td>Enzyme</td>
+	      <td>Target</td>
+	      <td>Info</td>
+	      <td>Duration [m]</td>
+	    </tr>
+	  </thead>
+	  <tbody>
+	    <tr *ngFor="let enzyme of enzymes">
+	      <td>{{enzyme.min}} - {{enzyme.max}}</td>
+	      <td>{{enzyme.name}}</td>
+	      <td>{{enzyme.target}}</td>
+	      <td>{{enzyme.info}}</td>
+	      <td>{{enzyme.duration!}}</td>
+	    </tr>
+	  </tbody>
+	</table>
+      </div>
       <div *ngIf="hasmash && mashSteps != null && mashSteps.controls != null"
 	   formArrayName="mashsteps" class="container">
 	<div *ngFor="let mashtemp of mashSteps.controls; let i=index"

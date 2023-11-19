@@ -79,6 +79,10 @@
 	      <th>T<sub>target</sub></th>
 	      <td>{{targettemp}} C</td>
 	    </tr>
+	    <tr *ngIf="rest">
+	      <th>Rest:</th>
+	      <td>{{rest}}</td>
+	    </tr>
 	    <tr *ngIf="brewtime">
 	      <th>Brew time</th>
 	      <td>{{brewtime}}</td>
