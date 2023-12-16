@@ -888,35 +888,30 @@ namespace aegir {
 	  } else if ( dT_mtc_temptarget < 2 ) {
 	    nextcontrol = 15;
 	  }
-	  pwr_mt = (4.2 * c_ps.getVolume() * dT_mtc_temptarget) / nextcontrol;
+	  pwr_mt = calcPower(dT_mtc_temptarget, dt_mt);
 
 	  // adjust the max power. let's see how intensively we're cooling
 	  {
 	    int size = tsdb.size();
 	    float mt300 = 0;
+	    float pwr_min = calcPower(std::abs(dT_mtc_temptarget)+0.2);
 	    if ( size > 300 ) mt300 = tsdb.at(size-300)[ThermoCouple::MT];
 	    else mt300 = tsdb.at(0)[ThermoCouple::MT];
 	    if ( size<300 || mt300 < curr_mt) {
 	      c_log.warn("!! RIMS cooling, can't find t-300 or it's cooler than current temp");
-	      pwr_max = hepwr * 0.35;
-	      c_log.warn("Limiting max power to 35%%: %.2f", pwr_max);
+	      pwr_max = std::max(pwr_min, hepwr * 0.45f);
+	      c_log.warn("Limiting max power to: %.2f kW", pwr_max);
 	    } else {
+	      // size>30 || mt300>curr_mt -> MT cooling
 	      float diff_temp = mt300 - curr_mt;
 	      uint32_t diff_time = size > 300 ? 300 : size;
-	      float pwr_cooling = (4.2 * c_ps.getVolume() * diff_temp) / diff_time;
+	      float pwr_cooling = calcPower(diff_temp, diff_time);
 
-	      float currpwr = 3;
+	      pwr_min += pwr_cooling*3;
+	      // and limiting the absolute minimum power above the previous setting
 
-	      if ( c_heratiohistory.size()>0 ) {
-		auto herd = c_heratiohistory[c_heratiohistory.size()-1];
-
-		currpwr = herd.ratio * hepwr;
-	      }
-
-	      pwr_max = std::min(float(currpwr+(pwr_cooling*3)), hepwr);
-
-	      c_log.warn("Cooling (%.2f C / %i sec) limiting pwr to %.2f",
-			 diff_temp, diff_time, pwr_max);
+	      c_log.warn("Cooling (%.2f C / %i sec) limiting power to %.2f/%.2f kW",
+			 diff_temp, diff_time, pwr_max, pwr_abs_min);
 	    }
 	  }
 	}
@@ -934,7 +929,7 @@ namespace aegir {
 
     // calculate the dissipation during the last cycle
     if ( !nodata ) {
-      float pwr_last_effective = (4.2 * c_ps.getVolume() * (dT_mt*dt))/dt;
+      float pwr_last_effective = calcPower(dT_mt*dt, dt);
       float pwr_last = hepwr * last_ratio;
       float diff = pwr_last - pwr_last_effective;
 
@@ -950,6 +945,14 @@ namespace aegir {
 		  pwr_last, pwr_last_effective, diff);
       c_log.debug("Controller::tempControl(): dissipation: %.3f pwr_abs_min:%.2f",
 		  pwr_dissipation, pwr_abs_min);
+    }
+
+    // adjust the minimum power if it's cooling
+    if ( !nodata && dT_mtc_temptarget > 0 && dT_mt < 0 ) {
+      auto herd = c_heratiohistory[c_heratiohistory.size()-1];
+      pwr_abs_min = std::min(pwr_abs_min, (herd.ratio * hepwr) * 1.05f);
+      c_log.info("Adjusting absolute minimum power to previous + 5%%: %.2f kW",
+		 pwr_abs_min);
     }
 
     /* The RIMS tube has a min a max value limiting its power,
@@ -1007,6 +1010,7 @@ namespace aegir {
     c_log.debug("Controller::tempControl(): RIMS pwr: final:%.2f min:%.2f max:%.2f calc:%.2f max:%.2f",
 		pwr_rims_final, pwr_rims_min, pwr_rims_max, pwr_rims, pwr_max);
     float her_rims = pwr_rims_final / hepwr;
+
 
     // MashTun heating element on-ratio
     float her_mt = pwr_mt / hepwr;
@@ -1151,4 +1155,5 @@ namespace aegir {
 #endif
     return flowrate;
   }
+
 }
