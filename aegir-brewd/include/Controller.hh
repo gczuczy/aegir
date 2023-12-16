@@ -99,6 +99,10 @@ namespace aegir {
     void setHERatio(float _cycletime, float _ratio);
     float calcFlowRate();
 
+    inline float calcPower(float _dT, float _dt=60) {
+      return (4.2 * c_ps.getVolume() * _dT)/ _dt;
+    }
+
   private:
     ZMQ::Socket c_mq_io, c_mq_iocmd;
     std::thread::id c_mythread;
