@@ -888,7 +888,7 @@ namespace aegir {
 	  } else if ( dT_mtc_temptarget < 2 ) {
 	    nextcontrol = 15;
 	  }
-	  pwr_mt = calcPower(dT_mtc_temptarget, nextcontrol);
+	  pwr_mt = calcPower(dT_mtc_temptarget, dt_mt);
 
 	  // adjust the max power. let's see how intensively we're cooling
 	  {
@@ -899,7 +899,7 @@ namespace aegir {
 	    else mt300 = tsdb.at(0)[ThermoCouple::MT];
 	    if ( size<300 || mt300 < curr_mt) {
 	      c_log.warn("!! RIMS cooling, can't find t-300 or it's cooler than current temp");
-	      pwr_max = std::min(pwr_min, hepwr * 0.45f);
+	      pwr_max = std::max(pwr_min, hepwr * 0.45f);
 	      c_log.warn("Limiting max power to: %.2f kW", pwr_max);
 	    } else {
 	      // size>30 || mt300>curr_mt -> MT cooling
@@ -907,9 +907,7 @@ namespace aegir {
 	      uint32_t diff_time = size > 300 ? 300 : size;
 	      float pwr_cooling = calcPower(diff_temp, diff_time);
 
-	      float currpwr = 3;
-
-	      pwr_max = std::min(float(pwr_min+(pwr_cooling*3)), hepwr);
+	      pwr_min += pwr_cooling*3;
 	      // and limiting the absolute minimum power above the previous setting
 
 	      c_log.warn("Cooling (%.2f C / %i sec) limiting power to %.2f/%.2f kW",
