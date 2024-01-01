@@ -73,7 +73,8 @@ namespace aegir {
 			    c_mq_iocmd(ZMQ::SocketType::PUB),
 			    c_levelerror(false), c_needcontrol(false),
 			    c_hestartdelay(-1), c_hepause(false),
-			    c_log("Controller") {
+			    c_log("Controller"),
+			    c_correctionfactor(1.0f) {
     // subscribe to our publisher for IO events
     try {
       c_mq_io.connect("inproc://iopub").subscribe("");
@@ -335,6 +336,7 @@ namespace aegir {
     PINTracker::reconfigure();
     c_hecycletime = c_cfg->getHECycleTime();
     c_needcontrol = false;
+    c_correctionfactor = 1.0f;
   }
 
   void Controller::controlProcess(PINTracker &_pt) {
@@ -475,10 +477,12 @@ namespace aegir {
     setPIN("mtheat", PINState::Off);
     setPIN("mtpump", PINState::Off);
     c_needcontrol = false;
+    c_correctionfactor = 1.0f;
   }
 
   void Controller::stageLoaded(PINTracker &_pt) {
     c_prog = c_ps.getProgram();
+    c_correctionfactor = 1.0f;
     // Loaded, so we should verify the timestamps
     uint32_t startat = c_ps.getStartat();
     c_hecycletime = c_cfg->getHECycleTime();
@@ -812,6 +816,12 @@ namespace aegir {
     float pwr_abs_min = 0;
     float dTadjust = 1.2f; // FIXME should be moved to a config variable
 
+    // get the previous iteration's power. <0 == unknown
+    float lastpwr = -1;
+    if ( std::size_t i=c_heratiohistory.size(); i>0 ) {
+      lastpwr = c_heratiohistory[i-1].ratio * hepwr;
+    }
+
     // when we're getting close to the target, but we don't have
     // data, then try to throttle the heating
     // this typically happens at Pre-Heating
@@ -897,21 +907,29 @@ namespace aegir {
 	    float pwr_min = calcPower(std::abs(dT_mtc_temptarget)+0.2);
 	    if ( size > 300 ) mt300 = tsdb.at(size-300)[ThermoCouple::MT];
 	    else mt300 = tsdb.at(0)[ThermoCouple::MT];
+
 	    if ( size<300 || mt300 < curr_mt) {
-	      c_log.warn("!! RIMS cooling, can't find t-300 or it's cooler than current temp");
-	      pwr_max = std::max(pwr_min, hepwr * 0.45f);
-	      c_log.warn("Limiting max power to: %.2f kW", pwr_max);
+	      c_log.warn("!! MT cooling, can't find t-300 or it's cooler than current temp");
+	      pwr_min = std::max(lastpwr, pwr_mt) * 1.05;
+	      if ( lastpwr > 0 ) {
+		c_correctionfactor *= 1.02f;
+		// revist this frequently, so the increment can kick in
+		nextcontrol = 10;
+	      } else {
+		pwr_min = std::max(pwr_min, hepwr * 0.45f);
+	      }
+	      c_log.warn("Limiting min power to: %.2f kW", pwr_min);
 	    } else {
 	      // size>30 || mt300>curr_mt -> MT cooling
 	      float diff_temp = mt300 - curr_mt;
 	      uint32_t diff_time = size > 300 ? 300 : size;
 	      float pwr_cooling = calcPower(diff_temp, diff_time);
 
-	      pwr_min += pwr_cooling*3;
+	      pwr_min = pwr_mt + pwr_cooling*3;
 	      // and limiting the absolute minimum power above the previous setting
 
-	      c_log.warn("Cooling (%.2f C / %i sec) limiting power to %.2f/%.2f kW",
-			 diff_temp, diff_time, pwr_max, pwr_abs_min);
+	      c_log.warn("Cooling (%.2f C / %i sec) limiting min power to %.2f/%.2f kW",
+			 diff_temp, diff_time, pwr_max, pwr_min);
 	    }
 	  }
 	}
@@ -1021,11 +1039,19 @@ namespace aegir {
     float heratio = pwr_final / hepwr;
     if ( heratio < 0.004f && curr_mt < c_temptarget && curr_rims < c_temptarget)
       heratio = 0.05f;
-    c_log.info("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.3f(MT:%.2f / RIMS:%.2f)",
-		c_temptarget, c_tempoverheat,
-		dT_rims, dT_mtc_temptarget,
-		hepwr, pwr_mt, pwr_rims_final,
-		heratio, her_mt, her_rims);
+
+    // limit the max correction factor
+    c_correctionfactor = std::min(c_correctionfactor, c_cfg->getMaxCorrectionFactor());
+
+    // apply the correction factor
+    heratio = std::min(heratio * c_correctionfactor, 1.0f);
+
+    c_log.info("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.3f(MT:%.2f / RIMS:%.2f) corr:%.2f",
+	       c_temptarget, c_tempoverheat,
+	       dT_rims, dT_mtc_temptarget,
+	       hepwr, pwr_mt, pwr_rims_final,
+	       heratio, her_mt, her_rims,
+	       c_correctionfactor);
 
     setHERatio(c_hecycletime, heratio);
     return nextcontrol;

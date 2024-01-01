@@ -123,6 +123,7 @@ namespace aegir {
     int32_t c_hestartdelay;
     bool c_hepause;
     LogChannel c_log;
+    float c_correctionfactor;
   };
 }
 
