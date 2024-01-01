@@ -92,6 +92,8 @@ namespace aegir {
     uint32_t c_hedelay;
     // loglevel
     blt::severity_level c_loglevel;
+    // max correction factor
+    float c_maxcorrectionfactor;
 
   public:
     Config(const Config&) = delete;
@@ -120,6 +122,7 @@ namespace aegir {
     inline const float getCoolTemp() const { return c_cooltemp; };
     inline const uint32_t getHEDelay() const { return c_hedelay; };
     inline const blt::severity_level getLogLevel() const { return c_loglevel; };
+    inline const float getMaxCorrectionFactor() const { return c_maxcorrectionfactor; };
 
     // Setting config elements
     Config &setHEPower(uint32_t _v);
@@ -129,6 +132,7 @@ namespace aegir {
     Config &setHEDelay(uint32_t _v);
     Config &setLogLevel(const std::string& _level);
     Config &setLogLevel(blt::severity_level _level);
+    Config &setMaxCorrectionFactor(float _factor);
   };
 }
 

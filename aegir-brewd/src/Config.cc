@@ -333,6 +333,14 @@ namespace aegir {
 	setLogLevel(level);
       }
 
+      // max correction factor
+      if ( config["maxcorrection"] && config["maxcorrection"].IsScalar() ) {
+	YAML::Node ct = config["maxcorrection"];
+	c_maxcorrectionfactor = ct.as<float>();
+	if ( c_maxcorrectionfactor < 1.10f || c_maxcorrectionfactor > 1.25f )
+	  throw Exception("Cooling MaxCorrectionFactor must be between 1.10 and 1.25");
+      }
+
     }
     catch (std::exception &e) {
       throw Exception("Error during parsing config: %s", e.what());
@@ -434,6 +442,10 @@ namespace aegir {
     yout << YAML::Key << "loglevel"
 	 << YAML::Value << logging::str(c_loglevel);
 
+    // MaxCorrectionFactor
+    yout << YAML::Key << "maxcorrection"
+	 << YAML::Value << c_maxcorrectionfactor;
+
     // End the config
     yout << YAML::EndMap;
 
@@ -500,6 +512,12 @@ namespace aegir {
 
   Config &Config::setLogLevel(blt::severity_level _level) {
     c_loglevel = _level;
+    return *this;
+  }
+
+  Config &Config::setMaxCorrectionFactor(float _factor) {
+    if ( _factor >= 1.10f && _factor <= 1.25f )
+      c_maxcorrectionfactor = _factor;
     return *this;
   }
 }
