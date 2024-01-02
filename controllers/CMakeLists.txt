@@ -145,6 +145,7 @@ target_link_options(tests
 target_link_libraries(tests
   PRIVATE
   Catch2::Catch2WithMain
+  Boost::log
   yaml-cpp::yaml-cpp
   zmq
   jsoncpp
