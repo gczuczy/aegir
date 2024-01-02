@@ -35,18 +35,16 @@ set_target_properties(
   RUNTIME_OUTPUT_DIRECTORY ${brewd_SOURCE_DIR}/bin
 )
 
-configure_file(include/cmakeconfig.hh.in include/cmakeconfig.hh)
+configure_file(brewd/cmakeconfig.hh.in brewd/cmakeconfig.hh)
 
 target_include_directories(brewd
-  PRIVATE ${brewd_SOURCE_DIR}/include
-  PRIVATE ${brewd_SOURCE_DIR}/contrib/include
+  PRIVATE ${brewd_SOURCE_DIR}/brewd
   SYSTEM /usr/local/include
   SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
 )
 
 target_include_directories(tests
-  PRIVATE ${brewd_SOURCE_DIR}/include
-  PRIVATE ${brewd_SOURCE_DIR}/contrib/include
+  PRIVATE ${brewd_SOURCE_DIR}/brewd
   SYSTEM /usr/local/include
   SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
 )
@@ -147,13 +145,13 @@ target_link_options(tests
 target_link_libraries(tests
   PRIVATE
   Catch2::Catch2WithMain
+  Boost::log
   yaml-cpp::yaml-cpp
   zmq
   jsoncpp
 )
 
-add_subdirectory(src)
-add_subdirectory(include)
+add_subdirectory(brewd)
 add_subdirectory(tests)
 
 set_property(TARGET brewd PROPERTY CXX_STANDARD 20)
