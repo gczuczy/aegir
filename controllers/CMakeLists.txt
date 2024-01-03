@@ -14,6 +14,7 @@ if ( (NOT DEFINED CMAKE_BUILD_TYPE) OR CMAKE_BUILD_TYPE STREQUAL "")
 endif()
 
 add_executable(brewd)
+add_executable(fermd)
 
 find_package(Catch2 3 REQUIRED)
 add_executable(tests)
@@ -21,32 +22,37 @@ include(CTest)
 include(Catch)
 catch_discover_tests(tests)
 
+add_subdirectory(brewd)
+add_subdirectory(fermd)
+add_subdirectory(common)
+add_subdirectory(tests)
+
 set_target_properties(
   brewd
   PROPERTIES
   OUTPUT_NAME "aegir-brewd"
-  RUNTIME_OUTPUT_DIRECTORY ${brewd_SOURCE_DIR}/bin
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
 )
 
 set_target_properties(
   tests
   PROPERTIES
   OUTPUT_NAME "tests"
-  RUNTIME_OUTPUT_DIRECTORY ${brewd_SOURCE_DIR}/bin
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
 )
 
-configure_file(brewd/cmakeconfig.hh.in brewd/cmakeconfig.hh)
+configure_file(common/cmakeconfig.hh.in common/cmakeconfig.hh)
 
 target_include_directories(brewd
   PRIVATE ${brewd_SOURCE_DIR}/brewd
   SYSTEM /usr/local/include
-  SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+  SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/common>
 )
 
 target_include_directories(tests
   PRIVATE ${brewd_SOURCE_DIR}/brewd
   SYSTEM /usr/local/include
-  SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+  SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/common>
 )
 
 include(CheckSymbolExists)
@@ -151,8 +157,6 @@ target_link_libraries(tests
   jsoncpp
 )
 
-add_subdirectory(brewd)
-add_subdirectory(tests)
 
 set_property(TARGET brewd PROPERTY CXX_STANDARD 20)
 set_property(TARGET brewd PROPERTY CXX_STANDARD_REQUIRED True)
@@ -191,4 +195,48 @@ install(TARGETS brewd
   CONFIGURATIONS Release
 )
 
-# blah
+# Fermd
+target_include_directories(fermd
+  PRIVATE ${fermd_SOURCE_DIR}/fermd
+  SYSTEM /usr/local/include
+  SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/common>
+)
+
+target_compile_options(fermd
+  PRIVATE -Werror -pedantic -std=c++20 -Wno-c11-extensions -I${Boost_INCLUDE_DIRS}
+  $<$<CONFIG:Debug>:-O0 -glldb -ferror-limit=2>
+  $<$<CONFIG:Release>:-O2>
+)
+
+target_link_options(fermd
+  PRIVATE
+  -L/usr/local/lib
+  -L${Boost_LIBRARY_DIRS}
+  Threads::Threads
+)
+
+target_link_libraries(fermd
+  PRIVATE
+  Boost::program_options
+  Boost::log
+  gpio
+  yaml-cpp::yaml-cpp
+  zmq
+  jsoncpp
+)
+
+install(TARGETS fermd
+  DESTINATION sbin
+  PERMISSIONS
+  OWNER_EXECUTE OWNER_WRITE OWNER_READ
+  GROUP_EXECUTE GROUP_READ
+  WORLD_EXECUTE WORLD_READ
+  CONFIGURATIONS Release
+)
+
+set_target_properties(
+  fermd
+  PROPERTIES
+  OUTPUT_NAME "aegir-fermd"
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
+)

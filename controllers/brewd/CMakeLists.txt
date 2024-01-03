@@ -17,7 +17,6 @@ list(APPEND brewd_HEADERS
   SPI.hh
   ThreadManager.hh
   ZMQ.hh
-  cmakeconfig.hh
   TSDB.hh
   types.hh
   Environment.hh
