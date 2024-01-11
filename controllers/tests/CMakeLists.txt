@@ -5,4 +5,6 @@ target_sources(tests
   types.cc
   Config.cc
   Message.cc
+  TiltDB.cc
+  FermdConfig.cc
 )

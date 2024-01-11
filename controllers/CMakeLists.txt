@@ -13,6 +13,8 @@ if ( (NOT DEFINED CMAKE_BUILD_TYPE) OR CMAKE_BUILD_TYPE STREQUAL "")
   set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
+include(FetchContent)
+
 add_executable(brewd)
 add_executable(fermd)
 
@@ -44,13 +46,15 @@ set_target_properties(
 configure_file(common/cmakeconfig.hh.in common/cmakeconfig.hh)
 
 target_include_directories(brewd
-  PRIVATE ${brewd_SOURCE_DIR}/brewd
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/brewd
   SYSTEM /usr/local/include
   SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/common>
 )
 
 target_include_directories(tests
-  PRIVATE ${brewd_SOURCE_DIR}/brewd
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/brewd
+  ${CMAKE_CURRENT_SOURCE_DIR}/fermd
   SYSTEM /usr/local/include
   SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/common>
 )
@@ -74,7 +78,9 @@ find_package(Boost
   CONFIG
   COMPONENTS program_options log
 )
-if(NOT Boost_FOUND)
+if(Boost_FOUND)
+  message(STATUS "Boost found")
+else()
   message(FATAL_ERROR "Boost program options is required")
 endif()
 
@@ -83,6 +89,20 @@ find_package(yaml-cpp
   0.8.0
   REQUIRED
 )
+
+# rapidyaml - fermd uses it instead of yaml-cpp and jsoncpp
+#find_package(ryml REQUIRED)
+#if(ryml_FOUND)
+#  message(STATUS "Rapid YAML found")
+#else()
+#  message(FATAL_ERROR "Rapid YAML is required but not found")
+#endif()
+FetchContent_Declare(ryml
+  GIT_REPOSITORY https://github.com/biojppm/rapidyaml.git
+  GIT_TAG "v0.5.0"
+  GIT_SHALLOW FALSE
+)
+FetchContent_MakeAvailable(ryml)
 
 # kqueue
 # non-bsd users can try https://github.com/mheily/libkqueue, however this requires code support as well,
@@ -155,6 +175,7 @@ target_link_libraries(tests
   yaml-cpp::yaml-cpp
   zmq
   jsoncpp
+  ryml::ryml
 )
 
 
@@ -220,9 +241,8 @@ target_link_libraries(fermd
   Boost::program_options
   Boost::log
   gpio
-  yaml-cpp::yaml-cpp
   zmq
-  jsoncpp
+  ryml::ryml
 )
 
 install(TARGETS fermd

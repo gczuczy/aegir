@@ -25,7 +25,6 @@
 #error "BOOST_LOG_USE_NATIVE_SYSLOG is unset"
 #endif
 
-#include "Config.hh"
 #include "Exception.hh"
 
 namespace bl = ::boost::log;
@@ -41,6 +40,7 @@ namespace aegir {
     typedef bls::synchronous_sink<bls::syslog_backend> syslog_sink_t;
 
     static bool filter(const boost::log::attribute_value_set&);
+    std::function<blt::severity_level()> g_getloglevel;
 
     void init() {
       auto blcore = bl::core::get();
@@ -90,8 +90,16 @@ namespace aegir {
       return it->second;
     }
 
+    void setGetLogLevel(std::function<blt::severity_level()> _getloglevel) {
+      g_getloglevel = _getloglevel;
+    }
+
     bool filter(const boost::log::attribute_value_set& attr_set) {
-      return attr_set["Severity"].extract<blt::severity_level>() >= Config::getInstance()->getLogLevel();
+      if ( g_getloglevel ) {
+	return attr_set["Severity"].extract<blt::severity_level>()
+	  >= g_getloglevel();
+      }
+      return true;
     }
   } // ns lggoging
 } // ns aegir
