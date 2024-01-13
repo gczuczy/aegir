@@ -2,6 +2,7 @@
 #include "misc.hh"
 
 #include <map>
+#include <cmath>
 
 #include "Exception.hh"
 
@@ -29,5 +30,9 @@ namespace aegir {
       if ( it.second == _level ) return it.first;
     }
     throw Exception("Severity level not found");
+  }
+
+  bool floateq(float _a, float _b, float _error) {
+    return std::fabs(_a - _b) < _error;
   }
 }

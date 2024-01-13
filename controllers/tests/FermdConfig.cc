@@ -65,6 +65,7 @@ TEST_CASE("FermdConfig", "[fermd]") {
 
   TempFileGuard fg;
 
+  //  std::cout << "saving config " << fg.getFilename() << std::endl;
   cfg->save(fg.getFilename());
   ryml::Tree tree;
   readFile(fg.getFilename(), tree);
@@ -76,9 +77,27 @@ TEST_CASE("FermdConfig", "[fermd]") {
   // modify the config
   root["loglevel"] = "error";
 
+  // add a Tilt calibration
+  root["tilts"][0]["calibrations"] |= ryml::SEQ;
+  root["tilts"][0]["calibrations"][0] |= ryml::MAP;
+  root["tilts"][0]["calibrations"][1] |= ryml::MAP;
+  root["tilts"][0]["calibrations"][0]["raw"] << ryml::fmt::real(1.000f, 5);
+  root["tilts"][0]["calibrations"][0]["corrected"] << ryml::fmt::real(1.0002f, 5);
+  root["tilts"][0]["calibrations"][1]["raw"] << ryml::fmt::real(1.0080f, 5);
+  root["tilts"][0]["calibrations"][1]["corrected"] << ryml::fmt::real(1.0084f, 5);
+  root["tilts"][0]["active"] << ryml::fmt::boolalpha(true);
+
   // change something and read it back
   writeYAML(tree, fg.getFilename());
+  //std::cout << "YAML:" << std::endl << tree << "---" << std::endl;
 
-  cfg->load(fg.getFilename());
+  try {
+    cfg->load(fg.getFilename());
+  }
+  catch (aegir::Exception& e) {
+    std::cout << "Error: " << e.what() << std::endl;
+    throw e;
+  }
+  // FermdConfig values
   REQUIRE(cfg->getLogLevel() == blt::severity_level::error);
 }

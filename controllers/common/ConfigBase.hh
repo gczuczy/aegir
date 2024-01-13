@@ -8,12 +8,14 @@
 #include <memory>
 #include <list>
 #include <functional>
+#include <concepts>
 
 #include <boost/log/trivial.hpp>
 
 #include "ryml.hh"
 
 #include "Exception.hh"
+#include "misc.hh"
 
 namespace blt = ::boost::log::trivial;
 
@@ -31,6 +33,8 @@ namespace aegir {
     virtual void marshall(ryml::NodeRef&)=0;
     virtual void unmarshall(ryml::ConstNodeRef&)=0;
   };
+
+  // concepts
 
   typedef std::shared_ptr<ConfigNode> ConfigNodeHandler;
 
@@ -68,6 +72,15 @@ namespace aegir {
     void save(const std::string& _file);
 
   protected:
+    template<Derived<ConfigNode> T>
+    void registerHandler(const std::string& _name) {
+      auto h = std::static_pointer_cast<ConfigNode>(T::getInstance());
+      if ( checkHandler({_name}) )
+	throw Exception("Handler already defined: %s", _name.c_str());
+      c_handlers.emplace_back(SectionPath{_name},
+			      h);
+    }
+
     template<typename T>
     void registerHandler(const std::string& _name,
 			 T& _variable,

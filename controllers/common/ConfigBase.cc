@@ -112,17 +112,19 @@ namespace aegir {
     root |= ryml::MAP;
 
     // invoke the handlers
-    ryml::NodeRef currnode = root;
     for (auto hit: c_handlers) {
+      ryml::NodeRef currnode = tree.rootref();
       for (auto pit = hit.path.begin(); pit != hit.path.end(); ++pit) {
-	auto csubstr = c4::to_csubstr(*pit);
+	//auto csubstr = c4::to_csubstr(*pit);
+	//auto csubstr = ryml::csubstr(pit->c_str(), pit->size());
+	auto csubstr = tree.to_arena(*pit);
 	if ( pit == --hit.path.end() ) {
 	  // if it's the last one, then call the handler
 	  ryml::NodeRef newnode;
 	  newnode = currnode[csubstr];
 	  hit.handler->marshall(newnode);
 	  break;
-	} else if ( currnode[csubstr].has_key() ) {
+	} else if ( currnode.has_child(csubstr) ) {
 	  // if the key already exists, we're going to the next one
 	  currnode = currnode[csubstr];
 	  continue;
@@ -138,7 +140,7 @@ namespace aegir {
 
     std::ofstream outfile;
     outfile.open(c_cfgfile, std::ios::out | std::ios::trunc);
-    outfile << root;
+    outfile << tree;
     outfile.flush();
     outfile.close();
   }

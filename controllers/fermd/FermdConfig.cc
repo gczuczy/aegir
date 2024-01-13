@@ -6,6 +6,7 @@
 
 #include "logging.hh"
 #include "Exception.hh"
+#include "TiltDB.hh"
 
 namespace aegir {
   namespace fermd {
@@ -16,6 +17,9 @@ namespace aegir {
     FermdConfig::FermdConfig(): ConfigBase(),
 				c_loglevel(blt::severity_level::info) {
       registerHandler("loglevel", c_loglevel);
+
+      // pull in submodules
+      registerHandler<TiltDB>("tilts");
     }
 
     FermdConfig::~FermdConfig() {

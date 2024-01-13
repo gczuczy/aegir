@@ -5,13 +5,13 @@
 #ifndef AEGIR_FERMD_TILTDB_H
 #define AEGIR_FERMD_TILTDB_H
 
-#include <uuid.h>
-
 #include <string>
 #include <memory>
 #include <cstdint>
 
 #include <shared_mutex>
+
+#include <boost/uuid/uuid.hpp>
 
 #include "ConfigBase.hh"
 
@@ -19,18 +19,26 @@
 namespace aegir {
   namespace fermd {
 
+    typedef boost::uuids::uuid uuid_t;
+
     class TiltDB: public ConfigNode {
     public:
       // the struct for the stored data
       struct entry {
-	entry(const std::string& _uuid,
-	      const std::string& _color,
-	      bool _active=false);
+	struct calibration_t {
+	  // in Specific Gravity
+	  float raw;
+	  float corrected;
+	};
 	uuid_t uuid;
 	char color[16];
 	bool active;
+	calibration_t calibrations[2];
 
 	std::string strUUID() const;
+	void setUUID(const std::string& _uuid);
+	void setColor(const std::string& _color);
+	void calibrate(float _raw, float _corrected);
       };
 
     public:
@@ -45,7 +53,12 @@ namespace aegir {
       std::list<entry> getEntries() const;
 
     private:
-      uint8_t c_size;
+      void reset();
+      entry& addEntry(const std::string& _uuid, const std::string& _color,
+		      bool _active=false);
+
+    private:
+      uint32_t c_size;
       entry* c_entries;
       mutable std::shared_mutex c_mutex;
     };
