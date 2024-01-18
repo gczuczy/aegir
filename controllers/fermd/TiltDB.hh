@@ -13,7 +13,7 @@
 
 #include <boost/uuid/uuid.hpp>
 
-#include "ConfigBase.hh"
+#include "common/ConfigBase.hh"
 
 
 namespace aegir {

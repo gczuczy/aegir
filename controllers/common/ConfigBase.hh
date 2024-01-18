@@ -12,10 +12,10 @@
 
 #include <boost/log/trivial.hpp>
 
-#include "ryml.hh"
+#include "common/ryml.hh"
 
-#include "Exception.hh"
-#include "misc.hh"
+#include "common/Exception.hh"
+#include "common/misc.hh"
 
 namespace blt = ::boost::log::trivial;
 

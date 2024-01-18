@@ -4,8 +4,8 @@
 #include <iostream>
 #include <fstream>
 
-#include "logging.hh"
-#include "Exception.hh"
+#include "common/logging.hh"
+#include "common/Exception.hh"
 #include "TiltDB.hh"
 
 namespace aegir {

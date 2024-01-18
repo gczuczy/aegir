@@ -4,7 +4,7 @@
 #ifndef AEGIR_FERMD_CONFIG_H
 #define AEGIR_FERMD_CONFIG_H
 
-#include "ConfigBase.hh"
+#include "common/ConfigBase.hh"
 
 namespace aegir {
 

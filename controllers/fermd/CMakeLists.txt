@@ -3,6 +3,8 @@ list(APPEND fermd_HEADERS
   TiltDB.hh
 )
 
+add_subdirectory(tests)
+
 #list(APPEND fermd_HEADERS
 #  cmakeconfig.hh
 #)
@@ -15,7 +17,7 @@ target_sources(fermd
   ${fermd_HADERS}
 )
 
-target_sources(tests
+target_sources(tests_fermd
   PRIVATE
   FermdConfig.cc
   TiltDB.cc

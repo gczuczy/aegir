@@ -12,8 +12,6 @@
 #include <fstream>
 #include <filesystem>
 
-#include "ryml.hh"
-
 #include <catch2/catch_test_macros.hpp>
 
 #define CFG_TEST_FILE "tests/data/aegir-brewd.yaml"

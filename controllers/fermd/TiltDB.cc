@@ -10,8 +10,8 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-#include "Exception.hh"
-#include "misc.hh"
+#include "common/Exception.hh"
+#include "common/misc.hh"
 
 namespace aegir {
   namespace fermd {

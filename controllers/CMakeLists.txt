@@ -20,9 +20,11 @@ add_executable(fermd)
 
 find_package(Catch2 3 REQUIRED)
 add_executable(tests)
+add_executable(tests_fermd)
 include(CTest)
 include(Catch)
 catch_discover_tests(tests)
+catch_discover_tests(tests_fermd)
 
 add_subdirectory(brewd)
 add_subdirectory(fermd)
@@ -43,20 +45,41 @@ set_target_properties(
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
 )
 
+set_target_properties(
+  tests_fermd
+  PROPERTIES
+  OUTPUT_NAME "tests-fermd"
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
+)
+
 configure_file(common/cmakeconfig.hh.in common/cmakeconfig.hh)
 
 target_include_directories(brewd
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/brewd
-  SYSTEM /usr/local/include
-  SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/common>
+  SYSTEM PRIVATE /usr/local/include
+)
+target_include_directories(brewd
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/brewd
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
+target_include_directories(tests
+  SYSTEM PRIVATE /usr/local/include
+)
 target_include_directories(tests
   PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/brewd
   ${CMAKE_CURRENT_SOURCE_DIR}/fermd
-  SYSTEM /usr/local/include
-  SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/common>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/common>
+)
+
+target_include_directories(tests_fermd
+  SYSTEM PRIVATE /usr/local/include
+)
+target_include_directories(tests_fermd
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/fermd/
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/>
 )
 
 include(CheckSymbolExists)
@@ -134,6 +157,7 @@ if(LTO_supported)
   message(STATUS "Enabling IPO/LTO")
   set_property(TARGET brewd PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
   set_property(TARGET tests PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+  set_property(TARGET tests_fermd PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 else()
   message(STATUS "IPO/LTO not supported: <${error}>")
 endif()
@@ -178,18 +202,38 @@ target_link_libraries(tests
   ryml::ryml
 )
 
+target_link_options(tests_fermd
+  PRIVATE
+  -L/usr/local/lib
+  -L${Boost_LIBRARY_DIRS}
+  Threads::Threads
+)
+
+target_link_libraries(tests_fermd
+  PRIVATE
+  Catch2::Catch2WithMain
+  Boost::log
+  yaml-cpp::yaml-cpp
+  zmq
+  jsoncpp
+  ryml::ryml
+)
+
 
 set_property(TARGET brewd PROPERTY CXX_STANDARD 20)
 set_property(TARGET brewd PROPERTY CXX_STANDARD_REQUIRED True)
 set_property(TARGET brewd PROPERTY CXX_EXTENSIONS False)
-
 target_compile_features(brewd PRIVATE cxx_std_20)
 
 set_property(TARGET tests PROPERTY CXX_STANDARD 20)
 set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
 set_property(TARGET tests PROPERTY CXX_EXTENSIONS False)
-
 target_compile_features(tests PRIVATE cxx_std_20)
+
+set_property(TARGET tests_fermd PROPERTY CXX_STANDARD 20)
+set_property(TARGET tests_fermd PROPERTY CXX_STANDARD_REQUIRED True)
+set_property(TARGET tests_fermd PROPERTY CXX_EXTENSIONS False)
+target_compile_features(tests_fermd PRIVATE cxx_std_20)
 
 # and finally enable testing
 enable_testing()
@@ -218,9 +262,12 @@ install(TARGETS brewd
 
 # Fermd
 target_include_directories(fermd
+  SYSTEM PRIVATE /usr/local/include
+)
+target_include_directories(fermd
   PRIVATE ${fermd_SOURCE_DIR}/fermd
-  SYSTEM /usr/local/include
-  SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/common>
+  /usr/local/include
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/common>
 )
 
 target_compile_options(fermd

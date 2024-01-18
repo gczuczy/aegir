@@ -33,7 +33,7 @@ target_sources(fermd
   ${fermd_HEADERS}
 )
 
-target_sources(tests
+target_sources(tests_fermd
   PRIVATE
   Exception.hh
   Exception.cc
