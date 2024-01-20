@@ -166,6 +166,7 @@ namespace aegir {
     std::map<std::string, thread_pool> c_pools;
     std::uint32_t c_metrics_samples;
     float c_scale_down, c_scale_up;
+    int c_kq;
   };
 }
 

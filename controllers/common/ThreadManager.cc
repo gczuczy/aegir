@@ -1,7 +1,7 @@
 
 #include "common/ThreadManager.hh"
 
-#include <stdio.h>
+#include <sys/event.h>
 
 #include <iostream>
 #include <chrono>
@@ -60,9 +60,11 @@ namespace aegir {
   ThreadManager::ThreadManager(): c_run(true), c_logger("ThreadManager"),
 				  c_metrics_samples(10),
 				  c_scale_down(0.3), c_scale_up(0.8) {
+    c_kq = kqueue();
   }
 
   ThreadManager::~ThreadManager() {
+    close(c_kq);
   }
 
   void ThreadManager::run() {
@@ -89,11 +91,22 @@ namespace aegir {
       spawnWorker(it.second);
     }
 
+    // set up a 100msec ticker with kqueue
+    struct kevent ev;
+    EV_SET(&ev, //event
+	   42, //ident
+	   EVFILT_TIMER, //filter
+	   EV_ADD|EV_ENABLE, //flags
+	   NOTE_MSECONDS, //fflags
+	   100, //data
+	   0); //udata
+    kevent(c_kq, &ev, 1, 0, 0, 0);
+
     uint32_t counter;
     pool_metrics_type tempmetrics;
-    std::chrono::milliseconds s(100);
     while ( c_run ) {
-      std::this_thread::sleep_for(s);
+      if ( kevent(c_kq, 0, 0, &ev, 1, 0)==0 ) continue;
+      if ( ev.filter != EVFILT_TIMER && ev.ident != 42 ) continue;
       // in this main loop we only have to take care
       // of the pool worker scaling
       // the individual threads are restarted in the wrappers
@@ -150,7 +163,7 @@ namespace aegir {
 
     // waiting for threads to stop
     bool has_running = true;
-    s = std::chrono::milliseconds(5);
+    auto s = std::chrono::milliseconds(5);
     while (has_running) {
       has_running = false;
 
