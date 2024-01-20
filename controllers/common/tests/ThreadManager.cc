@@ -22,7 +22,7 @@ public:
     c_initialized = true;
   }
 
-  virtual void run() {
+  virtual void worker() {
     std::chrono::milliseconds s(50);
 
     while ( c_run ) {
@@ -51,7 +51,7 @@ public:
     c_initialized = true;
   }
 
-  virtual void runController() {
+  virtual void controller() {
     std::chrono::milliseconds s(50);
 
     while ( c_run ) {
@@ -59,7 +59,7 @@ public:
     }
   }
 
-  virtual void runWorker(std::atomic<bool>& _run) {
+  virtual void worker(std::atomic<bool>& _run) {
     std::chrono::milliseconds s(50);
 
     while ( c_run && _run ) {

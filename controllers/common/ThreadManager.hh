@@ -10,11 +10,13 @@
 #include <atomic>
 #include <cstdint>
 #include <thread>
+#include <functional>
 #include <list>
 #include <map>
 
 #include "common/misc.hh"
 #include "common/Exception.hh"
+#include "common/LogChannel.hh"
 
 namespace aegir {
 
@@ -28,7 +30,9 @@ namespace aegir {
     private:
       std::atomic<bool>& c_flag;
     };
+
     // subclasses for tenants
+    // Thread
     class Thread {
 
     public:
@@ -36,14 +40,14 @@ namespace aegir {
       Thread(const Thread&)=delete;
       virtual ~Thread()=0;
       virtual void init()=0;
-      virtual void run()=0;
+      virtual void worker()=0;
       void stop();
-
-      void runWrapper(std::atomic<bool>& _flag);
+      inline bool shouldRun() const { return c_run; };
 
     protected:
       std::atomic<bool> c_run;
     };
+    // ThreadPool
     class ThreadPool {
 
     public:
@@ -51,11 +55,11 @@ namespace aegir {
       ThreadPool(const ThreadPool&)=delete;
       virtual ~ThreadPool()=0;
       virtual void init()=0;
-      virtual void runController()=0;
-      virtual void runWorker(std::atomic<bool>& _run)=0;
+      virtual void controller()=0;
+      virtual void worker(std::atomic<bool>& _run)=0;
       virtual std::uint32_t maxWorkers() const =0;
       void stop();
-
+      inline bool shouldRun() const { return c_run; };
 
     protected:
       std::atomic<bool> c_run;
@@ -72,13 +76,16 @@ namespace aegir {
     };
     struct worker_thread {
       std::thread thread;
-      std::atomic<bool> c_running;
+      std::uint32_t id;
+      std::string name;
+      std::shared_ptr<ThreadPool> impl;
+      std::atomic<bool> running;
       std::atomic<bool> run;
     };
     struct thread_pool {
       std::string name;
       std::shared_ptr<ThreadPool> impl;
-      std::thread controller;
+      std::thread thread;
       std::atomic<bool> running; // controller
       std::list<worker_thread> workers;
     };
@@ -116,7 +123,21 @@ namespace aegir {
     };
 
   private:
+    template<typename T>
+    void runWrapper(T& _subject) {
+      throw Exception("Generic runWrapper not implemented");
+    };
+    template<>
+    void runWrapper(single_thread& _subject);
+    template<>
+    void runWrapper(worker_thread& _subject);
+    template<>
+    void runWrapper(thread_pool& _subject);
+    void spawnWorker(thread_pool& _pool);
+
+  private:
     std::atomic<bool> c_run;
+    LogChannel c_logger;
     std::map<std::string, single_thread> c_threads;
     std::map<std::string, thread_pool> c_pools;
   };
