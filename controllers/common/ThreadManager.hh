@@ -11,7 +11,6 @@
 #include <cstdint>
 #include <thread>
 #include <functional>
-#include <list>
 #include <map>
 
 #include "common/misc.hh"
@@ -87,7 +86,7 @@ namespace aegir {
       std::shared_ptr<ThreadPool> impl;
       std::thread thread;
       std::atomic<bool> running; // controller
-      std::list<worker_thread> workers;
+      std::map<std::uint32_t, worker_thread> workers;
     };
 
   public:

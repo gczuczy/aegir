@@ -106,27 +106,33 @@ namespace aegir {
       // pools
       for ( auto& it: c_pools ) {
 	// first stop the workers
-	uint32_t workers(0);
 	for ( auto& wit: it.second.workers ) {
-	  if ( !wit.running && wit.thread.joinable() ) {
-	    wit.thread.join();
-	    c_logger.info("Joined worker %s", wit.name.c_str());
-	  } else if ( wit.running ) {
-	    ++workers;
+	  if ( !wit.second.running ) {
+	    if ( wit.second.thread.joinable() )
+	      wit.second.thread.join();
+	    c_logger.info("Joined worker %s", wit.second.name.c_str());
 	    has_running = true;
+	    it.second.workers.erase(wit.first);
+	    break;
 	  }
 	}
 
-	// if we have no more workers than kill the controller
-	if ( workers == 0 ) {
-	  if ( !it.second.running ) {
-	    if ( it.second.thread.joinable() ) it.second.thread.join();
-	    c_logger.info("Joined pool controller %s", it.second.name.c_str());
-	    c_pools.erase(it.first);
-	    break;
-	  } else {
-	    has_running = true;
-	  }
+	// if all the
+	if ( it.second.workers.size() ) {
+	  has_running = true;
+	} else {
+	  // no more workers, stop the controller
+	  if ( it.second.running ) continue;
+
+	  if ( it.second.thread.joinable() )
+	    it.second.thread.join();
+
+	  c_logger.info("Joined pool controller %s",
+			it.second.name.c_str());
+
+	  has_running = true;
+	  c_pools.erase(it.first);
+	  break;
 	}
       }
       std::this_thread::sleep_for(s);
@@ -142,7 +148,7 @@ namespace aegir {
     for ( auto& it: c_pools ) {
       it.second.impl->stop();
       for ( auto& wit: it.second.workers )
-	wit.run = false;
+	wit.second.run = false;
     }
   }
 
@@ -243,27 +249,30 @@ namespace aegir {
   void ThreadManager::spawnWorker(thread_pool& _pool) {
     std::uint32_t id(0);
 
-    // first get the last id
-    for ( auto& it: _pool.workers )
-      if ( it.id > id ) id = it.id;
+    // look for an unused ID
+    if ( _pool.workers.size()>0 ) {
+      while ( true ) {
+	if ( _pool.workers.find(id) == _pool.workers.end() )
+	  break;
+	++id;
+      }
+    }
 
-    ++id;
-    auto& ref = _pool.workers.emplace_back();
-    ref.id = id;
+    _pool.workers[id].id = id;
     { // assemble a name
       char name[64];
       uint32_t len;
       len = snprintf(name, sizeof(name)-1, "%s-%i",
-		     _pool.name.c_str(), ref.id);
-      ref.name = std::string(name, len);
+		     _pool.name.c_str(), id);
+      _pool.workers[id].name = std::string(name, len);
     }
-    ref.impl = _pool.impl;
-    ref.run = true;
+    _pool.workers[id].impl = _pool.impl;
+    _pool.workers[id].run = true;
 
     // structure is set up, we can launch it
-    ref.thread = std::thread(&ThreadManager::runWrapper<worker_thread>,
-			     this,
-			     std::ref(ref));
+    _pool.workers[id].thread = std::thread(&ThreadManager::runWrapper<worker_thread>,
+					   this,
+					   std::ref(_pool.workers[id]));
   }
 
 }
