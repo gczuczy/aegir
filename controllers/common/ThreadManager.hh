@@ -12,6 +12,9 @@
 #include <thread>
 #include <functional>
 #include <map>
+#include <chrono>
+
+#include <boost/circular_buffer.hpp>
 
 #include "common/misc.hh"
 #include "common/Exception.hh"
@@ -48,6 +51,20 @@ namespace aegir {
     };
     // ThreadPool
     class ThreadPool {
+    protected:
+      class ActivityGuard {
+      public:
+	ActivityGuard()=delete;
+	ActivityGuard(const ActivityGuard&) = delete;
+	ActivityGuard(ActivityGuard&&) = delete;
+	ActivityGuard(ThreadPool* _pool);
+	~ActivityGuard();
+
+      private:
+	ThreadPool* c_pool;
+	std::chrono::time_point<std::chrono::system_clock> c_start;
+      };
+      friend class ActivityGuard;
 
     public:
       ThreadPool();
@@ -59,9 +76,11 @@ namespace aegir {
       virtual std::uint32_t maxWorkers() const =0;
       void stop();
       inline bool shouldRun() const { return c_run; };
+      inline std::uint32_t getActiveCount() const {return c_activity;};
 
     protected:
       std::atomic<bool> c_run;
+      std::atomic<std::uint32_t> c_activity;
     };
     typedef std::shared_ptr<Thread> thread_type;
     typedef std::shared_ptr<ThreadPool> threadpool_type;
@@ -81,12 +100,17 @@ namespace aegir {
       std::atomic<bool> running;
       std::atomic<bool> run;
     };
+    struct pool_metrics_type {
+      uint32_t active;
+      uint32_t total;
+    };
     struct thread_pool {
       std::string name;
       std::shared_ptr<ThreadPool> impl;
       std::thread thread;
       std::atomic<bool> running; // controller
       std::map<std::uint32_t, worker_thread> workers;
+      boost::circular_buffer<pool_metrics_type> metrics;
     };
 
   public:
@@ -118,6 +142,7 @@ namespace aegir {
 
       c_pools[_name].name = _name;
       c_pools[_name].running = false;;
+      c_pools[_name].metrics.set_capacity(c_metrics_samples);
       c_pools[_name].impl = std::static_pointer_cast<ThreadPool>(T::getInstance());
     };
 
@@ -139,6 +164,8 @@ namespace aegir {
     LogChannel c_logger;
     std::map<std::string, single_thread> c_threads;
     std::map<std::string, thread_pool> c_pools;
+    std::uint32_t c_metrics_samples;
+    float c_scale_down, c_scale_up;
   };
 }
 

@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 
+#include <iostream>
 #include <chrono>
 
 namespace aegir {
@@ -31,7 +32,7 @@ namespace aegir {
   /*
     ThreadPool
    */
-  ThreadManager::ThreadPool::ThreadPool(): c_run(true) {
+  ThreadManager::ThreadPool::ThreadPool(): c_run(true), c_activity(0) {
   }
 
   ThreadManager::ThreadPool::~ThreadPool() {
@@ -41,19 +42,30 @@ namespace aegir {
     c_run = false;
   }
 
+  /*
+    ThreadPool::ActivityGuard
+   */
+  ThreadManager::ThreadPool::ActivityGuard::ActivityGuard(ThreadPool* _pool)
+    : c_pool(_pool) {
+    ++c_pool->c_activity;
+  }
+
+  ThreadManager::ThreadPool::ActivityGuard::~ActivityGuard() {
+    --c_pool->c_activity;
+  }
 
   /*
     ThreadManager
    */
-  ThreadManager::ThreadManager(): c_run(true), c_logger("ThreadManager") {
+  ThreadManager::ThreadManager(): c_run(true), c_logger("ThreadManager"),
+				  c_metrics_samples(10),
+				  c_scale_down(0.3), c_scale_up(0.8) {
   }
 
   ThreadManager::~ThreadManager() {
   }
 
   void ThreadManager::run() {
-    std::chrono::milliseconds s(100);
-
     // first initialize everyone
     c_logger.info("Initializing threads");
     for ( auto& it: c_threads ) it.second.impl->init();
@@ -77,8 +89,59 @@ namespace aegir {
       spawnWorker(it.second);
     }
 
+    uint32_t counter;
+    pool_metrics_type tempmetrics;
+    std::chrono::milliseconds s(100);
     while ( c_run ) {
       std::this_thread::sleep_for(s);
+      // in this main loop we only have to take care
+      // of the pool worker scaling
+      // the individual threads are restarted in the wrappers
+      bool check = (counter = (++counter % c_metrics_samples)) == 0;
+
+      for ( auto& it: c_pools ) {
+	// collect metrics first
+	tempmetrics.total = it.second.workers.size();
+	tempmetrics.active = it.second.impl->getActiveCount();
+	it.second.metrics.push_back(tempmetrics);
+
+	// check the pool scaling if needed
+	if ( check ) {
+	  // count the activity
+	  float activity(0);
+	  for ( auto& mit: it.second.metrics )
+	    activity += ((1.0f*mit.active)/mit.total)/c_metrics_samples;
+
+	  // clean workers which are not running
+	  bool found=false;
+	  do {
+	    found = false;
+	    for ( auto& wit: it.second.workers ) {
+	      if ( !wit.second.running && wit.second.thread.joinable() ) {
+		found = true;
+		wit.second.thread.join();
+		c_logger.info("Joined worker %s", wit.second.name.c_str());
+		it.second.workers.erase(wit.first);
+		break;
+	      }
+	    }
+	  } while ( found );
+
+	  // skip if noop
+	  if ( activity > c_scale_down && activity < c_scale_up )
+	    continue;
+
+	  if ( it.second.workers.size()>1 && activity<c_scale_down ) {
+	    c_logger.info("Scaling pool %s down", it.second.name.c_str());
+	    const auto& last = it.second.workers.crbegin();
+	    it.second.workers[last->first].run = false;
+	  } else if ( it.second.workers.size()<it.second.impl->maxWorkers() &&
+		      activity > c_scale_up ) {
+	    c_logger.info("Scaling pool %s up", it.second.name.c_str());
+	    spawnWorker(it.second);
+	  }
+	}
+      }
     }
 
     // call the stop internal to signal every thread
@@ -117,7 +180,7 @@ namespace aegir {
 	  }
 	}
 
-	// if all the
+	// if all the workers stopped, see to the controller
 	if ( it.second.workers.size() ) {
 	  has_running = true;
 	} else {
@@ -186,7 +249,7 @@ namespace aegir {
   template<>
   void ThreadManager::runWrapper(worker_thread& _subject) {
     RunGuard g(_subject.running);
-    while (_subject.impl->shouldRun() ) {
+    while (_subject.impl->shouldRun() && _subject.run ) {
       try {
 	c_logger.info("Starting worker %s", _subject.name.c_str());
 	_subject.impl->worker(_subject.run);
@@ -208,7 +271,7 @@ namespace aegir {
 		      _subject.name.c_str());
 	continue;
       }
-      if ( _subject.impl->shouldRun() ) {
+      if ( _subject.impl->shouldRun() && _subject.run ) {
 	c_logger.warn("worker thread %s exited but still should run, restarting",
 		      _subject.name.c_str());
       }
