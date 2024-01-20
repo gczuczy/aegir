@@ -4,10 +4,10 @@
 
 #include <boost/program_options.hpp>
 
-#include "logging.hh"
-#include "LogChannel.hh"
+#include "common/logging.hh"
+#include "common/LogChannel.hh"
 #include "FermdConfig.hh"
-#include "Exception.hh"
+#include "common/Exception.hh"
 
 namespace po = boost::program_options;
 
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
   aegir::LogChannel log("main");
 
   // config first
-  auto cfg = aegir::fermd::Config::getInstance();
+  auto cfg = aegir::fermd::FermdConfig::getInstance();
   // set the loglevel callback
   //aegir::logging::setGetLogLevel([cfg]() {return cfg->getLogLevel();});
 

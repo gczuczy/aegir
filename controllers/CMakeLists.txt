@@ -266,8 +266,7 @@ target_include_directories(fermd
 )
 target_include_directories(fermd
   PRIVATE ${fermd_SOURCE_DIR}/fermd
-  /usr/local/include
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/common>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
 target_compile_options(fermd

@@ -7,6 +7,7 @@
 #include "common/logging.hh"
 #include "common/Exception.hh"
 #include "TiltDB.hh"
+#include "MainLoop.hh"
 
 namespace aegir {
   namespace fermd {
@@ -20,6 +21,7 @@ namespace aegir {
 
       // pull in submodules
       registerHandler<TiltDB>("tilts");
+      registerHandler<MainLoop>("threads");
     }
 
     FermdConfig::~FermdConfig() {

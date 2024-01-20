@@ -1,0 +1,38 @@
+
+#include "MainLoop.hh"
+#include "common/Exception.hh"
+
+namespace aegir {
+  namespace fermd {
+
+    MainLoop::MainLoop(): ThreadManager(), ConfigNode() {
+    }
+
+    MainLoop::~MainLoop() {
+    }
+
+    std::shared_ptr<MainLoop> MainLoop::getInstance() {
+      static std::shared_ptr<MainLoop> instance{new MainLoop()};
+      return instance;
+    }
+
+    void MainLoop::marshall(ryml::NodeRef& _node) {
+      _node |= ryml::MAP;
+      _node["metricsamples"] << c_metrics_samples;
+      _node["scaledown"] << ryml::fmt::real(c_scale_down, 3);
+      _node["scaleup"] << ryml::fmt::real(c_scale_down, 3);;
+    }
+
+    void MainLoop::unmarshall(ryml::ConstNodeRef& _node) {
+      if ( !_node.is_map() )
+	throw Exception("MainLoop node is not a map");
+
+      if ( _node.has_child("metricssamples") )
+	_node["metricssamples"] >> c_metrics_samples;
+      if ( _node.has_child("scaledown") )
+	_node["scaledown"] >> c_scale_down;
+      if ( _node.has_child("scaleup") )
+	_node["scaleup"] >> c_scale_up;
+    }
+  }
+}
