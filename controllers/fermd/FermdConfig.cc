@@ -8,6 +8,7 @@
 #include "common/Exception.hh"
 #include "TiltDB.hh"
 #include "MainLoop.hh"
+#include "Bluetooth.hh"
 
 namespace aegir {
   namespace fermd {
@@ -22,6 +23,7 @@ namespace aegir {
       // pull in submodules
       registerHandler<TiltDB>("tilts");
       registerHandler<MainLoop>("threads");
+      registerHandler<Bluetooth>("bluetooth");
     }
 
     FermdConfig::~FermdConfig() {

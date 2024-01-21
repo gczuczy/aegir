@@ -217,6 +217,7 @@ target_link_libraries(tests_fermd
   zmq
   jsoncpp
   ryml::ryml
+  bluetooth
 )
 
 
@@ -289,6 +290,7 @@ target_link_libraries(fermd
   gpio
   zmq
   ryml::ryml
+  bluetooth
 )
 
 install(TARGETS fermd

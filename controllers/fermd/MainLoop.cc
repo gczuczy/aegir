@@ -1,11 +1,13 @@
 
 #include "MainLoop.hh"
 #include "common/Exception.hh"
+#include "Bluetooth.hh"
 
 namespace aegir {
   namespace fermd {
 
     MainLoop::MainLoop(): ThreadManager(), ConfigNode() {
+      registerHandler<Bluetooth>("bluetooth");
     }
 
     MainLoop::~MainLoop() {
