@@ -21,6 +21,11 @@ namespace aegir {
       _node["metricsamples"] << c_metrics_samples;
       _node["scaledown"] << ryml::fmt::real(c_scale_down, 3);
       _node["scaleup"] << ryml::fmt::real(c_scale_down, 3);;
+
+      // currently changing this on-the-fly is not supported
+      // so we're not updating the circular buffers.
+      // also, this should only run during startup, before
+      // any circular buffers are allocated
     }
 
     void MainLoop::unmarshall(ryml::ConstNodeRef& _node) {
