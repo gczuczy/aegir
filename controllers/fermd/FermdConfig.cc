@@ -9,6 +9,7 @@
 #include "TiltDB.hh"
 #include "MainLoop.hh"
 #include "Bluetooth.hh"
+#include "ZMQConfig.hh"
 
 namespace aegir {
   namespace fermd {
@@ -24,6 +25,7 @@ namespace aegir {
       registerHandler<TiltDB>("tilts");
       registerHandler<MainLoop>("threads");
       registerHandler<Bluetooth>("bluetooth");
+      registerHandler<ZMQConfig>("zeromq");
     }
 
     FermdConfig::~FermdConfig() {

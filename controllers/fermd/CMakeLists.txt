@@ -3,6 +3,7 @@ list(APPEND fermd_HEADERS
   TiltDB.hh
   MainLoop.hh
   Bluetooth.hh
+  ZMQConfig.hh
 )
 
 add_subdirectory(tests)
@@ -18,6 +19,7 @@ target_sources(fermd
   TiltDB.cc
   MainLoop.cc
   Bluetooth.cc
+  ZMQConfig.cc
   ${fermd_HADERS}
 )
 
@@ -27,5 +29,6 @@ target_sources(tests_fermd
   TiltDB.cc
   MainLoop.cc
   Bluetooth.cc
+  ZMQConfig.cc
   ${brewd_HEADERS}
 )
