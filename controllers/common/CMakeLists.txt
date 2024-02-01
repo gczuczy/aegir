@@ -26,6 +26,8 @@ list(APPEND fermd_FILES
   ThreadManager.cc
   ZMQ.hh
   ZMQ.cc
+  Message.hh
+  Message.cc
 )
 
 target_sources(brewd

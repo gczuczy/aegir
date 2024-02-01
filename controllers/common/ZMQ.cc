@@ -9,7 +9,24 @@
 
 namespace aegir {
 
+  /*
+    ZMQctx
+   */
+
+  ZMQctx::ZMQctx(): c_ctx(0) {
+    if ( (c_ctx = zmq_ctx_new()) == 0 )
+      throw Exception("zmq_ctx_new failed");
+  }
+
+  ZMQctx::~ZMQctx() {
+    zmq_ctx_term(c_ctx);
+  }
+
+  /*
+    ZMQConfig
+   */
   ZMQConfig::ZMQConfig(): ConfigNode(), c_specs(0), c_nspecs(0) {
+    c_ctx = std::make_shared<ZMQctx>();
   }
 
   ZMQConfig::~ZMQConfig() {
