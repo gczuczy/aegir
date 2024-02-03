@@ -2,12 +2,17 @@
 #include "MainLoop.hh"
 #include "common/Exception.hh"
 #include "Bluetooth.hh"
+#include "Message.hh"
 
 namespace aegir {
   namespace fermd {
 
     MainLoop::MainLoop(): ThreadManager(), ConfigNode() {
       registerHandler<Bluetooth>("bluetooth");
+
+      auto msf = aegir::MessageFactory::getInstance();
+
+      msf->registerHandler<TiltReadingMessage>();
     }
 
     MainLoop::~MainLoop() {

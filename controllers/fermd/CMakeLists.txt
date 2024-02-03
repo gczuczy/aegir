@@ -4,6 +4,7 @@ list(APPEND fermd_HEADERS
   MainLoop.hh
   Bluetooth.hh
   ZMQConfig.hh
+  Message.hh
 )
 
 add_subdirectory(tests)
@@ -20,6 +21,7 @@ target_sources(fermd
   MainLoop.cc
   Bluetooth.cc
   ZMQConfig.cc
+  Message.cc
   ${fermd_HADERS}
 )
 
@@ -30,5 +32,6 @@ target_sources(tests_fermd
   MainLoop.cc
   Bluetooth.cc
   ZMQConfig.cc
+  Message.cc
   ${brewd_HEADERS}
 )

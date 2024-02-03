@@ -3,4 +3,5 @@ target_sources(tests_fermd
   TiltDB.cc
   FermdConfig.cc
   Bluetooth.cc
+  Message.cc
 )

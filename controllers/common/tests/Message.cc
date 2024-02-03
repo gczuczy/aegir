@@ -19,22 +19,26 @@ public:
 
 public:
   TestMessage(int _data): Message(msg_group, msg_type, sizeof(headers)+sizeof(int)) {
-    //resize(size()+sizeof(int));
-    c_data = dataPtr<int>();
+    setPointers();
     c_headers->size = sizeof(headers)+sizeof(int);
     *c_data = _data;
   }
   virtual ~TestMessage() {};
 private:
   TestMessage(const char* _buffer): Message(_buffer)  {
-    c_data = dataPtr<int>();
+    setPointers();
   }
 
 public:
   static aegir::message_type parse(const char* _buffer) {
     return std::shared_ptr<TestMessage>{new TestMessage(_buffer)};
   };
-  int data() const { return *c_data; };
+  inline int data() const { return *c_data; };
+
+public:
+  virtual void setPointers() {
+    setPointer(c_data, 0);
+  }
 
 private:
   int *c_data;

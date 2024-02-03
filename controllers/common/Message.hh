@@ -54,6 +54,11 @@ namespace aegir {
     inline std::uint8_t type() const { return c_headers->type; };
     inline std::uint16_t size() const { return c_headers->size; };
 
+    template<typename T>
+    void setPointer(T*& _ptr, std::uint16_t _offset) {
+      _ptr = (T*)(dataPtr<char>() + _offset);
+    }
+
     template<IsMessage T>
     std::shared_ptr<T> as() {
       if ( !(group() == T::msg_group && type() == T::msg_type) )
@@ -61,6 +66,11 @@ namespace aegir {
       return std::static_pointer_cast<T>(shared_from_this());
     };
 
+  protected:
+    // by default blank, but should be overridden if needed
+    virtual void setPointers();
+
+  public:
     // size() always tells us the serialized length
     // this should not copy the data
     // can be reimplemented if needed

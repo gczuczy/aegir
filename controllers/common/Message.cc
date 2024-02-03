@@ -16,7 +16,9 @@ namespace aegir {
 
     c_headers->group = _group;
     c_headers->type = _type;
-    c_headers->size = sizeof(headers);
+    c_headers->size = _size;
+
+    setPointers();
   }
 
   Message::Message(const void* _buffer): c_buffer(0) {
@@ -32,6 +34,9 @@ namespace aegir {
   void Message::resize(std::uint16_t _size) {
     c_buffer = (void*)realloc((void*)c_buffer, _size);
     c_headers = (headers*)c_buffer;
+  }
+
+  void Message::setPointers() {
   }
 
   /*
