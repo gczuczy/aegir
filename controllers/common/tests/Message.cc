@@ -18,8 +18,8 @@ public:
   static constexpr std::uint8_t msg_type = 42;
 
 public:
-  TestMessage(int _data): Message(msg_group, msg_type) {
-    resize(size()+sizeof(int));
+  TestMessage(int _data): Message(msg_group, msg_type, sizeof(headers)+sizeof(int)) {
+    //resize(size()+sizeof(int));
     c_data = dataPtr<int>();
     c_headers->size = sizeof(headers)+sizeof(int);
     *c_data = _data;

@@ -41,7 +41,8 @@ namespace aegir {
       std::uint16_t size;
     };
   protected:
-    Message(MessageGroup _group, std::uint8_t _type);
+    Message(MessageGroup _group, std::uint8_t _type,
+	    std::uint16_t _size = sizeof(headers));
     Message(const void*);
   public:
     Message()=delete;

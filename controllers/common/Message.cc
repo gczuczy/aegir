@@ -9,8 +9,9 @@
 
 namespace aegir {
 
-  Message::Message(MessageGroup _group, std::uint8_t _type): c_buffer(0) {
-    c_buffer = (void*)malloc(sizeof(headers));
+  Message::Message(MessageGroup _group, std::uint8_t _type,
+		   std::uint16_t _size): c_buffer(0) {
+    c_buffer = (void*)malloc(_size);
     c_headers = (headers*)c_buffer;
 
     c_headers->group = _group;
