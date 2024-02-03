@@ -7,10 +7,12 @@ namespace aegir {
     /*
       TiltReadingMessage
      */
-    TiltReadingMessage::TiltReadingMessage(uuid_t _uuid, float _temp, float _sg):
+    TiltReadingMessage::TiltReadingMessage(uuid_t &_uuid, time_t _time,
+					   float _temp, float _sg):
       Message(msg_group, msg_type, total_size) {
       setPointers();
       *c_uuid = _uuid;
+      *c_time = _time;
       *c_temp = _temp;
       *c_sg = _sg;
     }
@@ -24,6 +26,7 @@ namespace aegir {
 
     void TiltReadingMessage::setPointers() {
       setPointer(c_uuid, uuid_offset);
+      setPointer(c_time, time_offset);
       setPointer(c_temp, temp_offset);
       setPointer(c_sg, sg_offset);
     }

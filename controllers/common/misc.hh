@@ -41,7 +41,7 @@ namespace aegir {
 	continue;
       }
 
-      if ( (i>0 && i%16==0) || i == _len-1 ) {
+      if ( (i>0 && i%16==15) || i == _len-1 ) {
 	printf("  |");
 	for (auto j=i>=16?i-16:0; j<i; ++j) {
 	  if ( data[j]>=33 && data[j]<=126 ) printf("%c", data[j]);
