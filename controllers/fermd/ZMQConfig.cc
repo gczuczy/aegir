@@ -21,6 +21,10 @@ namespace aegir {
 	      ZMQ_PUB, ZMQ_SUB,
 	      "sensorctrl", 0,
 	      false);
+      addProxy("sensorbus",
+	       "sensorfetch", false,
+	       "sensorbus", true,
+	       "sensorctrl", false);
 
       // The Public Relations socket
       addSpec("prpublic",
@@ -38,6 +42,11 @@ namespace aegir {
 	      ZMQ_PUB, ZMQ_SUB,
 	      "prctrl", 0,
 	      false);
+
+      addProxy("pr",
+	       "prpublic", false,
+	       "prbus", true,
+	       "prctrl", false);
     }
 
     ZMQConfig::~ZMQConfig() {

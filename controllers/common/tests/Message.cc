@@ -1,5 +1,5 @@
 /*
-  ThreadPool
+  Message
  */
 
 #include "common/Message.hh"
@@ -60,7 +60,7 @@ TEST_CASE("Message", "[common]") {
   testdata.headers.size = sizeof(testdata);
   testdata.data = 42;
   TestMessage testmsg(testdata.data);
-  void *ts = testmsg.serialize();
+  const void *ts = testmsg.serialize();
   aegir::Message::headers* h = (aegir::Message::headers*)ts;
 
   REQUIRE(h->size == testdata.headers.size);

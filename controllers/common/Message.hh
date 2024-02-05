@@ -74,7 +74,7 @@ namespace aegir {
     // size() always tells us the serialized length
     // this should not copy the data
     // can be reimplemented if needed
-    virtual void* serialize() const {
+    virtual const void* serialize() const {
       return c_buffer;
     };
 
