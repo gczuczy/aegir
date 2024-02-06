@@ -4,6 +4,9 @@
 #include <string.h>
 
 #include <cstdint>
+#include <thread>
+#include <atomic>
+#include <chrono>
 
 #include "common/misc.hh"
 
@@ -66,16 +69,10 @@ private:
 	    ZMQ_DEALER, ZMQ_REP,
 	    "reqb", 0,
 	    true);
-    addSpec("reqctrl",
-	    aegir::ZMQConfig::zmq_proto::INPROC,
-	    ZMQ_PUB, ZMQ_SUB,
-	    "reqctrl", 0,
-	    false);
 
     addProxy("test",
 	     "reqa", false,
-	     "reqb", true,
-	     "reqctrl", false);
+	     "reqb", true);
 
     // our message type
     auto msf = aegir::MessageFactory::getInstance();
@@ -113,4 +110,139 @@ TEST_CASE("pubsub", "[common][zmq]") {
   REQUIRE(srcmsg.group() == dstmsg->group());
   REQUIRE(srcmsg.type() == dstmsg->type());
   REQUIRE(srcmsg.size() == dstmsg->size());
+  auto tmsg = dstmsg->as<TestMessage>();
+  REQUIRE(srcmsg.data() == tmsg->data());
+}
+
+TEST_CASE("reqrep", "[common][zmq]") {
+  int reqval = 42;
+  int repval = 69;
+  auto cfg = TestConfig::getInstance();
+
+  auto req = cfg->srcSocket("reqrep");
+  auto rep = cfg->dstSocket("reqrep");
+
+  req->setSendTimeout(100);
+  req->setRecvTimeout(100);
+  rep->setSendTimeout(100);
+  rep->setRecvTimeout(100);
+
+  req->brrr();
+  rep->brrr();
+
+  auto reqmsg = TestMessage(reqval);
+  req->send(reqmsg, true);
+
+  {
+    auto msg = rep->recv(true);
+    REQUIRE(msg != nullptr);
+    REQUIRE(reqmsg.group() == msg->group());
+    REQUIRE(reqmsg.type() == msg->type());
+    REQUIRE(reqmsg.size() == msg->size());
+
+    auto tmsg = msg->as<TestMessage>();
+    REQUIRE(tmsg->data() == reqval);
+
+    rep->send(TestMessage(repval), true);
+  }
+
+  // receive the response
+  {
+    auto msg = req->recv(true);
+    REQUIRE(msg->group() == TestMessage::msg_group);
+    REQUIRE(msg->type() == TestMessage::msg_type);
+
+    auto tmsg = msg->as<TestMessage>();
+    REQUIRE(tmsg->data() == repval);
+  }
+}
+
+class ProxyThread {
+public:
+  ProxyThread(aegir::zmqproxy_type _proxy): c_proxy(_proxy),
+					    c_run(true), c_running(false) {
+  };
+  ProxyThread()=delete;
+  ProxyThread(const ProxyThread&)=delete;
+  ProxyThread(ProxyThread&&)=delete;
+  ~ProxyThread() {};
+
+  inline bool isRunning() const { return c_running; };
+
+  void stop() {
+    c_run = false;
+    c_proxy->terminate();
+
+    for (int i=0; i<1000; ++i) {
+      if ( !c_running ) break;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    if ( c_running )
+      throw std::runtime_error("Proxy did not stop");
+    c_thr->join();
+  };
+
+  void run() {
+    c_thr = std::shared_ptr<std::thread>{new std::thread(&ProxyThread::runProxy,
+							 this)};
+  };
+
+private:
+  void runProxy() {
+    c_running = true;
+    while ( c_run ) c_proxy->run();
+    c_running = false;
+  };
+
+private:
+  aegir::zmqproxy_type c_proxy;
+  std::atomic<bool> c_run, c_running;;
+  std::shared_ptr<std::thread> c_thr;
+};
+
+TEST_CASE("proxy", "[common][zmq]") {
+  int reqval = 42;
+  int repval = 69;
+  auto cfg = TestConfig::getInstance();
+  auto proxy = cfg->proxy("test");
+  auto req = cfg->srcSocket("reqa");
+  auto rep = cfg->dstSocket("reqb");
+
+  req->setSendTimeout(100);
+  req->setRecvTimeout(100);
+  rep->setSendTimeout(100);
+  rep->setRecvTimeout(100);
+
+  req->brrr();
+  rep->brrr();
+
+  ProxyThread pthr(proxy);
+  pthr.run();
+
+  auto reqmsg = TestMessage(reqval);
+  req->send(reqmsg, true);
+
+  {
+    auto msg = rep->recv(true);
+    REQUIRE(msg != nullptr);
+    REQUIRE(msg->group() == TestMessage::msg_group);
+    REQUIRE(msg->type() == TestMessage::msg_type);
+
+    auto tmsg = msg->as<TestMessage>();
+    REQUIRE(tmsg->data() == reqval);
+
+    rep->send(TestMessage(repval), true);
+  }
+
+  // receive the response
+  {
+    auto msg = req->recv(true);
+    REQUIRE(msg->group() == TestMessage::msg_group);
+    REQUIRE(msg->type() == TestMessage::msg_type);
+
+    auto tmsg = msg->as<TestMessage>();
+    REQUIRE(tmsg->data() == repval);
+  }
+
+  pthr.stop();
 }

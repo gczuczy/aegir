@@ -184,14 +184,12 @@ namespace aegir {
       dbg = getSocket(c_specs[n].name, c_specs[n].src_binds);
     }
 
-    auto srcidx = c_proxies[idx].src.idx;
-    auto dstidx = c_proxies[idx].dst.idx;
-    auto ctrlidx = c_proxies[idx].ctrl.idx;
+    auto frontidx = c_proxies[idx].front.idx;
+    auto backidx = c_proxies[idx].back.idx;
     return std::shared_ptr<ZMQProxy>{
-      new ZMQProxy(shared_from_this(),
-		   getSocket(c_specs[srcidx].name, c_specs[srcidx].src_binds),
-		   getSocket(c_specs[dstidx].name, c_specs[dstidx].src_binds),
-		   getSocket(c_specs[ctrlidx].name, c_specs[ctrlidx].src_binds),
+      new ZMQProxy(c_ctx,
+		   getSocket(c_specs[frontidx].name, c_specs[frontidx].src_binds),
+		   getSocket(c_specs[backidx].name, c_specs[backidx].src_binds),
 		   dbg)};
   }
 
@@ -265,20 +263,18 @@ namespace aegir {
   }
 
   void ZMQConfig::addProxy(const std::string& _name,
-			   const std::string& _src_name, bool _src_src,
-			   const std::string& _dst_name, bool _dst_src,
-			   const std::string& _ctrl_name, bool _ctrl_src,
+			   const std::string& _front_name, bool _front_src,
+			   const std::string& _back_name, bool _back_src,
 			   const std::string& _dbg_name, bool _dbg_src) {
-    std::uint32_t srcidx, dstidx, ctrlidx, dbgidx(0);
+    std::uint32_t frontidx, backidx, dbgidx(0);
 
     bool has_dbg = _dbg_name!="";
 
     if ( _name.length() <2 )
       throw Exception("ZMQ proxy name too short");
 
-    srcidx = getSocketIndex(_src_name);
-    dstidx = getSocketIndex(_dst_name);
-    ctrlidx = getSocketIndex(_ctrl_name);
+    frontidx = getSocketIndex(_front_name);
+    backidx = getSocketIndex(_back_name);
     if ( has_dbg) dbgidx = getSocketIndex(_dbg_name);
 
     uint32_t n = c_nproxies++;
@@ -286,12 +282,12 @@ namespace aegir {
 				     sizeof(proxy_spec)*c_nproxies);
     memset((void*)&c_proxies[n], 0, sizeof(proxy_spec));
 
-    c_proxies[n].src.idx = srcidx;
-    c_proxies[n].src.source = _src_src;
-    c_proxies[n].dst.idx = dstidx;
-    c_proxies[n].dst.source = _dst_src;
-    c_proxies[n].ctrl.idx = ctrlidx;
-    c_proxies[n].ctrl.source = _ctrl_src;
+    memcpy((void*)&c_proxies[n].name,
+	   (void*)_name.data(), _name.size());
+    c_proxies[n].front.idx = frontidx;
+    c_proxies[n].front.source = _front_src;
+    c_proxies[n].back.idx = backidx;
+    c_proxies[n].back.source = _back_src;
     if ( has_dbg ) {
       c_proxies[n].dbg.idx = dbgidx;
       c_proxies[n].dbg.source = _dbg_src;
@@ -437,15 +433,53 @@ namespace aegir {
   /*
     ZMQProxy
    */
-  ZMQProxy::ZMQProxy(zmqconfig_ptr _cfg,
-		     zmqsocket_type _src,
-		     zmqsocket_type _dst,
-		     zmqsocket_type _ctrl,
+  std::atomic<std::uint32_t> ZMQProxy::c_control_index(0);
+  ZMQProxy::ZMQProxy(zmqctx_type _ctx,
+		     zmqsocket_type _front,
+		     zmqsocket_type _back,
 		     zmqsocket_type _dbg)
-    : c_zmqcfg(_cfg), c_src(_src), c_dst(_dst), c_ctrl(_ctrl), c_dbg(_dbg) {
+    : c_ctx(_ctx), c_front(_front), c_back(_back), c_dbg(_dbg) {
+    uint32_t idx = c_control_index++;
+    char buff[32];
+    int len;
 
+    len = snprintf(buff, sizeof(buff)-1,
+		   "inproc://global-proxy-control-%u", idx);
+
+    if ( (c_ctrl = zmq_socket(c_ctx->getCtx(), ZMQ_REP))==0 )
+      throw Exception("zmq_socket(): %s", std::strerror(errno));
+    if ( (c_ctrlclient = zmq_socket(c_ctx->getCtx(), ZMQ_REQ))==0 )
+      throw Exception("zmq_socket(): %s", std::strerror(errno));
+
+    if ( zmq_bind(c_ctrl, buff)<0 )
+      throw Exception("zmq_bind(): %s", std::strerror(errno));
+
+    if ( zmq_connect(c_ctrlclient, buff)<0 )
+      throw Exception("zmq_connect(): %s", std::strerror(errno));
   }
 
   ZMQProxy::~ZMQProxy() {
+    zmq_close(c_ctrl);
+    zmq_close(c_ctrlclient);
+  }
+
+  void ZMQProxy::run() {
+    void *dbg(0);
+    if ( c_dbg ) dbg = c_dbg->nativeSocket();
+    c_front->brrr();
+    c_back->brrr();
+
+    void *front = c_front->nativeSocket();
+    void *back = c_back->nativeSocket();
+    if ( zmq_proxy_steerable(front,
+			     back,
+			     dbg,
+			     c_ctrl) != 0 )
+      throw Exception("zmq_proxy_steerable(): %s", std::strerror(errno));
+  }
+
+  void ZMQProxy::terminate() {
+    if ( zmq_send(c_ctrlclient, "TERMINATE", 9, 0) < 0 )
+      throw Exception("zmq_send(): %s", std::strerror(errno));
   }
 }

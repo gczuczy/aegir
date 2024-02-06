@@ -40,8 +40,7 @@ namespace aegir {
   // to be subclassed
   class ZMQConfig;
   typedef std::shared_ptr<ZMQConfig> zmqconfig_ptr;
-  class ZMQConfig: public ConfigNode,
-		   public std::enable_shared_from_this<ZMQConfig> {
+  class ZMQConfig: public ConfigNode {
   public:
     enum class zmq_proto {
       INPROC=0,
@@ -65,9 +64,8 @@ namespace aegir {
 
     struct alignas(sizeof(long)) proxy_spec {
       char name[16];
-      proxy_node src;
-      proxy_node dst;
-      proxy_node ctrl;
+      proxy_node front;
+      proxy_node back;
       proxy_node dbg;
       bool has_dbg;
       bool debug;
@@ -100,9 +98,8 @@ namespace aegir {
 		 const uint16_t _port=0,
 		 bool _srcbind=false);
     void addProxy(const std::string& _name,
-		  const std::string& _src_name, bool _src_src,
-		  const std::string& _dst_name, bool _dst_src,
-		  const std::string& _ctrl_name, bool _ctrl_src,
+		  const std::string& _front_name, bool _front_src,
+		  const std::string& _back_name, bool _back_src,
 		  const std::string& _dbg_name="", bool _dbg_src=false);
 
   private:
@@ -121,8 +118,10 @@ namespace aegir {
   /*
     ZMQSocket
    */
+  class ZMQProxy;
   class ZMQSocket {
     friend aegir::ZMQConfig;
+    friend aegir::ZMQProxy;
 
   protected:
     ZMQSocket()=delete;
@@ -145,7 +144,7 @@ namespace aegir {
     inline void send(message_type _msg, bool _wait=false) {
       send(_msg->serialize(), _msg->size(), _wait);
     }
-    inline void send(Message& _msg, bool _wait=false) {
+    inline void send(const Message& _msg, bool _wait=false) {
       send(_msg.serialize(), _msg.size(), _wait);
     }
     inline void send(const std::string& _buff, bool _wait=false) {
@@ -155,6 +154,9 @@ namespace aegir {
 
     // makes the socket go brrr
     void brrr();
+
+  protected:
+    inline void* nativeSocket() const { return c_sock; };
 
   private:
     void *c_sock;
@@ -170,10 +172,9 @@ namespace aegir {
     friend aegir::ZMQConfig;
 
     protected:
-    ZMQProxy(zmqconfig_ptr _cfg,
-	     zmqsocket_type _src,
-	     zmqsocket_type _dst,
-	     zmqsocket_type _ctrl,
+    ZMQProxy(zmqctx_type _ctx,
+	     zmqsocket_type _front,
+	     zmqsocket_type _back,
 	     zmqsocket_type _dbg);
     ZMQProxy()=delete;
     ZMQProxy(const ZMQProxy&) = delete;
@@ -181,9 +182,15 @@ namespace aegir {
   public:
     ~ZMQProxy();
 
+    void run();
+    void terminate();
+
   private:
-    zmqconfig_ptr c_zmqcfg;
-    zmqsocket_type c_src, c_dst, c_ctrl, c_dbg;
+    static std::atomic<std::uint32_t> c_control_index;
+    zmqctx_type c_ctx;
+    zmqsocket_type c_front, c_back, c_dbg;
+    void *c_ctrl;
+    void *c_ctrlclient;
   };
 }
 

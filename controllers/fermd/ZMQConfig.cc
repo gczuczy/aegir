@@ -16,15 +16,9 @@ namespace aegir {
 	      ZMQ_XPUB, ZMQ_SUB,
 	      "sensorbus", 0,
 	      true);
-      addSpec("sensorctrl",
-	      aegir::ZMQConfig::zmq_proto::INPROC,
-	      ZMQ_PUB, ZMQ_SUB,
-	      "sensorctrl", 0,
-	      false);
       addProxy("sensorbus",
 	       "sensorfetch", false,
-	       "sensorbus", true,
-	       "sensorctrl", false);
+	       "sensorbus", true);
 
       // The Public Relations socket
       addSpec("prpublic",
@@ -37,16 +31,10 @@ namespace aegir {
 	      ZMQ_DEALER, ZMQ_REP,
 	      "prbus", 0,
 	      true);
-      addSpec("prctrl",
-	      aegir::ZMQConfig::zmq_proto::INPROC,
-	      ZMQ_PUB, ZMQ_SUB,
-	      "prctrl", 0,
-	      false);
 
       addProxy("pr",
 	       "prpublic", false,
-	       "prbus", true,
-	       "prctrl", false);
+	       "prbus", true);
     }
 
     ZMQConfig::~ZMQConfig() {
