@@ -30,7 +30,6 @@ namespace aegir {
       // ConfigNode
       virtual void marshall(ryml::NodeRef&);
       virtual void unmarshall(ryml::ConstNodeRef&);
-
     }; // class MainLoop
   } // namespace fermd
 } // namespace aegir

@@ -76,6 +76,8 @@ namespace aegir {
 	void setmask(std::uint64_t _opgroup, std::uint64_t _opcode, std::uint64_t _mask);
 	uint32_t readBufferSize();
 	void readSupprtedFeatures();
+	void getBDAddress(bdaddr_t &_addr);
+	void initNode();
 	void setEventFilter(std::uint64_t _filter);
 
       private:

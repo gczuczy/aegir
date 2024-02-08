@@ -61,9 +61,44 @@ namespace aegir {
       // per ng_hci(4)
       try {
 	readBufferSize();
-	readSupprtedFeatures();
+      }
+      catch (Exception& e) {
+	c_logger.error("readBufferSize(): %s", e.what());
       }
       catch (...) {
+	c_logger.error("readBufferSize(): unknown error");
+      }
+
+      try {
+	readSupprtedFeatures();
+      }
+      catch (Exception& e) {
+	c_logger.error("readSupportedFeatures(): %s", e.what());
+      }
+      catch (...) {
+	c_logger.error("readSupportedFeatures(): unknown error");
+      }
+
+      try {
+	bdaddr_t addr;
+	getBDAddress(addr);
+	printf("bdaddr: %s\n", bdaddr(addr).c_str());
+      }
+      catch (Exception& e) {
+	c_logger.error("getBDAddress(): %s", e.what());
+      }
+      catch (...) {
+	c_logger.error("getBDAddress(): unknown error");
+      }
+
+      try {
+	initNode();
+      }
+      catch (Exception& e) {
+	c_logger.error("initNode(): %s", e.what());
+      }
+      catch (...) {
+	c_logger.error("initNode(): unknown error");
       }
 
       // skipping LE scan parameters, testprog got
@@ -109,8 +144,7 @@ namespace aegir {
 		      NG_HCI_OCF_LE_READ_BUFFER_SIZE,
 		      rp, 1);
       if ( rp.status != 0 ) {
-	printf("LE read buff Status: %i\n", rp.status);
-	return 4;
+	throw Exception("LE read buff Status: %i\n", rp.status);
       }
       return rp.hc_le_data_packet_length;
     }
@@ -128,11 +162,38 @@ namespace aegir {
 			NG_HCI_OCF_LE_READ_LOCAL_SUPPORTED_FEATURES,
 			rp, 1);
       }
-      catch (...) {
-	c_logger.warn("Reading supported features failed");
-	return;
+      catch (Exception& e) {
+	throw Exception("Reading supported features failed: %s", e.what());
       }
       c_logger.debug("Supported features: %0lx", rp.le_features);
+    }
+
+    void Bluetooth::LE::initNode() {
+      struct bt_devreq dr;
+      dr.opcode = NG_HCI_OPCODE(NG_HCI_OGF_LE,
+				NGM_HCI_NODE_INIT);
+
+      dr.cparam = (void*)0;
+      dr.clen = 0;
+      dr.rparam = (void*)0;
+      dr.rlen = 0;
+
+      if ( bt_devreq(c_sock, &dr, 1)<0 ) {
+	c_logger.error("bt_devreq failed: %s", strerror(errno));
+	throw Exception("bt_devreq failed: %s", strerror(errno));
+      }
+    }
+
+    void Bluetooth::LE::getBDAddress(bdaddr_t &_addr) {
+
+      try {
+	btDeviceRequest(NG_HCI_OGF_LE,
+			NGM_HCI_NODE_GET_BDADDR,
+			_addr, 1);
+      }
+      catch (Exception& e) {
+	throw Exception("Reading BDAddr: %s", e.what());
+      }
     }
 
     void Bluetooth::LE::setEventFilter(std::uint64_t _filter) {
@@ -191,6 +252,7 @@ namespace aegir {
     }
 
     void Bluetooth::init() {
+      printf("Bluetooth::init\n");
       if ( c_device == "auto" ) {
 	c_logger.debug("Enumerating Bluetooth devices");
 	getDeviceList();
@@ -203,6 +265,7 @@ namespace aegir {
       } else {
 	c_device_selected = c_device;
       }
+      printf("BT dev: %s\n", c_device_selected.c_str());
 
       // get the device information
       struct bt_devinfo di;
@@ -260,17 +323,19 @@ namespace aegir {
 	throw Exception("Bluetooth: kevent(): %s", strerror(errno));
       }
 
-      to.tv_sec = 0;
-      to.tv_nsec = 10000;
+      to.tv_sec = 1;
+      to.tv_nsec = 0;
       while ( c_run ) {
 	int nevents;
 	if ( (nevents = kevent(kq, 0, 0, evlist, 4, &to))<0 ) {
 	  c_logger.error("kevent(): %s", strerror(errno));
 	  continue;
 	}
+	printf("nevents: %i\n", nevents);
 	// if no events, we just loop back
 	if ( !nevents ) continue;
 	c_logger.debug("events from kqueue: %i", nevents);
+	printf("%s:%i\n", __FILE__, __LINE__);
 
 	// handle the events
 	for (int i=0; i<nevents; ++i ) {
@@ -284,6 +349,7 @@ namespace aegir {
 	    c_logger.error("Was unable to read the whole data");
 	    continue;
 	  }
+	  hexdump(buffer, evlist[i].data);
 	}
       }
 

@@ -8,6 +8,7 @@
 #include "common/LogChannel.hh"
 #include "FermdConfig.hh"
 #include "common/Exception.hh"
+#include "MainLoop.hh"
 
 namespace po = boost::program_options;
 
@@ -82,6 +83,12 @@ int main(int argc, char* argv[]) {
   }
 
   //daemonization
+
+  // the main loop
+  {
+    auto ml = aegir::fermd::MainLoop::getInstance();
+    ml->run();
+  }
 
   return 0;
 }
