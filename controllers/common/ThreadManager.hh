@@ -43,7 +43,7 @@ namespace aegir {
       virtual ~Thread()=0;
       virtual void init()=0;
       virtual void worker()=0;
-      void stop();
+      virtual void stop();
       inline bool shouldRun() const { return c_run; };
 
     protected:

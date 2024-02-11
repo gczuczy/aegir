@@ -34,6 +34,7 @@ namespace aegir {
       // loglevel
       blt::severity_level c_loglevel;
     };
+    typedef std::shared_ptr<FermdConfig> fermdconfig_type;
   }
 }
 

@@ -59,7 +59,22 @@ int main(int argc, char* argv[]) {
   aegir::LogChannel log("main");
 
   // config first
-  auto cfg = aegir::fermd::FermdConfig::getInstance();
+  aegir::fermd::fermdconfig_type cfg;
+  try {
+    cfg = aegir::fermd::FermdConfig::getInstance();
+  }
+  catch (aegir::Exception& e) {
+    printf("Fatal error: %s\n", e.what());
+    return 1;
+  }
+  catch (std::exception& e) {
+    printf("Fatal error: %s\n", e.what());
+    return 2;
+  }
+  catch (...) {
+    printf("Unknown fatal error\n");
+    return 3;
+  }
   // set the loglevel callback
   //aegir::logging::setGetLogLevel([cfg]() {return cfg->getLogLevel();});
 
@@ -85,9 +100,21 @@ int main(int argc, char* argv[]) {
   //daemonization
 
   // the main loop
-  {
+  try {
     auto ml = aegir::fermd::MainLoop::getInstance();
     ml->run();
+  }
+  catch (aegir::Exception& e) {
+    printf("Fatal error: %s\n", e.what());
+    return 1;
+  }
+  catch (std::exception& e) {
+    printf("Fatal error: %s\n", e.what());
+    return 2;
+  }
+  catch (...) {
+    printf("Unknown fatal error\n");
+    return 3;
   }
 
   return 0;

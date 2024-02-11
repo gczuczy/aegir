@@ -3,12 +3,14 @@
 #include "common/Exception.hh"
 #include "Bluetooth.hh"
 #include "Message.hh"
+#include "SensorProxy.hh"
 
 namespace aegir {
   namespace fermd {
 
     MainLoop::MainLoop(): ThreadManager(), ConfigNode() {
       registerHandler<Bluetooth>("bluetooth");
+      registerHandler<SensorProxy>("sensorproxy");
 
       auto msf = aegir::MessageFactory::getInstance();
 

@@ -22,6 +22,8 @@ target_sources(fermd
   Bluetooth.cc
   ZMQConfig.cc
   Message.cc
+  SensorProxy.hh
+  SensorProxy.cc
   ${fermd_HADERS}
 )
 

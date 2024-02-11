@@ -239,9 +239,8 @@ namespace aegir {
 
     Bluetooth::Bluetooth(): ConfigNode(), ThreadManager::Thread(),
 			    c_device("auto"), c_logger("Bluetooth") {
-      c_sensorbus = ZMQConfig::getInstance()->srcSocket("sensorbus");
+      c_sensorbus = ZMQConfig::getInstance()->srcSocket("sensorfetch");
       c_sensorbus->setSendTimeout(100);
-      c_sensorbus->brrr();
     }
 
     Bluetooth::~Bluetooth() {
@@ -318,6 +317,9 @@ namespace aegir {
       c_logger.info("Selected device %s with address %s",
 		    c_device_selected.c_str(),
 		    bdaddr(di.bdaddr).c_str());
+
+      // and start the sensorbus
+      c_sensorbus->brrr();
     }
 
     void Bluetooth::worker() {

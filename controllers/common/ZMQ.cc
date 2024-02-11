@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include <cerrno>
+#include <cstring>
 
 #include "common/Exception.hh"
 
@@ -186,10 +187,12 @@ namespace aegir {
 
     auto frontidx = c_proxies[idx].front.idx;
     auto backidx = c_proxies[idx].back.idx;
+    auto front = getSocket(c_specs[frontidx].name, c_proxies[idx].front.source);
+    auto back = getSocket(c_specs[backidx].name, c_proxies[idx].back.source);
     return std::shared_ptr<ZMQProxy>{
       new ZMQProxy(c_ctx,
-		   getSocket(c_specs[frontidx].name, c_specs[frontidx].src_binds),
-		   getSocket(c_specs[backidx].name, c_specs[backidx].src_binds),
+		   front,
+		   back,
 		   dbg)};
   }
 
@@ -423,10 +426,12 @@ namespace aegir {
   void ZMQSocket::brrr() {
     if ( c_bind ) {
       if ( zmq_bind(c_sock, c_address.c_str()) != 0 )
-	throw Exception("ZMQ bind(%s) failed", c_address.c_str());
+	throw Exception("ZMQ bind(%s) failed: %s", c_address.c_str(),
+			std::strerror(errno));
     } else {
       if ( zmq_connect(c_sock, c_address.c_str()) != 0 )
-	throw Exception("ZMQ connect(%s) failed", c_address.c_str());
+	throw Exception("ZMQ connect(%s) failed: %s", c_address.c_str(),
+			std::strerror(errno));
     }
   }
 
@@ -456,6 +461,7 @@ namespace aegir {
 
     if ( zmq_connect(c_ctrlclient, buff)<0 )
       throw Exception("zmq_connect(): %s", std::strerror(errno));
+
   }
 
   ZMQProxy::~ZMQProxy() {
@@ -465,9 +471,12 @@ namespace aegir {
 
   void ZMQProxy::run() {
     void *dbg(0);
-    if ( c_dbg ) dbg = c_dbg->nativeSocket();
     c_front->brrr();
     c_back->brrr();
+    if ( c_dbg ) {
+      c_dbg->brrr();
+      dbg = c_dbg->nativeSocket();
+    }
 
     void *front = c_front->nativeSocket();
     void *back = c_back->nativeSocket();

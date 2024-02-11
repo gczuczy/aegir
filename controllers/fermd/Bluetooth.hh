@@ -16,8 +16,8 @@
 #include "common/ThreadManager.hh"
 #include "common/LogChannel.hh"
 #include "common/Exception.hh"
-#include "fermd/ZMQConfig.hh"
-#include "fermd/Message.hh"
+#include "ZMQConfig.hh"
+#include "Message.hh"
 
 namespace aegir {
   namespace fermd {
