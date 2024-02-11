@@ -49,14 +49,14 @@ namespace aegir {
     TiltDB::TiltDB(): ConfigNode(), c_size(0), c_entries(0) {
       // initialize with the default set
 
-      addEntry("10bb95a4-b1c5-444b-b512-1370f02d74de", "Red");
-      addEntry("20bb95a4-b1c5-444b-b512-1370f02d74de", "Green");
-      addEntry("30bb95a4-b1c5-444b-b512-1370f02d74de", "Black");
-      addEntry("40bb95a4-b1c5-444b-b512-1370f02d74de", "Purple");
-      addEntry("50bb95a4-b1c5-444b-b512-1370f02d74de", "Orange");
-      addEntry("60bb95a4-b1c5-444b-b512-1370f02d74de", "Blue");
-      addEntry("70bb95a4-b1c5-444b-b512-1370f02d74de", "Yellow");
-      addEntry("80bb95a4-b1c5-444b-b512-1370f02d74de", "Pink");
+      addEntry("a495bb10-c5b1-4b44-b512-1370f02d74de", "Red");
+      addEntry("a495bb20-c5b1-4b44-b512-1370f02d74de", "Green");
+      addEntry("a495bb30-c5b1-4b44-b512-1370f02d74de", "Black");
+      addEntry("a495bb40-c5b1-4b44-b512-1370f02d74de", "Purple");
+      addEntry("a495bb50-c5b1-4b44-b512-1370f02d74de", "Orange");
+      addEntry("a495bb60-c5b1-4b44-b512-1370f02d74de", "Blue");
+      addEntry("a495bb70-c5b1-4b44-b512-1370f02d74de", "Yellow");
+      addEntry("a495bb80-c5b1-4b44-b512-1370f02d74de", "Pink");
     }
 
     TiltDB::~TiltDB() {

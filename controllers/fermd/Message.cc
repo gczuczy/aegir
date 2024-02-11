@@ -34,5 +34,14 @@ namespace aegir {
     aegir::message_type TiltReadingMessage::parse(const char* _buffer) {
       return std::shared_ptr<TiltReadingMessage>{new TiltReadingMessage(_buffer)};
     }
+    aegir::message_type TiltReadingMessage::create(uuid_t _uuid,
+						   time_t _time,
+						   float _temp,
+						   float _sg) {
+      return std::shared_ptr<TiltReadingMessage>{new TiltReadingMessage(_uuid,
+									_time,
+									_temp,
+									_sg)};
+    }
   }
 }

@@ -55,6 +55,10 @@ namespace aegir {
       inline float sg() const noexcept { return *c_sg; };
 
       static aegir::message_type parse(const char*);
+      static aegir::message_type create(uuid_t _uuid,
+					time_t _time,
+					float _temp,
+					float _sg);
 
     private:
       uuid_t *c_uuid;

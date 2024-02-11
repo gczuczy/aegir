@@ -6,6 +6,7 @@
 #define AEGIR_MISC_H
 
 #include <stdio.h>
+#include <string.h>
 
 #include <string>
 #include <memory>
@@ -25,6 +26,12 @@ namespace aegir {
   blt::severity_level parseLoglevel(const std::string& _str);
   std::string toStr(blt::severity_level _level);
   bool floateq(float _a, float _b, float _error=0.000001f);
+
+  // zero memory area
+  template<typename T>
+  void zero(T* _dst, size_t _len = sizeof(T)) {
+    memset((void*)_dst, 0, _len);
+  }
 
   // hexdumping
   template<typename T>

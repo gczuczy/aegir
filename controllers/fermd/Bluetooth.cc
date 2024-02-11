@@ -5,12 +5,17 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/event.h>
 #include <sys/bitstring.h>
+#include <arpa/inet.h>
 #include <netgraph/bluetooth/include/ng_hci.h>
 #include <netgraph/bluetooth/include/ng_l2cap.h>
 #include <netgraph/bluetooth/include/ng_btsocket.h>
+
+#include <boost/lexical_cast.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 namespace aegir {
   namespace fermd {
@@ -64,42 +69,35 @@ namespace aegir {
       }
       catch (Exception& e) {
 	c_logger.error("readBufferSize(): %s", e.what());
+	throw e;
       }
       catch (...) {
 	c_logger.error("readBufferSize(): unknown error");
       }
 
       try {
-	readSupprtedFeatures();
+	readSupportedFeatures();
       }
       catch (Exception& e) {
 	c_logger.error("readSupportedFeatures(): %s", e.what());
+	throw e;
       }
       catch (...) {
 	c_logger.error("readSupportedFeatures(): unknown error");
       }
 
       try {
-	bdaddr_t addr;
-	getBDAddress(addr);
-	printf("bdaddr: %s\n", bdaddr(addr).c_str());
+	setLEScanParams();;
       }
       catch (Exception& e) {
-	c_logger.error("getBDAddress(): %s", e.what());
+	c_logger.error("setLEScanParams(): %s", e.what());
+	throw e;
       }
       catch (...) {
-	c_logger.error("getBDAddress(): unknown error");
+	c_logger.error("setLEScanParams(): unknown error");
       }
 
-      try {
-	initNode();
-      }
-      catch (Exception& e) {
-	c_logger.error("initNode(): %s", e.what());
-      }
-      catch (...) {
-	c_logger.error("initNode(): unknown error");
-      }
+      leEnable();
 
       // skipping LE scan parameters, testprog got
       // failure at it
@@ -146,6 +144,9 @@ namespace aegir {
       if ( rp.status != 0 ) {
 	throw Exception("LE read buff Status: %i\n", rp.status);
       }
+      if ( rp.hc_le_data_packet_length == 0 ) {
+	c_logger.error("packetlen=0\n");
+      }
       return rp.hc_le_data_packet_length;
     }
 
@@ -154,7 +155,7 @@ namespace aegir {
       the device, but we don't need anything out of this.
       So, this call just ignores everything returned.
      */
-    void Bluetooth::LE::readSupprtedFeatures() {
+    void Bluetooth::LE::readSupportedFeatures() {
       ng_hci_le_read_local_supported_features_rp rp;
 
       try {
@@ -168,32 +169,48 @@ namespace aegir {
       c_logger.debug("Supported features: %0lx", rp.le_features);
     }
 
-    void Bluetooth::LE::initNode() {
-      struct bt_devreq dr;
-      dr.opcode = NG_HCI_OPCODE(NG_HCI_OGF_LE,
-				NGM_HCI_NODE_INIT);
+    void Bluetooth::LE::setLEScanParams(int _type,
+					int _interval,
+					int _window,
+					int _addrtype,
+					int _policy) {
+      // type=0, interval = 0x12, window=0x12, adrtype=0, policy=0
+      ng_hci_le_set_scan_parameters_cp cp;
+      ng_hci_le_set_scan_parameters_rp rp;
 
-      dr.cparam = (void*)0;
-      dr.clen = 0;
-      dr.rparam = (void*)0;
-      dr.rlen = 0;
-
-      if ( bt_devreq(c_sock, &dr, 1)<0 ) {
-	c_logger.error("bt_devreq failed: %s", strerror(errno));
-	throw Exception("bt_devreq failed: %s", strerror(errno));
-      }
-    }
-
-    void Bluetooth::LE::getBDAddress(bdaddr_t &_addr) {
+      cp.le_scan_type = _type;
+      cp.le_scan_interval = _interval;
+      cp.own_address_type = _addrtype;
+      cp.le_scan_window = _window;
+      cp.scanning_filter_policy = _policy;
 
       try {
 	btDeviceRequest(NG_HCI_OGF_LE,
-			NGM_HCI_NODE_GET_BDADDR,
-			_addr, 1);
+			NG_HCI_OCF_LE_SET_SCAN_PARAMETERS,
+			cp, rp, 1);
       }
       catch (Exception& e) {
-	throw Exception("Reading BDAddr: %s", e.what());
+	throw Exception("Setting LE scan params failed: %s", e.what());
       }
+      c_logger.debug("LE scan params set");
+    }
+
+    void Bluetooth::LE::leEnable() {
+      ng_hci_le_set_scan_enable_cp cp;
+      ng_hci_le_set_scan_enable_rp rp;
+
+      cp.le_scan_enable = 1;
+      cp.filter_duplicates = 0;
+
+      try {
+	btDeviceRequest(NG_HCI_OGF_LE,
+			NG_HCI_OCF_LE_SET_SCAN_ENABLE,
+			cp, rp, 1);
+      }
+      catch (Exception& e) {
+	throw Exception("Error while enabling LE scan: %s", e.what());
+      }
+      c_logger.debug("LE enabled");
     }
 
     void Bluetooth::LE::setEventFilter(std::uint64_t _filter) {
@@ -222,6 +239,9 @@ namespace aegir {
 
     Bluetooth::Bluetooth(): ConfigNode(), ThreadManager::Thread(),
 			    c_device("auto"), c_logger("Bluetooth") {
+      c_sensorbus = ZMQConfig::getInstance()->srcSocket("sensorbus");
+      c_sensorbus->setSendTimeout(100);
+      c_sensorbus->brrr();
     }
 
     Bluetooth::~Bluetooth() {
@@ -252,7 +272,6 @@ namespace aegir {
     }
 
     void Bluetooth::init() {
-      printf("Bluetooth::init\n");
       if ( c_device == "auto" ) {
 	c_logger.debug("Enumerating Bluetooth devices");
 	getDeviceList();
@@ -265,7 +284,6 @@ namespace aegir {
       } else {
 	c_device_selected = c_device;
       }
-      printf("BT dev: %s\n", c_device_selected.c_str());
 
       // get the device information
       struct bt_devinfo di;
@@ -331,11 +349,9 @@ namespace aegir {
 	  c_logger.error("kevent(): %s", strerror(errno));
 	  continue;
 	}
-	printf("nevents: %i\n", nevents);
 	// if no events, we just loop back
 	if ( !nevents ) continue;
 	c_logger.debug("events from kqueue: %i", nevents);
-	printf("%s:%i\n", __FILE__, __LINE__);
 
 	// handle the events
 	for (int i=0; i<nevents; ++i ) {
@@ -349,7 +365,15 @@ namespace aegir {
 	    c_logger.error("Was unable to read the whole data");
 	    continue;
 	  }
-	  hexdump(buffer, evlist[i].data);
+	  if ( auto msg = handleData(buffer, evlist[i].data) ) {
+	    c_sensorbus->send(msg);
+#if 0
+	    auto tl = msg->as<TiltReadingMessage>();
+	    printf("UUID:%s %.2fC %.4fSG\n",
+		   boost::lexical_cast<std::string>(tl->uuid()).c_str(),
+		   tl->temp(), tl->sg());
+#endif
+	  }
 	}
       }
 
@@ -363,6 +387,33 @@ namespace aegir {
       int ndev;
       if ( (ndev = bt_devenum(&bt_devenum_cb, (void*)&c_devlist))<0 )
 	throw Exception("bt_devenum error: %s", strerror(errno));
+    }
+
+    message_type Bluetooth::handleData(char *_buffer, std::uint32_t _size) {
+
+      ng_hci_event_pkt_t *hcie = (ng_hci_event_pkt_t*)_buffer;
+      if ( hcie->type != NG_HCI_EVENT_PKT ) return nullptr;
+
+      if ( hcie->event != 0x3e ) return nullptr;
+
+      btreport_t *r1 = (btreport_t*)_buffer;
+      if ( r1->subevent != 0x02 ) return nullptr;
+
+      int offset = sizeof(btreport_t);
+      int explen = offset + r1->subreports*sizeof(ng_hci_le_advreport);
+
+      if ( r1->subreports != 1 ) return nullptr;
+
+      ng_hci_le_advreport *r2 = (ng_hci_le_advreport*)(_buffer+offset);
+      if ( r2->event_type != 0x3 ) return nullptr;
+      if ( r2->length_data != 30 ) return nullptr;
+      offset += 4 + sizeof(bdaddr_t);
+
+      ibeacon_t *ibeacon = (ibeacon_t*)(_buffer+offset);
+      float temp = ((((1.0f*ntohs(ibeacon->temp))/10)-32)*5)/9;
+      float gravity = (1.0f*(ntohs(ibeacon->gravity)))/10000;
+      return TiltReadingMessage::create(ibeacon->uuid, time(0),
+					temp, gravity);
     }
   }
 }
