@@ -5,6 +5,7 @@ list(APPEND fermd_HEADERS
   Bluetooth.hh
   ZMQConfig.hh
   Message.hh
+  SensorProxy.hh
 )
 
 add_subdirectory(tests)
@@ -22,8 +23,6 @@ target_sources(fermd
   Bluetooth.cc
   ZMQConfig.cc
   Message.cc
-  SensorProxy.hh
-  SensorProxy.cc
   ${fermd_HADERS}
 )
 
@@ -35,5 +34,6 @@ target_sources(tests_fermd
   Bluetooth.cc
   ZMQConfig.cc
   Message.cc
+  SensorProxy.cc
   ${brewd_HEADERS}
 )
