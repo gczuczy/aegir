@@ -60,6 +60,7 @@ void writeYAML(const ryml::Tree& _tree, const std::string& _fname) {
 
 TEST_CASE("FermdConfig", "[fermd]") {
   auto cfg = aegir::fermd::FermdConfig::getInstance();
+  cfg->autosave(false);
 
   TempFileGuard fg;
 

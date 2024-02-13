@@ -70,6 +70,7 @@ namespace aegir {
     void load(const std::string& _file);
     void save();
     void save(const std::string& _file);
+    void autosave(bool _auto);
 
   protected:
     template<Derived<ConfigNode> T>
@@ -102,6 +103,7 @@ namespace aegir {
     std::list<Section> c_handlers;
     // the configfile
     std::string c_cfgfile;
+    bool c_autosave;
   };
 }
 

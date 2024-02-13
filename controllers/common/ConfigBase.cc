@@ -54,11 +54,11 @@ namespace aegir {
   /*
    * Config
    */
-  ConfigBase::ConfigBase() {
+  ConfigBase::ConfigBase(): c_autosave(true) {
   }
 
   ConfigBase::~ConfigBase() {
-    save();
+    if ( c_autosave ) save();
   }
 
   void ConfigBase::load(const std::string& _file) {
@@ -148,6 +148,10 @@ namespace aegir {
   void ConfigBase::save(const std::string& _file) {
     c_cfgfile = _file;
     save();
+  }
+
+  void ConfigBase::autosave(bool _auto) {
+    c_autosave = _auto;
   }
 
   template<>
