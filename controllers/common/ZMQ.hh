@@ -137,6 +137,7 @@ namespace aegir {
     void unsubscribe(const std::string& _str);
     void setRecvTimeout(int _to);
     void setSendTimeout(int _to);
+    void setEnvelope(const std::string& _env);
 
     // message
     message_type recv(bool _wait=false);
@@ -159,10 +160,20 @@ namespace aegir {
     inline void* nativeSocket() const { return c_sock; };
 
   private:
+    inline void sendPart(const std::string& _data, int _flags=0, bool _more=false) {
+      sendPart((const void*)_data.data(), _data.size(), _flags, _more);
+    }
+    void sendPart(const void *_buff, size_t _len, int _flags=0, bool _more=false);
+    int recvChunk(void *_buff, size_t _len, int _flags=0);
+    bool hasMore();
+
+  private:
     void *c_sock;
     zmqctx_type c_ctx;
     std::string c_address;
     bool c_bind;
+    int c_type;
+    std::string c_envelope;
   };
 
   /*

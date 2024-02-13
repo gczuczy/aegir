@@ -338,7 +338,7 @@ namespace aegir {
    */
   ZMQSocket::ZMQSocket(zmqctx_type& _ctx, int _type,
 		       const std::string& _address, bool _bind)
-    : c_ctx(_ctx), c_address(_address), c_bind(_bind) {
+    : c_ctx(_ctx), c_address(_address), c_bind(_bind), c_type(_type) {
     void *ctx = _ctx->getCtx();
 
     c_sock = zmq_socket(ctx, _type);
@@ -349,13 +349,21 @@ namespace aegir {
   }
 
   void ZMQSocket::subscribe(const std::string& _str) {
-    zmq_setsockopt(c_sock, ZMQ_SUBSCRIBE,
-		   (const void*)_str.data(), _str.size());
+    if ( c_type == ZMQ_SUB ) {
+      zmq_setsockopt(c_sock, ZMQ_SUBSCRIBE,
+		     (const void*)_str.data(), _str.size());
+    } else {
+      throw Exception("subscribe only supported on ZMQ_SUB");
+    }
   }
 
   void ZMQSocket::unsubscribe(const std::string& _str) {
-    zmq_setsockopt(c_sock, ZMQ_UNSUBSCRIBE,
-		   (const void*)_str.data(), _str.size());
+    if ( c_type == ZMQ_SUB ) {
+      zmq_setsockopt(c_sock, ZMQ_UNSUBSCRIBE,
+		     (const void*)_str.data(), _str.size());
+    } else {
+      throw Exception("subscribe only supported on ZMQ_SUB");
+    }
   }
 
   void ZMQSocket::setRecvTimeout(int _to) {
@@ -368,43 +376,53 @@ namespace aegir {
 		   (const void*)&_to, sizeof(int));
   }
 
+  void ZMQSocket::setEnvelope(const std::string& _env) {
+    c_envelope = _env;
+  }
+
   message_type ZMQSocket::recv(bool _wait){
     constexpr int buffsize = 65536;
-    thread_local char buff[buffsize];
+    thread_local char buff[buffsize], envelope[64];
 
     int flags=0;
     if ( !_wait ) flags |= ZMQ_DONTWAIT;
 
-    int rc = zmq_recv(c_sock, buff, buffsize-1, flags);
-    if ( rc < 0 ) {
-      if ( errno == EAGAIN ) return nullptr;
-      int type;
-      size_t s = sizeof(type);
-      zmq_getsockopt(c_sock, ZMQ_TYPE, (void *)&type, &s);
-      throw Exception("zmq_recv(%s): %s", zmqTypeToStr(type).c_str(),
-		      std::strerror(errno));
-    } else if ( rc == 0 ) {
-      return nullptr;
+    // for sub we're reading the envelope first
+    if ( c_type == ZMQ_SUB ) {
+      if ( recvChunk(envelope, sizeof(envelope), flags) < 0 )
+	return nullptr;
+
+      if ( !hasMore() )
+	throw Exception("Second part of pubsub message missing");
     }
 
-    return MessageFactory::getInstance()->parse(buff, rc);
+    int len;
+    if ( (len = recvChunk(buff, buffsize, flags))<0 )
+      throw Exception("Second part of pubsub message missing");
+
+    return MessageFactory::getInstance()->parse(buff, len);
   }
 
   bool ZMQSocket::recv(char *_buff, std::uint16_t _len, bool _wait) {
+    constexpr int buffsize = 65536;
+    thread_local char buff[buffsize], envelope[64];
     int flags=0;
+    int rc;
     if ( !_wait ) flags |= ZMQ_DONTWAIT;
 
-    int rc = zmq_recv(c_sock, _buff, _len, flags);
-    if ( rc < 0 ) {
-      if ( errno == EAGAIN ) return false;
-      int type;
-      size_t s = sizeof(type);
-      zmq_getsockopt(c_sock, ZMQ_TYPE, (void *)&type, &s);
-      throw Exception("zmq_recv(%s): %s", zmqTypeToStr(type).c_str(),
-		      std::strerror(errno));
-    } else if ( rc == 0 ) {
-      return false;
+    // for sub we're reading the envelope first
+    if ( c_type == ZMQ_SUB ) {
+      if ( recvChunk(envelope, sizeof(envelope), flags) < 0 )
+	return false;
+
+      if ( !hasMore() )
+	throw Exception("Second part of pubsub message missing");
     }
+
+    // read the real content
+    if ( recvChunk(buff, buffsize, flags)<0 )
+      throw Exception("Second part of pubsub message missing");
+
     return true;
   }
 
@@ -412,15 +430,8 @@ namespace aegir {
     int flags=0;
     if ( !_wait ) flags |= ZMQ_DONTWAIT;
 
-    do {
-      if ( zmq_send(c_sock, _buff, _len, flags) >= 0 ) break;
-      if ( errno == EAGAIN ) continue;
-      int type;
-      size_t s = sizeof(type);
-      zmq_getsockopt(c_sock, ZMQ_TYPE, (void *)&type, &s);
-      throw Exception("zmq_send(%s): %s", zmqTypeToStr(type).c_str(),
-		      std::strerror(errno));
-    } while (true);
+    if ( c_type == ZMQ_PUB ) sendPart(c_envelope, flags, true);
+    sendPart(_buff, _len, flags);
   }
 
   void ZMQSocket::brrr() {
@@ -433,6 +444,33 @@ namespace aegir {
 	throw Exception("ZMQ connect(%s) failed: %s", c_address.c_str(),
 			std::strerror(errno));
     }
+  }
+
+  void ZMQSocket::sendPart(const void *_buff, size_t _len, int _flags, bool _more) {
+    if ( _more ) _flags |= ZMQ_SNDMORE;
+    do {
+      if ( zmq_send(c_sock, _buff, _len, _flags) >= 0 ) break;
+      if ( errno == EAGAIN ) continue;
+      throw Exception("zmq_send(%s): %s", zmqTypeToStr(c_type).c_str(),
+		      std::strerror(errno));
+    } while (true);
+  }
+
+  int ZMQSocket::recvChunk(void *_buff, size_t _len, int _flags) {
+    int rc = zmq_recv(c_sock, _buff, _len, _flags);
+    if ( rc<0 ) {
+      if ( errno == EAGAIN ) return -1;
+      throw Exception("zmq_recv(%s): %s", zmqTypeToStr(c_type).c_str(),
+		      std::strerror(errno));
+    }
+    return rc;
+  }
+
+  bool ZMQSocket::hasMore() {
+    int more;
+    size_t s = sizeof(more);
+    zmq_getsockopt(c_sock, ZMQ_RCVMORE, (void *)&more, &s);
+    return (more == 1);
   }
 
   /*
