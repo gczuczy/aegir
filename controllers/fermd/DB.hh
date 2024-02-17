@@ -10,6 +10,7 @@
 #include <map>
 #include <list>
 #include <concepts>
+#include <shared_mutex>
 
 #include <boost/uuid/uuid.hpp>
 
@@ -27,21 +28,24 @@ namespace aegir {
     class DB: public aegir::ConfigNode {
     public:
       typedef std::shared_ptr<DB> pointer_type;
-      struct tilthydrometer_tuple {
+      struct tilthydrometer {
+	typedef std::shared_ptr<tilthydrometer> ptr;
+	struct calibration {
+	  float at;
+	  float sg;
+	};
 	int id;
 	std::string color;
 	uuid_t uuid;
 	bool active;
 	bool enabled;
-	bool has_calibr_null;
-	float calibr_null;
-	bool has_calibr_sg;
-	float calibr_at;
-	float calibr_sg;
+	std::shared_ptr<calibration> calibr_null;
+	std::shared_ptr<calibration> calibr_sg;
       };
-      static_assert(std::copy_constructible<tilthydrometer_tuple>,
+      typedef std::list<tilthydrometer::ptr> tilthydrometer_db;
+      static_assert(std::copy_constructible<tilthydrometer>,
 		    "Tilthydrometer is not copy constructable");
-      static_assert(std::move_constructible<tilthydrometer_tuple>,
+      static_assert(std::move_constructible<tilthydrometer>,
 		    "Tilthydrometer is not move constructable");
 
     private:
@@ -64,6 +68,8 @@ namespace aegir {
 	  inline operator bool() const {
 	    return sqlite3_stmt_busy(c_statement) == 1;
 	  }
+	  bool isNull(const std::string& _name);
+	  bool isNull(int _idx);
 
 	  template<typename T>
 	  T fetch(int _idx) {
@@ -74,6 +80,12 @@ namespace aegir {
 	  bool fetch(int _idx);
 	  template<>
 	  int fetch(int _idx);
+	  template<>
+	  std::string fetch(int _idx);
+	  template<>
+	  float fetch(int _idx);
+	  template<>
+	  uuid_t fetch(int _idx);
 
 	  template<typename T>
 	  T fetch(const std::string& _name) {
@@ -129,13 +141,16 @@ namespace aegir {
       virtual void marshall(ryml::NodeRef&);
       virtual void unmarshall(ryml::ConstNodeRef&);
 
-      void setDBfile(const std::string& _file);
       void init();
+      void setDBfile(const std::string& _file);
+      void reload_tilthydrometers();
 
+      tilthydrometer_db getTilthydrometers() const;
     private:
       void prepare(const std::string& _name,
 		   const std::string& _stmt,
 		   bool _temporary=false);
+
 
     private:
       std::string c_dbfile;
@@ -143,6 +158,9 @@ namespace aegir {
       LogChannel c_logger;
       std::map<std::string, Statement> c_statements;
       std::list<Schema> c_schemas;
+      // storages
+      mutable std::shared_mutex c_mtx;
+      tilthydrometer_db cache_tilthydrometers;
     };
   }
 }

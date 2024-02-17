@@ -19,4 +19,7 @@ TEST_CASE("DB", "[db][fermd]") {
   auto db = aegir::fermd::DB::getInstance();
 
   db->init();
+
+  auto tilts = db->getTilthydrometers();
+  REQUIRE(tilts.size() == 8);
 }

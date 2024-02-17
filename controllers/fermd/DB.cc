@@ -2,10 +2,15 @@
 
 #include <utility>
 
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
 #include "generated.hh"
 
 namespace aegir {
   namespace fermd {
+
+    static boost::uuids::string_generator g_uuidstrgen;
 
     static void s3log(void* _logger, int _errcode, const char* _msg) {
       LogChannel *lc = (LogChannel*)_logger;
@@ -89,6 +94,18 @@ namespace aegir {
     DB::Statement::Result::~Result() {
     }
 
+    bool DB::Statement::Result::isNull(const std::string& _name) {
+      for (int i=0; i<=sqlite3_data_count(c_statement); ++i ) {
+	if ( _name == sqlite3_column_name(c_statement, i) )
+	  return isNull(i);
+      }
+      throw Exception("Column \"%s\" not found", _name.c_str());
+    }
+
+    bool DB::Statement::Result::isNull(int _idx) {
+      return sqlite3_column_type(c_statement, _idx) == SQLITE_NULL;
+    }
+
     template<>
     bool DB::Statement::Result::fetch(int _idx) {
       return sqlite3_column_int(c_statement, _idx) != 0;
@@ -98,6 +115,26 @@ namespace aegir {
     int DB::Statement::Result::fetch(int _idx) {
       return sqlite3_column_int(c_statement, _idx);
     }
+
+    template<>
+    std::string DB::Statement::Result::fetch(int _idx) {
+      const char* text = (const char*)sqlite3_column_text(c_statement, _idx);
+      int len = sqlite3_column_bytes(c_statement, _idx);
+      return std::string(text, len);
+    }
+
+    template<>
+    float DB::Statement::Result::fetch(int _idx) {
+      return sqlite3_column_double(c_statement, _idx);
+    }
+
+    template<>
+    uuid_t DB::Statement::Result::fetch(int _idx) {
+      const char* text = (const char*)sqlite3_column_text(c_statement, _idx);
+      int len = sqlite3_column_bytes(c_statement, _idx);
+      return g_uuidstrgen(std::string(text, len));
+    }
+
     /*
       DB::Statement
      */
@@ -266,15 +303,25 @@ namespace aegir {
 	  throw Exception("Upgrade not yet implemented");
 	}
       }
-      /*
-      */
-    }
+      // prepare our statements
+      prepare("get_tilthydrometers",
+	      "SELECT id,color,uuid,active,enabled,fermenterid,"
+	      "calibr_null,calibr_at,calibr_sg "
+	      "FROM tilthydrometers");
+
+      reload_tilthydrometers();
+    } // init
 
     void DB::setDBfile(const std::string& _file) {
       if ( c_db )
 	throw Exception("Cannot set dbfile while db is open");
       c_dbfile = _file;
     }
+
+    DB::tilthydrometer_db DB::getTilthydrometers() const {
+      std::shared_lock g(c_mtx);
+      return cache_tilthydrometers;
+    } // getTilthydrometers
 
     void DB::prepare(const std::string& _name,
 		     const std::string& _stmt,
@@ -286,5 +333,34 @@ namespace aegir {
 			   std::forward_as_tuple(_name),
 			   std::forward_as_tuple(c_db, _stmt, _temporary));
     }
+    void DB::reload_tilthydrometers() {
+      std::unique_lock g(c_mtx);
+
+      cache_tilthydrometers.clear();
+      for ( auto r=c_statements.find("get_tilthydrometers")->second.execute();
+	    r; ++r ) {
+	auto th = std::make_shared<tilthydrometer>();
+	th->id = r.fetch<int>("id");
+	th->color = r.fetch<std::string>("color");
+	th->uuid = r.fetch<uuid_t>("uuid");
+ 	th->active = r.fetch<bool>("active");
+ 	th->enabled = r.fetch<bool>("enabled");
+
+	if ( !r.isNull("calibr_null") ) {
+	  auto c = std::make_shared<tilthydrometer::calibration>();
+	  c->sg = r.fetch<float>("calibr_null");
+	  th->calibr_null = c;
+	}
+
+	if ( !r.isNull("calibr_at") && !r.isNull("calibr_sg") ) {
+	  auto c = std::make_shared<tilthydrometer::calibration>();
+	  c->at = r.fetch<float>("calibr_at");
+	  c->sg = r.fetch<float>("calibr_sg");
+	  th->calibr_sg = c;
+	}
+	cache_tilthydrometers.emplace_back(th);
+      }
+    } // reload_tilthydrometers
+
   }
 }
