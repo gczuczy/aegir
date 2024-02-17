@@ -15,6 +15,13 @@ endif()
 
 include(FetchContent)
 
+#FetchContent_Declare(
+#  battery-embed
+#  GIT_REPOSITORY https://github.com/batterycenter/embed.git
+#  GIT_TAG        v1.2.8
+#)
+#FetchContent_MakeAvailable(battery-embed)
+
 add_executable(brewd)
 add_executable(fermd)
 
@@ -112,6 +119,9 @@ find_package(yaml-cpp
   0.8.0
   REQUIRED
 )
+
+# SQLite3
+find_package(SQLite3 REQUIRED)
 
 # rapidyaml - fermd uses it instead of yaml-cpp and jsoncpp
 #find_package(ryml REQUIRED)
@@ -218,6 +228,7 @@ target_link_libraries(tests_fermd
   jsoncpp
   ryml::ryml
   bluetooth
+  SQLite::SQLite3
 )
 
 
@@ -291,6 +302,7 @@ target_link_libraries(fermd
   zmq
   ryml::ryml
   bluetooth
+  SQLite::SQLite3
 )
 
 install(TARGETS fermd

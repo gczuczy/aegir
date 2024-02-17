@@ -68,6 +68,9 @@ namespace aegir {
   }
 
   void ThreadManager::run() {
+    // call the child's init
+    init();
+
     // first initialize everyone
     c_logger.info("Initializing threads");
     for ( auto& it: c_threads ) it.second.impl->init();
@@ -226,6 +229,9 @@ namespace aegir {
       for ( auto& wit: it.second.workers )
 	wit.second.run = false;
     }
+  }
+
+  void ThreadManager::init() {
   }
 
   template<>

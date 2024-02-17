@@ -4,4 +4,5 @@ target_sources(tests_fermd
   FermdConfig.cc
   Bluetooth.cc
   Message.cc
+  db.cc
 )

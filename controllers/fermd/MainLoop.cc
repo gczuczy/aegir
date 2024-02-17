@@ -4,6 +4,7 @@
 #include "Bluetooth.hh"
 #include "Message.hh"
 #include "SensorProxy.hh"
+#include "DB.hh"
 
 namespace aegir {
   namespace fermd {
@@ -47,6 +48,10 @@ namespace aegir {
 	_node["scaledown"] >> c_scale_down;
       if ( _node.has_child("scaleup") )
 	_node["scaleup"] >> c_scale_up;
+    }
+
+    void MainLoop::init() {
+      DB::getInstance()->init();
     }
   }
 }

@@ -123,6 +123,7 @@ namespace aegir {
   protected:
     ThreadManager();
 
+    virtual void init();
     // these are for singletons
     template<Derived<Thread> T>
     void registerHandler(const std::string& _name) {
