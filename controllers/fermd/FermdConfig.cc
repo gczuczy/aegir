@@ -6,7 +6,6 @@
 
 #include "common/logging.hh"
 #include "common/Exception.hh"
-#include "TiltDB.hh"
 #include "MainLoop.hh"
 #include "Bluetooth.hh"
 #include "ZMQConfig.hh"
@@ -23,7 +22,6 @@ namespace aegir {
       registerHandler("loglevel", c_loglevel);
 
       // pull in submodules
-      registerHandler<TiltDB>("tilts");
       registerHandler<MainLoop>("threads");
       registerHandler<Bluetooth>("bluetooth");
       registerHandler<ZMQConfig>("zeromq");

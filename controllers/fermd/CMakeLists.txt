@@ -1,6 +1,5 @@
 list(APPEND fermd_HEADERS
   FermdConfig.hh
-  TiltDB.hh
   MainLoop.hh
   Bluetooth.hh
   ZMQConfig.hh
@@ -31,7 +30,6 @@ target_sources(fermd
   PRIVATE
   main.cc
   FermdConfig.cc
-  TiltDB.cc
   MainLoop.cc
   Bluetooth.cc
   ZMQConfig.cc
@@ -45,7 +43,6 @@ target_sources(fermd
 target_sources(tests_fermd
   PRIVATE
   FermdConfig.cc
-  TiltDB.cc
   MainLoop.cc
   Bluetooth.cc
   ZMQConfig.cc

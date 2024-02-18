@@ -8,7 +8,7 @@
 #include <time.h>
 
 #include "common/Message.hh"
-#include "fermd/TiltDB.hh"
+#include "fermd/DB.hh"
 
 namespace aegir {
   namespace fermd {
