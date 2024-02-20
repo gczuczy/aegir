@@ -30,6 +30,7 @@ namespace aegir {
       typedef std::shared_ptr<DB> pointer_type;
       struct tilthydrometer {
 	typedef std::shared_ptr<tilthydrometer> ptr;
+	typedef std::shared_ptr<const tilthydrometer> cptr;
 	struct calibration {
 	  float at;
 	  float sg;
@@ -43,10 +44,32 @@ namespace aegir {
 	std::shared_ptr<calibration> calibr_sg;
       };
       typedef std::list<tilthydrometer::ptr> tilthydrometer_db;
+      typedef const std::list<tilthydrometer::cptr> tilthydrometer_cdb;
       static_assert(std::copy_constructible<tilthydrometer>,
 		    "Tilthydrometer is not copy constructable");
       static_assert(std::move_constructible<tilthydrometer>,
 		    "Tilthydrometer is not move constructable");
+
+      /* transaction
+       */
+      class Transaction {
+	friend DB;
+      protected:
+	Transaction(DB* _db);
+      public:
+	~Transaction();
+
+	inline DB* operator->() {
+	  return c_db;
+	};
+	inline void setTilthydrometer(const tilthydrometer& _item) {
+	  c_db->setTilthydrometer(_item);
+	}
+
+      private:
+	DB* c_db;
+      };
+      friend class Transaction;
 
     private:
       class Statement {
@@ -68,6 +91,7 @@ namespace aegir {
 	  inline operator bool() const {
 	    return sqlite3_stmt_busy(c_statement) == 1;
 	  }
+
 	  bool isNull(const std::string& _name);
 	  bool isNull(int _idx);
 
@@ -97,7 +121,7 @@ namespace aegir {
 	  };
 	private:
 	  sqlite3_stmt *c_statement;
-	};
+	}; // class Result
       public:
 	Statement()=delete;
 	Statement(sqlite3 *_db,
@@ -108,6 +132,11 @@ namespace aegir {
 	~Statement();
 
 	Result execute();
+
+	void bind(const std::string& _field);
+	void bind(const std::string& _field, int _value);
+	void bind(const std::string& _field, float _value);
+	void bind(const std::string& _field, const std::string& _value);
 
       private:
 	sqlite3_stmt *c_statement;
@@ -143,9 +172,24 @@ namespace aegir {
 
       void init();
       void setDBfile(const std::string& _file);
-      void reload_tilthydrometers();
 
-      tilthydrometer_db getTilthydrometers() const;
+      // Tilt Hydrometers
+    public:
+      void reload_tilthydrometers();
+      tilthydrometer_cdb getTilthydrometers() const;
+      tilthydrometer::cptr getTilthydrometerByUUID(uuid_t _uuid) const;
+    protected:
+      void setTilthydrometer(const tilthydrometer& _item);
+
+      // transactions
+    public:
+      inline Transaction txn() {
+	return Transaction(this);
+      };
+    protected:
+      void begin();
+      void commit();
+
     private:
       void prepare(const std::string& _name,
 		   const std::string& _stmt,
@@ -158,8 +202,9 @@ namespace aegir {
       LogChannel c_logger;
       std::map<std::string, Statement> c_statements;
       std::list<Schema> c_schemas;
+      mutable std::mutex c_mtx;
       // storages
-      mutable std::shared_mutex c_mtx;
+      mutable std::shared_mutex c_mtx_tilthydrometers;
       tilthydrometer_db cache_tilthydrometers;
     };
   }

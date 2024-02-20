@@ -78,6 +78,18 @@ namespace aegir {
     static bool evalrc(int rc, sqlite3_stmt* stmt) {
       return evalrc(rc, sqlite3_db_handle(stmt));
     }
+
+    /*
+      DB::Transaction
+     */
+    DB::Transaction::Transaction(DB* _db): c_db(_db) {
+      c_db->begin();
+    }
+
+    DB::Transaction::~Transaction() {
+      c_db->commit();
+    }
+
     /*
       DB::Statement::Result
      */
@@ -89,9 +101,13 @@ namespace aegir {
 
     DB::Statement::Result::Result(Result&& _other) {
       c_statement = std::move(_other.c_statement);
+      _other.c_statement = 0;
     }
 
     DB::Statement::Result::~Result() {
+      if ( c_statement ) {
+	sqlite3_clear_bindings(c_statement);
+      }
     }
 
     bool DB::Statement::Result::isNull(const std::string& _name) {
@@ -168,6 +184,41 @@ namespace aegir {
       return Result(c_statement);
     }
 
+    void DB::Statement::bind(const std::string& _field) {
+      int idx = sqlite3_bind_parameter_index(c_statement, _field.c_str());
+      if ( idx == 0 )
+	throw Exception("Parameter %s not found for query %s",
+			_field.c_str(), sqlite3_sql(c_statement));
+      sqlite3_bind_null(c_statement, idx);
+    }
+
+    void DB::Statement::bind(const std::string& _field, int _value) {
+      int idx = sqlite3_bind_parameter_index(c_statement, _field.c_str());
+      if ( idx == 0 )
+	throw Exception("Parameter %s not found for query %s",
+			_field.c_str(), sqlite3_sql(c_statement));
+      sqlite3_bind_int(c_statement, idx, _value);
+    }
+
+    void DB::Statement::bind(const std::string& _field, float _value) {
+      int idx = sqlite3_bind_parameter_index(c_statement, _field.c_str());
+      if ( idx == 0 )
+	throw Exception("Parameter %s not found for query %s",
+			_field.c_str(), sqlite3_sql(c_statement));
+      sqlite3_bind_double(c_statement, idx, _value);
+    }
+
+    void DB::Statement::bind(const std::string& _field,
+				     const std::string& _value) {
+      int idx = sqlite3_bind_parameter_index(c_statement, _field.c_str());
+      if ( idx == 0 )
+	throw Exception("Parameter %s not found for query %s",
+			_field.c_str(), sqlite3_sql(c_statement));
+      sqlite3_bind_text(c_statement, idx,
+			_value.c_str(), _value.size(),
+			SQLITE_STATIC);
+    }
+
     /*
       Schema
      */
@@ -223,7 +274,6 @@ namespace aegir {
       c_schemas.emplace_back(Schema(1,
 				    std::string((char*)sql_v1_sql,
 						sql_v1_sql_len)));
-
     }
 
     DB::~DB() {
@@ -304,10 +354,20 @@ namespace aegir {
 	}
       }
       // prepare our statements
+      prepare("begin", "BEGIN IMMEDIATE;");
+      prepare("commit", "COMMIT;");
       prepare("get_tilthydrometers",
 	      "SELECT id,color,uuid,active,enabled,fermenterid,"
 	      "calibr_null,calibr_at,calibr_sg "
 	      "FROM tilthydrometers");
+      prepare("set_tilthydrometer",
+	      "UPDATE tilthydrometers "
+	      "SET active=:active,enabled=:enabled,"
+	      "fermenterid=:fermenterid,calibr_null=:calibrnull,"
+	      "calibr_at=:calibrat,calibr_sg=:calibrsg "
+	      "WHERE id=:id "
+	      "RETURNING id,active,enabled,fermenterid,"
+	      "calibr_null,calibr_at,calibr_sg");
 
       reload_tilthydrometers();
     } // init
@@ -318,23 +378,8 @@ namespace aegir {
       c_dbfile = _file;
     }
 
-    DB::tilthydrometer_db DB::getTilthydrometers() const {
-      std::shared_lock g(c_mtx);
-      return cache_tilthydrometers;
-    } // getTilthydrometers
-
-    void DB::prepare(const std::string& _name,
-		     const std::string& _stmt,
-		     bool _temporary) {
-      if ( c_statements.find(_name) != c_statements.end() )
-	throw Exception("Prepared satement %s already exists", _name.c_str());
-
-      c_statements.emplace(std::piecewise_construct,
-			   std::forward_as_tuple(_name),
-			   std::forward_as_tuple(c_db, _stmt, _temporary));
-    }
     void DB::reload_tilthydrometers() {
-      std::unique_lock g(c_mtx);
+      std::unique_lock g(c_mtx_tilthydrometers);
 
       cache_tilthydrometers.clear();
       for ( auto r=c_statements.find("get_tilthydrometers")->second.execute();
@@ -361,6 +406,90 @@ namespace aegir {
 	cache_tilthydrometers.emplace_back(th);
       }
     } // reload_tilthydrometers
+
+    DB::tilthydrometer_cdb DB::getTilthydrometers() const {
+      std::shared_lock g(c_mtx_tilthydrometers);
+      std::list<std::shared_ptr<const tilthydrometer> > ret;
+      for (auto it: cache_tilthydrometers)
+	ret.emplace_back(std::shared_ptr<const tilthydrometer>(it.get()));
+      return ret;
+    } // getTilthydrometers
+
+    DB::tilthydrometer::cptr DB::getTilthydrometerByUUID(uuid_t _uuid) const {
+      std::shared_lock g(c_mtx_tilthydrometers);
+      for (auto it: cache_tilthydrometers)
+	if ( it->uuid == _uuid) return tilthydrometer::cptr(it.get());
+      return nullptr;
+    }
+
+    void DB::setTilthydrometer(const tilthydrometer& _item) {
+      std::unique_lock g(c_mtx_tilthydrometers);
+      auto& stmt(c_statements.find("set_tilthydrometer")->second);
+      stmt.bind(":id", _item.id);
+      stmt.bind(":active", _item.active?1:0);
+      stmt.bind(":enabled", _item.enabled?1:0);
+
+      if ( _item.calibr_null ) {
+	stmt.bind(":calibrnull", _item.calibr_null->sg);
+      } else {
+	stmt.bind(":calibrnull");
+      }
+
+      if ( _item.calibr_sg ) {
+	stmt.bind(":calibrat", _item.calibr_sg->at);
+	stmt.bind(":calibrsg", _item.calibr_sg->sg);
+      } else {
+	stmt.bind(":calibrat");
+	stmt.bind(":calibrsg");
+      }
+
+      // TODO: add fermenters
+
+      // run the query
+      auto r(stmt.execute());
+
+      // update the cache entry
+      int id = r.fetch<int>("id");
+      for (auto& th: cache_tilthydrometers ) {
+	if ( th->id == id ) {
+	  th->active = r.fetch<bool>("active");
+	  th->enabled = r.fetch<bool>("enabled");
+
+	  if ( !r.isNull("calibr_null") ) {
+	    auto c = std::make_shared<tilthydrometer::calibration>();
+	    c->sg = r.fetch<float>("calibr_null");
+	    th->calibr_null = c;
+	  }
+
+	  if ( !r.isNull("calibr_at") && !r.isNull("calibr_sg") ) {
+	    auto c = std::make_shared<tilthydrometer::calibration>();
+	    c->at = r.fetch<float>("calibr_at");
+	    c->sg = r.fetch<float>("calibr_sg");
+	    th->calibr_sg = c;
+	  }
+	  // add fermenters
+	}
+      }
+    }
+
+    void DB::begin() {
+      c_mtx.lock();
+    }
+
+    void DB::commit() {
+      c_mtx.unlock();
+    }
+
+    void DB::prepare(const std::string& _name,
+		     const std::string& _stmt,
+		     bool _temporary) {
+      if ( c_statements.find(_name) != c_statements.end() )
+	throw Exception("Prepared satement %s already exists", _name.c_str());
+
+      c_statements.emplace(std::piecewise_construct,
+			   std::forward_as_tuple(_name),
+			   std::forward_as_tuple(c_db, _stmt, _temporary));
+    } // prepare
 
   }
 }

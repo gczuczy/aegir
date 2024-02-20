@@ -5,12 +5,35 @@ CREATE TABLE globals (
 
 INSERT INTO globals (name, value) VALUES ('version', '1');
 
+CREATE TABLE fermenter_types (
+  id integer PRIMARY KEY,
+  name text NOT NULL,
+  capacity int NOT NULL, -- liters
+  imageurl text NOT NULL,
+  CHECK (capacity>10 AND capacity < 300)
+);
+
+INSERT INTO fermenter_types (id, name, capacity, imageurl) VALUES
+(1, 'SSBrewtech Chronical 2.0', 32, 'https://www.ssbrewtech.com/cdn/shop/products/7galChronical_800x.png'),
+(2, 'SSBrewtech Chronical 2.0', 64, 'https://www.ssbrewtech.com/cdn/shop/products/7galChronical_800x.png'),
+(3, 'SSBrewtech Chronical 2.0', 77, 'https://www.ssbrewtech.com/cdn/shop/products/7galChronical_800x.png'),
+(4, 'SSBrewtech Unitank', 32, 'https://www.ssbrewtech.com/cdn/shop/products/Unitank2.07galhero_800x.jpg'),
+(5, 'SSBrewtech Unitank', 64, 'https://www.ssbrewtech.com/cdn/shop/products/Unitank2.014.2galhero_800x.jpg'),
+(6, 'SSBrewtech Unitank', 77, 'https://www.ssbrewtech.com/cdn/shop/products/Unitank2.017galhero_800x.jpg')
+;
+
 CREATE TABLE fermenters (
   id integer PRIMARY KEY,
   name text NOT NULL UNIQUE,
-  type text NOT NULL,
-  imageurl text
+  typeid text NOT NULL,
+  FOREIGN KEY (typeid) REFERENCES fermenter_types(id) ON DELETE RESTRICT
 );
+
+INSERT INTO fermenters (name, typeid) VALUEs
+('Chronical2.0 1', 2),
+('Chronical2.0 2', 2)
+;
+
 
 CREATE TABLE yeasts (
   id integer PRIMARY KEY,
