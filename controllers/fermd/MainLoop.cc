@@ -4,7 +4,7 @@
 #include "Bluetooth.hh"
 #include "Message.hh"
 #include "SensorProxy.hh"
-#include "DB.hh"
+#include "DBConnection.hh"
 
 namespace aegir {
   namespace fermd {
@@ -51,7 +51,7 @@ namespace aegir {
     }
 
     void MainLoop::init() {
-      DB::getInstance()->init();
+      DB::Connection::getInstance()->init();
     }
   }
 }

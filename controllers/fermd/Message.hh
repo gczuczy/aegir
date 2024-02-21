@@ -7,8 +7,8 @@
 
 #include <time.h>
 
+#include "uuid.hh"
 #include "common/Message.hh"
-#include "fermd/DB.hh"
 
 namespace aegir {
   namespace fermd {

@@ -9,7 +9,7 @@
 #include "MainLoop.hh"
 #include "Bluetooth.hh"
 #include "ZMQConfig.hh"
-#include "DB.hh"
+#include "DBConnection.hh"
 
 namespace aegir {
   namespace fermd {
@@ -25,7 +25,7 @@ namespace aegir {
       registerHandler<MainLoop>("threads");
       registerHandler<Bluetooth>("bluetooth");
       registerHandler<ZMQConfig>("zeromq");
-      registerHandler<DB>("db");
+      registerHandler<DB::Connection>("db");
     }
 
     FermdConfig::~FermdConfig() {

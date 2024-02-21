@@ -6,6 +6,12 @@ list(APPEND fermd_HEADERS
   Message.hh
   SensorProxy.hh
   DB.hh
+  DBConnection.hh
+  DBResult.hh
+  DBStatement.hh
+  DBTransaction.hh
+  DBSchema.hh
+  DBTypes.hh
 )
 
 add_subdirectory(tests)
@@ -35,7 +41,13 @@ target_sources(fermd
   ZMQConfig.cc
   Message.cc
   SensorProxy.cc
+  uuid.cc
   DB.cc
+  DBConnection.cc
+  DBStatement.cc
+  DBResult.cc
+  DBTransaction.cc
+  DBSchema.cc
   sql_v1_gen.cc
   ${fermd_HADERS}
 )
@@ -48,7 +60,13 @@ target_sources(tests_fermd
   ZMQConfig.cc
   Message.cc
   SensorProxy.cc
+  uuid.cc
   DB.cc
+  DBConnection.cc
+  DBStatement.cc
+  DBResult.cc
+  DBTransaction.cc
+  DBSchema.cc
   sql_v1_gen.cc
   ${brewd_HEADERS}
 )
