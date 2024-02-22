@@ -18,7 +18,12 @@ namespace aegir {
 	inline Connection* operator->() {
 	  return c_db;
 	};
+	void reload();
 	void setTilthydrometer(const tilthydrometer& _item);
+	// fermenters
+	void updateFermenterType(const fermenter_types& _item);
+	fermenter_types::cptr addFermenterType(const fermenter_types& _item);
+	void deleteFermenterType(int _id);
 
       private:
 	Connection* c_db;

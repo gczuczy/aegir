@@ -41,13 +41,28 @@ namespace aegir {
 	void init();
 	void setConnectionFile(const std::string& _file);
 
+	// reloads
+      protected:
+	void reload();
+      private:
+	void reload_fermenter_types();
+	void reload_tilthydrometers();
+
 	// Tilt Hydrometers
       public:
-	void reload_tilthydrometers();
 	tilthydrometer_cdb getTilthydrometers() const;
 	tilthydrometer::cptr getTilthydrometerByUUID(uuid_t _uuid) const;
       protected:
 	void setTilthydrometer(const tilthydrometer& _item);
+
+	// Fermenter Types
+      public:
+	fermenter_types_cdb getFermenterTypes() const;
+	fermenter_types::cptr getFermenterTypeByID(int _id) const;
+      protected:
+	void updateFermenterType(const fermenter_types& _item);
+	fermenter_types::cptr addFermenterType(const fermenter_types& _item);
+	void deleteFermenterType(int _id);
 
       public:
 	inline Transaction txn() {
@@ -73,6 +88,8 @@ namespace aegir {
 	// storages
 	mutable std::shared_mutex c_mtx_tilthydrometers;
 	tilthydrometer_db cache_tilthydrometers;
+	mutable std::shared_mutex c_mtx_fermenter_types;
+	fermenter_types_db cache_fermenter_types;
       }; // class Connection
 
     } // ns DB

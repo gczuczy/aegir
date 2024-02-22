@@ -9,10 +9,16 @@ namespace aegir {
 	int rc;
 	rc = sqlite3_step(c_statement);
 	evalrc(rc, c_statement);
+
+	// cache column names
+	for (int i=0; i<sqlite3_data_count(c_statement); ++i ) {
+	  c_fields[sqlite3_column_name(c_statement, i)] = i;
+	}
       }
 
       Result::Result(Result&& _other) {
 	c_statement = std::move(_other.c_statement);
+	c_fields = std::move(_other.c_fields);
 	_other.c_statement = 0;
       }
 

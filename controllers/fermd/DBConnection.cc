@@ -122,13 +122,47 @@ namespace aegir {
 		"RETURNING id,active,enabled,fermenterid,"
 		"calibr_null,calibr_at,calibr_sg");
 
-	reload_tilthydrometers();
+	// fermenter types
+	prepare("get_fermter_types",
+		"SELECT id,name,capacity,imageurl "
+		"FROM fermenter_types");
+	prepare("update_fermter_types",
+		"UPDATE fermenter_types "
+		"SET name=:name,capacity=:capacity,imageurl=:imageurl "
+		"WHERE id=:id "
+		"RETURNING id,name,capacity,imageurl");
+	prepare("insert_fermter_types",
+		"INSERT INTO fermenter_types "
+		"(name, capacity, imageurl) "
+		"VALUES (:name,:capacity,:imageurl) "
+		"RETURNING id,name,capacity,imageurl");
+	prepare("delete_fermter_types",
+		"DELETE FROM fermenter_types WHERE id=:id ");
+
+	reload();
       } // init
 
       void Connection::setConnectionFile(const std::string& _file) {
 	if ( c_db )
 	  throw Exception("Cannot set dbfile while db is open");
 	c_dbfile = _file;
+      }
+
+      void Connection::reload() {
+	reload_fermenter_types();
+	reload_tilthydrometers();
+      }
+
+      void Connection::reload_fermenter_types() {
+	std::unique_lock g(c_mtx_fermenter_types);
+
+	cache_fermenter_types.clear();
+	for ( auto r=c_statements.find("get_fermter_types")->second.execute();
+	      r; ++r) {
+	  auto ft = std::make_shared<fermenter_types>();
+	  *ft = r;
+	  cache_fermenter_types.emplace_back(ft);
+	}
       }
 
       void Connection::reload_tilthydrometers() {
@@ -138,24 +172,7 @@ namespace aegir {
 	for ( auto r=c_statements.find("get_tilthydrometers")->second.execute();
 	      r; ++r ) {
 	  auto th = std::make_shared<tilthydrometer>();
-	  th->id = r.fetch<int>("id");
-	  th->color = r.fetch<std::string>("color");
-	  th->uuid = r.fetch<uuid_t>("uuid");
-	  th->active = r.fetch<bool>("active");
-	  th->enabled = r.fetch<bool>("enabled");
-
-	  if ( !r.isNull("calibr_null") ) {
-	    auto c = std::make_shared<tilthydrometer::calibration>();
-	    c->sg = r.fetch<float>("calibr_null");
-	    th->calibr_null = c;
-	  }
-
-	  if ( !r.isNull("calibr_at") && !r.isNull("calibr_sg") ) {
-	    auto c = std::make_shared<tilthydrometer::calibration>();
-	    c->at = r.fetch<float>("calibr_at");
-	    c->sg = r.fetch<float>("calibr_sg");
-	    th->calibr_sg = c;
-	  }
+	  *th = r;
 	  cache_tilthydrometers.emplace_back(th);
 	}
       } // reload_tilthydrometers
@@ -205,22 +222,74 @@ namespace aegir {
 	int id = r.fetch<int>("id");
 	for (auto& th: cache_tilthydrometers ) {
 	  if ( th->id == id ) {
-	    th->active = r.fetch<bool>("active");
-	    th->enabled = r.fetch<bool>("enabled");
+	    *th = r;
+	    break;
+	  }
+	}
+      }
 
-	    if ( !r.isNull("calibr_null") ) {
-	      auto c = std::make_shared<tilthydrometer::calibration>();
-	      c->sg = r.fetch<float>("calibr_null");
-	      th->calibr_null = c;
-	    }
+      fermenter_types_cdb Connection::getFermenterTypes() const {
+	std::shared_lock g(c_mtx_fermenter_types);
+	std::list<std::shared_ptr<const fermenter_types> > ret;
+	for (auto it: cache_fermenter_types)
+	  ret.emplace_back(std::shared_ptr<const fermenter_types>(it.get()));
+	return ret;
+      }
 
-	    if ( !r.isNull("calibr_at") && !r.isNull("calibr_sg") ) {
-	      auto c = std::make_shared<tilthydrometer::calibration>();
-	      c->at = r.fetch<float>("calibr_at");
-	      c->sg = r.fetch<float>("calibr_sg");
-	      th->calibr_sg = c;
-	    }
-	    // add fermenters
+      fermenter_types::cptr Connection::getFermenterTypeByID(int _id) const {
+	std::shared_lock g(c_mtx_fermenter_types);
+	for (auto it: cache_fermenter_types)
+	  if ( it->id == _id) return fermenter_types::cptr(it.get());
+	return nullptr;
+      }
+
+      void Connection::updateFermenterType(const fermenter_types& _item) {
+	std::unique_lock g(c_mtx_fermenter_types);
+	auto& stmt(c_statements.find("update_fermter_types")->second);
+	stmt.bind(":id", _item.id);
+	stmt.bind(":name", _item.name);
+	stmt.bind(":capacity", _item.capacity);
+	if ( _item.imageurl.length()>0 )
+	  stmt.bind(":imageurl", _item.imageurl);
+	else stmt.bind(":imageurl");
+
+	auto r(stmt.execute());
+	int id = r.fetch<int>("id");
+	for (auto& ft: cache_fermenter_types) {
+	  if ( ft->id == id ) {
+	    *ft = r;
+	    break;
+	  }
+	}
+      }
+
+      fermenter_types::cptr Connection::addFermenterType(const fermenter_types& _item) {
+	std::unique_lock g(c_mtx_fermenter_types);
+	auto& stmt(c_statements.find("insert_fermter_types")->second);
+	stmt.bind(":name", _item.name);
+	stmt.bind(":capacity", _item.capacity);
+	if ( _item.imageurl.length()>0 )
+	  stmt.bind(":imageurl", _item.imageurl);
+	else stmt.bind(":imageurl");
+
+	auto r(stmt.execute());
+	auto ft = std::make_shared<fermenter_types>();
+	*ft = r;
+	cache_fermenter_types.emplace_back(ft);
+	return ft;
+      }
+
+      void Connection::deleteFermenterType(int _id) {
+	std::unique_lock g(c_mtx_fermenter_types);
+	auto& stmt(c_statements.find("delete_fermter_types")->second);
+	stmt.bind(":id", _id);
+	stmt.execute();
+
+	for (auto it = cache_fermenter_types.begin();
+	     it != cache_fermenter_types.end(); ++it) {
+	  if ( (*it)->id == _id ) {
+	    cache_fermenter_types.erase(it);
+	    break;
 	  }
 	}
       }

@@ -3,6 +3,7 @@
 #define AEGIR_FERMD_DB_RESULT
 
 #include <string>
+#include <map>
 
 #include <sqlite3.h>
 
@@ -33,6 +34,10 @@ namespace aegir {
 	  return sqlite3_stmt_busy(c_statement) == 1;
 	}
 
+	inline bool hasField(const std::string& _name) {
+	  return c_fields.find(_name) != c_fields.end();
+	}
+
 	bool isNull(const std::string& _name);
 	bool isNull(int _idx);
 
@@ -54,14 +59,14 @@ namespace aegir {
 
 	template<typename T>
 	T fetch(const std::string& _name) {
-	  for (int i=0; i<=sqlite3_data_count(c_statement); ++i ) {
-	    if ( _name == sqlite3_column_name(c_statement, i) )
-	      return fetch<T>(i);
-	  }
-	  throw Exception("Column \"%s\" not found", _name.c_str());
+	  const auto& it = c_fields.find(_name);
+	  if ( it == c_fields.end() )
+	    throw Exception("Field \"%s\" not found", _name.c_str());
+	  return fetch<T>(it->second);
 	};
       private:
 	sqlite3_stmt *c_statement;
+	std::map<std::string, int> c_fields;
       }; // class Result
     } // ns DB
   } // ns fermd

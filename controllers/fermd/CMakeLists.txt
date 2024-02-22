@@ -48,6 +48,7 @@ target_sources(fermd
   DBResult.cc
   DBTransaction.cc
   DBSchema.cc
+  DBTypes.cc
   sql_v1_gen.cc
   ${fermd_HADERS}
 )
@@ -67,6 +68,7 @@ target_sources(tests_fermd
   DBResult.cc
   DBTransaction.cc
   DBSchema.cc
+  DBTypes.cc
   sql_v1_gen.cc
   ${brewd_HEADERS}
 )
