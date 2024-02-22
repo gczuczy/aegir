@@ -1,6 +1,7 @@
 
 #include "DBTypes.hh"
 #include "DBResult.hh"
+#include "DBConnection.hh"
 
 namespace aegir {
   namespace fermd {
@@ -49,6 +50,17 @@ namespace aegir {
 	  imageurl = r.fetch<std::string>("imageurl");
 	else imageurl = "";
 
+	return *this;
+      }
+
+      fermenter& fermenter::operator=(Result& r) {
+	if ( r.hasField("id") )
+	  id = r.fetch<int>("id");
+
+	name = r.fetch<std::string>("name");
+
+	int tid = r.fetch<int>("typeid");
+	fermenter_type = Connection::getInstance()->getFermenterTypeByID(tid);
 	return *this;
       }
     }

@@ -20,10 +20,14 @@ namespace aegir {
 	};
 	void reload();
 	void setTilthydrometer(const tilthydrometer& _item);
-	// fermenters
+	// fermenter types
 	void updateFermenterType(const fermenter_types& _item);
 	fermenter_types::cptr addFermenterType(const fermenter_types& _item);
 	void deleteFermenterType(int _id);
+	// fermenters
+	void updateFermenter(const fermenter& _item);
+	fermenter::cptr addFermenter(const fermenter& _item);
+	void deleteFermenter(int _id);
 
       private:
 	Connection* c_db;

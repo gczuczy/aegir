@@ -46,6 +46,7 @@ namespace aegir {
 	void reload();
       private:
 	void reload_fermenter_types();
+	void reload_fermenters();
 	void reload_tilthydrometers();
 
 	// Tilt Hydrometers
@@ -63,6 +64,15 @@ namespace aegir {
 	void updateFermenterType(const fermenter_types& _item);
 	fermenter_types::cptr addFermenterType(const fermenter_types& _item);
 	void deleteFermenterType(int _id);
+
+	// fermenters
+      public:
+	fermenter_cdb getFermenters() const;
+	fermenter::cptr getFermenterByID(int _id) const;
+      protected:
+	void updateFermenter(const fermenter& _item);
+	fermenter::cptr addFermenter(const fermenter& _item);
+	void deleteFermenter(int _id);
 
       public:
 	inline Transaction txn() {
@@ -90,6 +100,8 @@ namespace aegir {
 	tilthydrometer_db cache_tilthydrometers;
 	mutable std::shared_mutex c_mtx_fermenter_types;
 	fermenter_types_db cache_fermenter_types;
+	mutable std::shared_mutex c_mtx_fermenters;
+	fermenter_db cache_fermenters;
       }; // class Connection
 
     } // ns DB

@@ -43,7 +43,7 @@ namespace aegir {
 	fermenter& operator=(Result&);
 	int id;
 	std::string name;
-	fermenter_types::ptr fermenter_type;
+	fermenter_types::cptr fermenter_type;
       };
       typedef std::list<fermenter::ptr> fermenter_db;
       typedef const std::list<fermenter::cptr> fermenter_cdb;
