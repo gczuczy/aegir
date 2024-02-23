@@ -208,16 +208,16 @@ namespace aegir {
 
       tilthydrometer_cdb Connection::getTilthydrometers() const {
 	std::shared_lock g(c_mtx_tilthydrometers);
-	std::list<std::shared_ptr<const tilthydrometer> > ret;
-	for (auto it: cache_tilthydrometers)
-	  ret.emplace_back(std::shared_ptr<const tilthydrometer>(it.get()));
+	std::list<tilthydrometer::cptr> ret;
+	for (auto& it: cache_tilthydrometers)
+	  ret.emplace_back(it);
 	return ret;
       } // getTilthydrometers
 
       tilthydrometer::cptr Connection::getTilthydrometerByUUID(uuid_t _uuid) const {
 	std::shared_lock g(c_mtx_tilthydrometers);
 	for (auto it: cache_tilthydrometers)
-	  if ( it->uuid == _uuid) return tilthydrometer::cptr(it.get());
+	  if ( it->uuid == _uuid) return it;
 	return nullptr;
       }
 
@@ -259,16 +259,16 @@ namespace aegir {
 
       fermenter_types_cdb Connection::getFermenterTypes() const {
 	std::shared_lock g(c_mtx_fermenter_types);
-	std::list<std::shared_ptr<const fermenter_types> > ret;
+	std::list<fermenter_types::cptr> ret;
 	for (auto it: cache_fermenter_types)
-	  ret.emplace_back(std::shared_ptr<const fermenter_types>(it.get()));
+	  ret.emplace_back(it);
 	return ret;
       }
 
       fermenter_types::cptr Connection::getFermenterTypeByID(int _id) const {
 	std::shared_lock g(c_mtx_fermenter_types);
 	for (auto it: cache_fermenter_types)
-	  if ( it->id == _id) return fermenter_types::cptr(it.get());
+	  if ( it->id == _id) return it;
 	return nullptr;
       }
 
@@ -325,16 +325,16 @@ namespace aegir {
 
       fermenter_cdb Connection::getFermenters() const {
 	std::shared_lock g(c_mtx_fermenters);
-	std::list<std::shared_ptr<const fermenter> > ret;
+	std::list<fermenter::cptr> ret;
 	for (auto it: cache_fermenters)
-	  ret.emplace_back(std::shared_ptr<const fermenter>(it.get()));
+	  ret.emplace_back(std::const_pointer_cast<const fermenter>(it));
 	return ret;
       }
 
       fermenter::cptr Connection::getFermenterByID(int _id) const {
 	std::shared_lock g(c_mtx_fermenters);
 	for (auto it: cache_fermenters)
-	  if ( it->id == _id) return fermenter::cptr(it.get());
+	  if ( it->id == _id) return it;
 	return nullptr;
       }
 
