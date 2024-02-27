@@ -164,7 +164,7 @@ namespace aegir {
 
     return std::shared_ptr<ZMQSocket>{new ZMQSocket(c_ctx,
 						    c_specs[idx].src_type,
-						    connString(c_specs[idx]),
+						    connString(c_specs[idx], true),
 						    c_specs[idx].src_binds)};
   }
 
@@ -318,12 +318,16 @@ namespace aegir {
     throw Exception("Unable to find specs for proxy %s", _name.c_str());
   }
 
-  std::string ZMQConfig::connString(const conn_spec& _spec) {
+  std::string ZMQConfig::connString(const conn_spec& _spec, bool _local) {
     std::string address;
     if ( _spec.proto == zmq_proto::TCP ) {
       char buff[128];
+      std::string host;
+      if ( _local ) host = "127.0.0.1";
+      else host = _spec.address;
+
       auto len = snprintf(buff, sizeof(buff)-1, "tcp://%s:%u",
-			  _spec.address,
+			  host.c_str(),
 			  _spec.port);
       address = std::string(buff, len);
     } else if ( _spec.proto == zmq_proto::INPROC ) {
@@ -551,7 +555,6 @@ namespace aegir {
   }
 
   void ZMQProxy::terminate() {
-    printf("Terminating zmq proxy\n");
     if ( zmq_send(c_ctrlclient, "TERMINATE", 9, 0) < 0 )
       throw Exception("zmq_send(): %s", std::strerror(errno));
   }

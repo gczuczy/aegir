@@ -99,8 +99,9 @@ namespace aegir {
   /*
     RawMessage for holding raw data
    */
-  class RawMessage: Message {
+  class RawMessage: public Message {
   public:
+    typedef std::shared_ptr<RawMessage> ptr;
     static constexpr aegir::MessageGroup msg_group =
       aegir::MessageGroup::CORE;
     static constexpr std::uint8_t msg_type = (uint8_t)aegir::MessageType::RAW;

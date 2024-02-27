@@ -215,8 +215,6 @@ namespace aegir {
     }
 
     info("All threads are stopped");
-    debug("Threads in registry: %u", c_threads.size());
-    debug("Pools in registry: %u", c_pools.size());
   }
 
   void ThreadManager::stop() {

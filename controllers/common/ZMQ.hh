@@ -105,7 +105,7 @@ namespace aegir {
   private:
     uint32_t getSocketIndex(const std::string& _name);
     uint32_t getProxyIndex(const std::string& _name);
-    std::string connString(const conn_spec& _spec);
+    std::string connString(const conn_spec& _spec, bool _local=false);
 
   private:
     conn_spec* c_specs;

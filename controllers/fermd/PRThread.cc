@@ -2,6 +2,8 @@
 #include "PRThread.hh"
 #include "ZMQConfig.hh"
 #include "Message.hh"
+#include "common/ServiceManager.hh"
+#include "DBConnection.hh"
 
 #define PRCMD(NAME) \
   void PRThread::handle_##NAME(ryml::ConstNodeRef& _req, ryml::NodeRef& _rep)
@@ -59,6 +61,7 @@ namespace aegir {
 	auto msg = zmqsock->recvRaw(true);
 
 	if ( msg == nullptr ) continue;
+	trace("Received message, size: %u", msg->size());
 
 	ryml::Tree resptree;
 	ryml::NodeRef resproot = resptree.rootref();
@@ -80,8 +83,10 @@ namespace aegir {
 	  reqtree["command"] >> command;
 
 	  const auto& cmdit = c_handlers.find(command);
-	  if ( cmdit == c_handlers.end() )
+	  if ( cmdit == c_handlers.end() ) {
+	    error("No handler for requested command \"%s\"", command.c_str());
 	    throw Exception("Command \"%s\" not found", command.c_str());
+	  }
 
 	  ryml::ConstNodeRef reqdata = reqtree["data"];
 	  cmdit->second(reqdata, respdata);
@@ -95,17 +100,17 @@ namespace aegir {
 	  }
 	}
 	catch (Exception& e) {
-	  resproot["status"] = "failure";
+	  resproot["status"] = "error";
 	  auto cmsg = resptree.to_arena(e.what());
 	  resproot["message"] = cmsg;
 	}
 	catch (std::exception& e) {
-	  resproot["status"] = "failure";
+	  resproot["status"] = "error";
 	  auto cmsg = resptree.to_arena(e.what());
 	  resproot["message"] = cmsg;
 	}
 	catch (...) {
-	  resproot["status"] = "failure";
+	  resproot["status"] = "error";
 	  resproot["message"] = "Unknown exception";
 	}
 
@@ -113,7 +118,8 @@ namespace aegir {
 	// an error block and need to switch to
 	// generating an error message
 	if ( response.size() == 0 ) {
-	  resproot.remove_child("data");
+	  if ( resproot.has_child("data") )
+	    resproot.remove_child("data");
 	  response = ryml::emitrs_json<std::string>(resptree);
 	}
 	zmqsock->send(response.data(), response.size(), true);
@@ -125,6 +131,8 @@ namespace aegir {
     }
 
     PRCMD(getFermenterTypes) {
+      _rep |= ryml::MAP;
+      auto fts = ServiceManager::get<DB::Connection>()->getFermenterTypes();
     }
 
     PRCMD(getFermenters) {
