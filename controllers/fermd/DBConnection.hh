@@ -15,17 +15,21 @@
 #include "DBSchema.hh"
 #include "common/ConfigBase.hh"
 #include "common/LogChannel.hh"
+#include "common/ServiceManager.hh"
 
 namespace aegir {
   namespace fermd {
     namespace DB {
       class Transaction;
-      class Connection: public aegir::ConfigNode {
+      class Connection: public aegir::ConfigNode,
+			public aegir::Service,
+			private aegir::LogChannel {
 	friend class Transaction;
+	friend class aegir::ServiceManager;
       public:
 	typedef std::shared_ptr<Connection> pointer_type;
 
-      private:
+      protected:
 	Connection();
 
       public:
@@ -33,7 +37,7 @@ namespace aegir {
 	Connection(Connection&&)=delete;
 	virtual ~Connection();
 
-	static std::shared_ptr<Connection> getInstance();
+	virtual void bailout();
 
 	virtual void marshall(ryml::NodeRef&);
 	virtual void unmarshall(ryml::ConstNodeRef&);
@@ -91,7 +95,6 @@ namespace aegir {
       private:
 	std::string c_dbfile;
 	sqlite3 *c_db;
-	LogChannel c_logger;
 	std::map<std::string, Statement> c_statements;
 	std::list<Schema> c_schemas;
 	mutable std::mutex c_mtx;

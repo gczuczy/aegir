@@ -5,6 +5,8 @@
 #include "Message.hh"
 #include "SensorProxy.hh"
 #include "DBConnection.hh"
+#include "PRThread.hh"
+#include "common/ServiceManager.hh"
 
 namespace aegir {
   namespace fermd {
@@ -12,18 +14,14 @@ namespace aegir {
     MainLoop::MainLoop(): ThreadManager(), ConfigNode() {
       registerHandler<Bluetooth>("bluetooth");
       registerHandler<SensorProxy>("sensorproxy");
+      registerHandler<PRThread>("PR");
 
-      auto msf = aegir::MessageFactory::getInstance();
+      auto msf = aegir::ServiceManager::get<MessageFactory>();
 
       msf->registerHandler<TiltReadingMessage>();
     }
 
     MainLoop::~MainLoop() {
-    }
-
-    std::shared_ptr<MainLoop> MainLoop::getInstance() {
-      static std::shared_ptr<MainLoop> instance{new MainLoop()};
-      return instance;
     }
 
     void MainLoop::marshall(ryml::NodeRef& _node) {
@@ -51,7 +49,7 @@ namespace aegir {
     }
 
     void MainLoop::init() {
-      DB::Connection::getInstance()->init();
+      ServiceManager::get<DB::Connection>()->init();
     }
   }
 }

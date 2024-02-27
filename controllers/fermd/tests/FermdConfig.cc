@@ -12,9 +12,39 @@
 #include <fstream>
 #include <filesystem>
 
+#include "common/ServiceManager.hh"
+#include "PRThread.hh"
+#include "ZMQConfig.hh"
+#include "MainLoop.hh"
+#include "Bluetooth.hh"
+#include "DBConnection.hh"
+#include "SensorProxy.hh"
+
 #include <catch2/catch_test_macros.hpp>
 
 #define CFG_TEST_FILE "tests/data/aegir-brewd.yaml"
+
+class FermdConfigTestSM: public aegir::ServiceManager {
+public:
+  FermdConfigTestSM(): aegir::ServiceManager() {
+    try {
+      add<aegir::MessageFactory>();
+      add<aegir::fermd::ZMQConfig>();
+      add<aegir::fermd::SensorProxy>();
+      add<aegir::fermd::PRThread>();
+      add<aegir::fermd::Bluetooth>();
+      add<aegir::fermd::MainLoop>();
+      add<aegir::fermd::DB::Connection>();
+      add<aegir::fermd::FermdConfig>();
+    }
+    catch (aegir::Exception& e) {
+      printf("FermdConfigTestSM excepton: %s\n", e.what());
+      throw e;
+    }
+  };
+  virtual ~FermdConfigTestSM() {
+  };
+};
 
 class TempFileGuard {
 public:
@@ -59,7 +89,8 @@ void writeYAML(const ryml::Tree& _tree, const std::string& _fname) {
 }
 
 TEST_CASE("FermdConfig", "[fermd]") {
-  auto cfg = aegir::fermd::FermdConfig::getInstance();
+  FermdConfigTestSM sm;
+  auto cfg = sm.get<aegir::fermd::FermdConfig>();
   cfg->autosave(false);
 
   TempFileGuard fg;
@@ -75,16 +106,6 @@ TEST_CASE("FermdConfig", "[fermd]") {
 
   // modify the config
   root["loglevel"] = "error";
-
-  // add a Tilt calibration
-  root["tilts"][0]["calibrations"] |= ryml::SEQ;
-  root["tilts"][0]["calibrations"][0] |= ryml::MAP;
-  root["tilts"][0]["calibrations"][1] |= ryml::MAP;
-  root["tilts"][0]["calibrations"][0]["raw"] << ryml::fmt::real(1.000f, 5);
-  root["tilts"][0]["calibrations"][0]["corrected"] << ryml::fmt::real(1.0002f, 5);
-  root["tilts"][0]["calibrations"][1]["raw"] << ryml::fmt::real(1.0080f, 5);
-  root["tilts"][0]["calibrations"][1]["corrected"] << ryml::fmt::real(1.0084f, 5);
-  root["tilts"][0]["active"] << ryml::fmt::boolalpha(true);
 
   // change something and read it back
   writeYAML(tree, fg.getFilename());

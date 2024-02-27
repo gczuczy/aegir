@@ -11,16 +11,16 @@ namespace aegir {
 	lc->error("SQLite3(%i) error: %s", _errcode, _msg);
       }
 
-      Connection::Connection(): ConfigNode(), c_dbfile("/var/db/aegir/fermd.db"), c_db(0),
-				c_logger("db") {
+      Connection::Connection(): ConfigNode(), Service(), LogChannel("DB"),
+				c_dbfile("/var/db/aegir/fermd.db"), c_db(0) {
 
 	if ( sqlite3_config(SQLITE_CONFIG_SERIALIZED) != SQLITE_OK ) {
-	  c_logger.warn("Cannot set SQLITE_CONFIG_SERIALIZED");
+	  warn("Cannot set SQLITE_CONFIG_SERIALIZED");
 	}
 
-	if ( sqlite3_config(SQLITE_CONFIG_LOG, &s3log, (void*)&c_logger)
+	if ( sqlite3_config(SQLITE_CONFIG_LOG, &s3log, (void*)this)
 	     != SQLITE_OK ) {
-	  c_logger.warn("Unable to set SQLITE_CONFIG_LOG");
+	  warn("Unable to set SQLITE_CONFIG_LOG");
 	}
 
 	// load the schemas
@@ -34,9 +34,7 @@ namespace aegir {
 	if ( c_db ) sqlite3_close_v2(c_db);
       }
 
-      std::shared_ptr<Connection> Connection::getInstance() {
-	static std::shared_ptr<Connection> instance{new Connection()};
-	return instance;
+      void Connection::bailout() {
       }
 
       void Connection::marshall(ryml::NodeRef& _node) {
@@ -52,7 +50,7 @@ namespace aegir {
 
       void Connection::unmarshall(ryml::ConstNodeRef& _node) {
 	if ( c_db ) {
-	  c_logger.warn("Cannot unmarshall config: db already open");
+	  warn("Cannot unmarshall config: db already open");
 	  return;
 	}
 
@@ -69,7 +67,7 @@ namespace aegir {
 
 	// open the dbconn
 	int rc;
-	c_logger.info("Opening Connection file %s", c_dbfile.c_str());
+	info("Opening Connection file %s", c_dbfile.c_str());
 	rc = sqlite3_open_v2(c_dbfile.c_str(),
 			     &c_db,
 			     SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,
@@ -93,7 +91,7 @@ namespace aegir {
 	  .fetch<bool>("count");
 
 	if ( !hasglobals ) {
-	  c_logger.info("globals not found, initializing Connection");
+	  info("globals not found, initializing Connection");
 	  for (auto it: c_schemas) it.apply(c_db);
 	} else {
 	  int version = Statement(c_db,
@@ -102,7 +100,7 @@ namespace aegir {
 				  "WHERE name == 'version'", true)
 	    .execute().fetch<int>("version");
 	  if ( version != c_schemas.back().version() ) {
-	    c_logger.error("Connection Upgrade not yet implemented");
+	    error("Connection Upgrade not yet implemented");
 	    throw Exception("Upgrade not yet implemented");
 	  }
 	}

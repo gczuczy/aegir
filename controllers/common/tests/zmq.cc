@@ -9,6 +9,7 @@
 #include <chrono>
 
 #include "common/misc.hh"
+#include "common/ServiceManager.hh"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -45,9 +46,17 @@ private:
 
 };
 
-class TestConfig: public aegir::ZMQConfig {
-private:
-  TestConfig(): aegir::ZMQConfig() {
+class ZMQTestSM: public aegir::ServiceManager {
+public:
+  ZMQTestSM();
+  virtual ~ZMQTestSM() {};
+};
+
+class TestConfig: public aegir::ZMQConfig,
+		  public aegir::Service {
+  friend class aegir::ServiceManager;
+protected:
+  TestConfig(): aegir::ZMQConfig(), aegir::Service() {
     // simple tests
     addSpec("reqrep",
 	    aegir::ZMQConfig::zmq_proto::INPROC,
@@ -75,7 +84,7 @@ private:
 	     "reqb", true);
 
     // our message type
-    auto msf = aegir::MessageFactory::getInstance();
+    auto msf = aegir::ServiceManager::get<aegir::MessageFactory>();
 
     msf->registerHandler<TestMessage>();
   }
@@ -83,14 +92,17 @@ public:
   TestConfig(const TestConfig&)=delete;
   TestConfig(TestConfig&&)=delete;
   virtual ~TestConfig() {};
-  static std::shared_ptr<TestConfig> getInstance() {
-    static std::shared_ptr<TestConfig> instance{new TestConfig()};
-    return instance;
-  }
+  virtual void bailout() {};
+};
+
+ZMQTestSM::ZMQTestSM(): aegir::ServiceManager() {
+  add<aegir::MessageFactory>();
+  add<TestConfig>();
 };
 
 TEST_CASE("pubsub", "[common][zmq]") {
-  auto cfg = TestConfig::getInstance();
+  ZMQTestSM sm;
+  auto cfg = sm.get<TestConfig>();
 
   auto src = cfg->srcSocket("pubsub");
   auto dst = cfg->dstSocket("pubsub");
@@ -117,7 +129,8 @@ TEST_CASE("pubsub", "[common][zmq]") {
 TEST_CASE("reqrep", "[common][zmq]") {
   int reqval = 42;
   int repval = 69;
-  auto cfg = TestConfig::getInstance();
+  ZMQTestSM sm;
+  auto cfg = sm.get<TestConfig>();
 
   auto req = cfg->srcSocket("reqrep");
   auto rep = cfg->dstSocket("reqrep");
@@ -203,7 +216,8 @@ private:
 TEST_CASE("proxy", "[common][zmq]") {
   int reqval = 42;
   int repval = 69;
-  auto cfg = TestConfig::getInstance();
+  ZMQTestSM sm;
+  auto cfg = sm.get<TestConfig>();
   auto proxy = cfg->proxy("test");
   auto req = cfg->srcSocket("reqa");
   auto rep = cfg->dstSocket("reqb");

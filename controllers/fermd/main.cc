@@ -9,6 +9,7 @@
 #include "FermdConfig.hh"
 #include "common/Exception.hh"
 #include "MainLoop.hh"
+#include "ServiceManager.hh"
 
 namespace po = boost::program_options;
 
@@ -60,8 +61,10 @@ int main(int argc, char* argv[]) {
 
   // config first
   aegir::fermd::fermdconfig_type cfg;
+  std::shared_ptr<aegir::fermd::ServiceManager> sm;
   try {
-    cfg = aegir::fermd::FermdConfig::getInstance();
+    sm = std::make_shared<aegir::fermd::ServiceManager>();
+    cfg = sm->get<aegir::fermd::FermdConfig>();
   }
   catch (aegir::Exception& e) {
     printf("Fatal error: %s\n", e.what());
@@ -101,7 +104,7 @@ int main(int argc, char* argv[]) {
 
   // the main loop
   try {
-    auto ml = aegir::fermd::MainLoop::getInstance();
+    auto ml = sm->get<aegir::fermd::MainLoop>();
     ml->run();
   }
   catch (aegir::Exception& e) {

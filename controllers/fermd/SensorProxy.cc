@@ -7,17 +7,12 @@
 namespace aegir {
   namespace fermd {
 
-    SensorProxy::SensorProxy(): aegir::ThreadManager::Thread() {
-      c_proxy = ZMQConfig::getInstance()->proxy("sensorbus");
+    SensorProxy::SensorProxy(): aegir::Thread(), Service() {
+      c_proxy = ServiceManager::get<ZMQConfig>()->proxy("sensorbus");
     }
 
     SensorProxy::~SensorProxy() {
     }
-
-    sensorproxy_type SensorProxy::getInstance() {
-      static std::shared_ptr<SensorProxy> instance{new SensorProxy()};
-      return instance;
-    };
 
     void SensorProxy::init() {
     }
@@ -29,6 +24,10 @@ namespace aegir {
     void SensorProxy::stop() {
       c_run = false;
       c_proxy->terminate();
+    }
+
+    void SensorProxy::bailout() {
+      stop();
     }
   }
 }

@@ -10,13 +10,13 @@
 
 #define DBTASSERT(T) \
   static_assert(std::copy_constructible<T>, \
-		#T" is not copy constructable");	\
+		#T" is not copy constructable"); \
   static_assert(std::move_constructible<T>,	\
-		#T" is not move constructable");
+		#T" is not move constructable")
 
 #define DBTPTRS(T) \
   typedef std::shared_ptr<T> ptr; \
-  typedef std::shared_ptr<const T> cptr;
+  typedef std::shared_ptr<const T> cptr
 
 namespace aegir {
   namespace fermd {

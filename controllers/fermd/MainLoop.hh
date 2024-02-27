@@ -9,6 +9,7 @@
 
 #include "common/ThreadManager.hh"
 #include "common/ConfigBase.hh"
+#include "common/ServiceManager.hh"
 
 namespace aegir {
   namespace fermd {
@@ -16,15 +17,13 @@ namespace aegir {
     class MainLoop: public aegir::ThreadManager,
 		    public aegir::ConfigNode {
 
-    private:
+      friend class aegir::ServiceManager;
+    protected:
       MainLoop();
     public:
       MainLoop(const MainLoop&)=delete;
       MainLoop(MainLoop&&)=delete;
       virtual ~MainLoop();
-
-    public:
-      static std::shared_ptr<MainLoop> getInstance();
 
     public:
       // ConfigNode

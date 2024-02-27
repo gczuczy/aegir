@@ -12,9 +12,9 @@ list(APPEND fermd_HEADERS
   DBTransaction.hh
   DBSchema.hh
   DBTypes.hh
+  PRThread.hh
+  ServiceManager.hh
 )
-
-add_subdirectory(tests)
 
 #list(APPEND fermd_HEADERS
 #  cmakeconfig.hh
@@ -35,6 +35,7 @@ add_dependencies(tests_fermd embed_generators)
 target_sources(fermd
   PRIVATE
   main.cc
+  ServiceManager.cc
   FermdConfig.cc
   MainLoop.cc
   Bluetooth.cc
@@ -50,6 +51,7 @@ target_sources(fermd
   DBSchema.cc
   DBTypes.cc
   sql_v1_gen.cc
+  PRThread.cc
   ${fermd_HADERS}
 )
 
@@ -70,5 +72,9 @@ target_sources(tests_fermd
   DBSchema.cc
   DBTypes.cc
   sql_v1_gen.cc
+  PRThread.cc
+  ServiceManager.cc
   ${brewd_HEADERS}
 )
+
+add_subdirectory(tests)

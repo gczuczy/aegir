@@ -11,6 +11,8 @@ list(APPEND brewd_HEADERS
 
 list(APPEND fermd_FILES
   cmakeconfig.hh
+  ServiceManager.hh
+  ServiceManager.cc
   ConfigBase.hh
   ConfigBase.cc
   Exception.hh

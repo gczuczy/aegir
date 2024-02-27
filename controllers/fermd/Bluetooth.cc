@@ -237,18 +237,15 @@ namespace aegir {
       Bluetooth main class
      */
 
-    Bluetooth::Bluetooth(): ConfigNode(), ThreadManager::Thread(),
+    Bluetooth::Bluetooth(): ConfigNode(), Thread(),
 			    c_device("auto"), c_logger("Bluetooth") {
-      c_sensorbus = ZMQConfig::getInstance()->srcSocket("sensorfetch");
-      c_sensorbus->setSendTimeout(100);
     }
 
     Bluetooth::~Bluetooth() {
     }
 
-    std::shared_ptr<Bluetooth> Bluetooth::getInstance() {
-      static std::shared_ptr<Bluetooth> instance{new Bluetooth()};
-      return instance;
+    void Bluetooth::bailout() {
+      stop();
     }
 
     void Bluetooth::marshall(ryml::NodeRef& _node) {
@@ -318,6 +315,9 @@ namespace aegir {
 		    c_device_selected.c_str(),
 		    bdaddr(di.bdaddr).c_str());
 
+      c_sensorbus = ServiceManager::get<ZMQConfig>()->srcSocket("sensorfetch");
+      c_sensorbus->setSendTimeout(100);
+
       // and start the sensorbus
       c_sensorbus->brrr();
     }
@@ -353,11 +353,9 @@ namespace aegir {
 	}
 	// if no events, we just loop back
 	if ( !nevents ) continue;
-	c_logger.debug("events from kqueue: %i", nevents);
 
 	// handle the events
 	for (int i=0; i<nevents; ++i ) {
-	  c_logger.info("Event data len: %i", evlist[i].data);
 	  // empty the buffer fist for safety
 	  memset((void*)buffer, 0, buffsize);
 
@@ -369,7 +367,7 @@ namespace aegir {
 	  }
 	  if ( auto msg = handleData(buffer, evlist[i].data) ) {
 	    c_sensorbus->send(msg);
-#if 0
+#if 1
 	    auto tl = msg->as<TiltReadingMessage>();
 	    printf("UUID:%s %.2fC %.4fSG\n",
 		   boost::lexical_cast<std::string>(tl->uuid()).c_str(),

@@ -18,12 +18,14 @@
 #include "common/Exception.hh"
 #include "ZMQConfig.hh"
 #include "Message.hh"
+#include "common/ServiceManager.hh"
 
 namespace aegir {
   namespace fermd {
 
     class Bluetooth: public ConfigNode,
-		     public ThreadManager::Thread{
+		     public Service,
+		     public Thread {
     private:
       class LE {
       public:
@@ -113,14 +115,15 @@ namespace aegir {
 	uint8_t rssi;
       } __attribute__((packed));
 
-    private:
+    protected:
+      friend class aegir::ServiceManager;
       Bluetooth();
     public:
       Bluetooth(const Bluetooth&)=delete;
       Bluetooth(Bluetooth&&)=delete;
       virtual ~Bluetooth();
 
-      static std::shared_ptr<Bluetooth> getInstance();
+      virtual void bailout();
 
       // confignode
       virtual void marshall(ryml::NodeRef&);

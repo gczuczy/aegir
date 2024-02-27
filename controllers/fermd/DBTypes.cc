@@ -2,6 +2,7 @@
 #include "DBTypes.hh"
 #include "DBResult.hh"
 #include "DBConnection.hh"
+#include "common/ServiceManager.hh"
 
 namespace aegir {
   namespace fermd {
@@ -60,7 +61,8 @@ namespace aegir {
 	name = r.fetch<std::string>("name");
 
 	int tid = r.fetch<int>("typeid");
-	fermenter_type = Connection::getInstance()->getFermenterTypeByID(tid);
+	fermenter_type = ServiceManager::get<Connection>()
+	  ->getFermenterTypeByID(tid);
 	return *this;
       }
     }

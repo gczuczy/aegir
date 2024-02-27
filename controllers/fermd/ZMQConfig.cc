@@ -40,9 +40,7 @@ namespace aegir {
     ZMQConfig::~ZMQConfig() {
     }
 
-    std::shared_ptr<aegir::fermd::ZMQConfig> ZMQConfig::getInstance() {
-      static std::shared_ptr<ZMQConfig> instance{new ZMQConfig()};
-      return instance;
+    void ZMQConfig::bailout() {
     }
   }
 }

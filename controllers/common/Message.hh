@@ -14,6 +14,7 @@
 
 #include "common/Exception.hh"
 #include "common/misc.hh"
+#include "common/ServiceManager.hh"
 
 namespace aegir {
 
@@ -21,6 +22,10 @@ namespace aegir {
     CORE=0,
     BREWD,
     FERMD
+  };
+
+  enum class MessageType: uint8_t {
+    RAW=0,
   };
 
   class Message;
@@ -35,14 +40,15 @@ namespace aegir {
   // base class
   class Message: public std::enable_shared_from_this<Message> {
   public:
+    typedef uint16_t size_type;
     struct headers {
       MessageGroup group;
       std::uint8_t type;
-      std::uint16_t size;
+      size_type size;
     };
   protected:
     Message(MessageGroup _group, std::uint8_t _type,
-	    std::uint16_t _size = sizeof(headers));
+	    size_type _size = sizeof(headers));
     Message(const void*);
   public:
     Message()=delete;
@@ -52,10 +58,10 @@ namespace aegir {
 
     inline MessageGroup group() const { return c_headers->group; };
     inline std::uint8_t type() const { return c_headers->type; };
-    inline std::uint16_t size() const { return c_headers->size; };
+    inline size_type size() const { return c_headers->size; };
 
     template<typename T>
-    void setPointer(T*& _ptr, std::uint16_t _offset) {
+    void setPointer(T*& _ptr, size_type _offset) {
       _ptr = (T*)(dataPtr<char>() + _offset);
     }
 
@@ -79,7 +85,7 @@ namespace aegir {
     };
 
   protected:
-    void resize(std::uint16_t _size);
+    void resize(size_type _size);
     template<typename T>
     T* dataPtr() const {
       return (T*)(((char*)c_buffer) + sizeof(headers));
@@ -91,22 +97,49 @@ namespace aegir {
   };
 
   /*
+    RawMessage for holding raw data
+   */
+  class RawMessage: Message {
+  public:
+    static constexpr aegir::MessageGroup msg_group =
+      aegir::MessageGroup::CORE;
+    static constexpr std::uint8_t msg_type = (uint8_t)aegir::MessageType::RAW;
+
+  public:
+    RawMessage()=delete;
+    RawMessage(const RawMessage&)=delete;
+    RawMessage(RawMessage&&)=delete;
+    RawMessage(const void* _data, size_type _size, bool _copy=false);
+    virtual ~RawMessage();
+
+    inline const void* data() const { return c_data; };
+
+    virtual const void* serialize() const;
+
+  private:
+    void* c_data;
+    bool c_iscopy;
+  };
+
+  /*
     Factory to unserialize buffers to message objects
    */
-  class MessageFactory {
+  class MessageFactory: public Service {
   public:
     // the header is also passed which contains the message size
     // and parse() ensures the size match, so no len is needed
     typedef std::function<message_type(const char*)> handler_type;
-  private:
+  protected:
     MessageFactory() noexcept;
+    friend class ServiceManager;
+  private:
     MessageFactory(const MessageFactory&)=delete;
     MessageFactory(MessageFactory&&)=delete;
 
   public:
-    ~MessageFactory();
+    virtual ~MessageFactory();
+    virtual void bailout();
 
-    static std::shared_ptr<MessageFactory> getInstance();
     message_type parse(const char* _buffer, std::uint16_t _len);
 
     template<IsMessage T>

@@ -16,6 +16,7 @@
 
 #include "common/Exception.hh"
 #include "common/misc.hh"
+#include "common/ServiceManager.hh"
 
 namespace blt = ::boost::log::trivial;
 
@@ -35,6 +36,9 @@ namespace aegir {
   };
 
   // concepts
+  template<class T>
+  concept IsConfigNode = std::is_base_of<ConfigNode, T>::value &&
+    std::is_base_of<Service, T>::value;
 
   typedef std::shared_ptr<ConfigNode> ConfigNodeHandler;
 
@@ -73,13 +77,12 @@ namespace aegir {
     void autosave(bool _auto);
 
   protected:
-    template<Derived<ConfigNode> T>
+    template<IsConfigNode T>
     void registerHandler(const std::string& _name) {
-      auto h = std::static_pointer_cast<ConfigNode>(T::getInstance());
+      auto h = ServiceManager::get<T>();
       if ( checkHandler({_name}) )
 	throw Exception("Handler already defined: %s", _name.c_str());
-      c_handlers.emplace_back(SectionPath{_name},
-			      h);
+      c_handlers.emplace_back(SectionPath{_name}, h);
     }
 
     template<typename T>
@@ -87,7 +90,8 @@ namespace aegir {
 			 T& _variable,
 			 std::function<void(const T&)> _checker = nullptr
 			 ) {
-      throw Exception("Generic ConfigBase::registerHandler not implemented");
+      static_assert(sizeof(T)!=0,
+		    "Generic ConfigBase::registerHandler not implemented");
     };
     template<>
     void registerHandler(const std::string& _name,

@@ -9,6 +9,7 @@
 #include <cstring>
 
 #include "common/Exception.hh"
+#include "common/ServiceManager.hh"
 
 namespace aegir {
 
@@ -342,6 +343,7 @@ namespace aegir {
     void *ctx = _ctx->getCtx();
 
     c_sock = zmq_socket(ctx, _type);
+    setLinger(0);
   }
 
   ZMQSocket::~ZMQSocket() {
@@ -380,6 +382,11 @@ namespace aegir {
     c_envelope = _env;
   }
 
+  void ZMQSocket::setLinger(int _msecs) {
+    zmq_setsockopt(c_sock, ZMQ_LINGER,
+		   (const void*)&_msecs, sizeof(int));
+  }
+
   message_type ZMQSocket::recv(bool _wait){
     constexpr int buffsize = 65536;
     thread_local char buff[buffsize], envelope[64];
@@ -400,7 +407,21 @@ namespace aegir {
     if ( (len = recvChunk(buff, buffsize, flags))<0 )
       throw Exception("Second part of pubsub message missing");
 
-    return MessageFactory::getInstance()->parse(buff, len);
+    return ServiceManager::get<MessageFactory>()->parse(buff, len);
+  }
+
+  std::shared_ptr<RawMessage> ZMQSocket::recvRaw(bool _wait) {
+    constexpr int buffsize = 65536;
+    thread_local char buff[buffsize], envelope[64];
+
+    int flags=0;
+    if ( !_wait ) flags |= ZMQ_DONTWAIT;
+
+    int len;
+    if ( (len = recvChunk(buff, buffsize, flags))<0 )
+      return nullptr;
+
+    return std::make_shared<RawMessage>((void*)buff, len, true);
   }
 
   bool ZMQSocket::recv(char *_buff, std::uint16_t _len, bool _wait) {
@@ -483,7 +504,7 @@ namespace aegir {
 		     zmqsocket_type _dbg)
     : c_ctx(_ctx), c_front(_front), c_back(_back), c_dbg(_dbg) {
     uint32_t idx = c_control_index++;
-    char buff[32];
+    char buff[64];
     int len;
 
     len = snprintf(buff, sizeof(buff)-1,
@@ -494,11 +515,15 @@ namespace aegir {
     if ( (c_ctrlclient = zmq_socket(c_ctx->getCtx(), ZMQ_REQ))==0 )
       throw Exception("zmq_socket(): %s", std::strerror(errno));
 
+    int linger=0;
+    zmq_setsockopt(c_ctrl, ZMQ_LINGER, &linger, sizeof(int));
+    zmq_setsockopt(c_ctrlclient, ZMQ_LINGER, &linger, sizeof(int));
+
     if ( zmq_bind(c_ctrl, buff)<0 )
-      throw Exception("zmq_bind(): %s", std::strerror(errno));
+      throw Exception("zmq_bind(%s): %s", buff, std::strerror(errno));
 
     if ( zmq_connect(c_ctrlclient, buff)<0 )
-      throw Exception("zmq_connect(): %s", std::strerror(errno));
+      throw Exception("zmq_connect(%s): %s", buff, std::strerror(errno));
 
   }
 
@@ -526,6 +551,7 @@ namespace aegir {
   }
 
   void ZMQProxy::terminate() {
+    printf("Terminating zmq proxy\n");
     if ( zmq_send(c_ctrlclient, "TERMINATE", 9, 0) < 0 )
       throw Exception("zmq_send(): %s", std::strerror(errno));
   }

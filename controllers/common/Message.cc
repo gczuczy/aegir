@@ -40,6 +40,31 @@ namespace aegir {
   }
 
   /*
+    RawMessage
+   */
+  RawMessage::RawMessage(const void* _data,
+			 std::uint16_t _size,
+			 bool _copy): Message(MessageGroup::CORE,
+					      (uint8_t)MessageType::RAW),
+				      c_iscopy(_copy) {
+    if ( _copy ) {
+      c_data = malloc(_size);
+      memcpy(c_data, _data, _size);
+    } else {
+      c_data = (void*)_data;
+    }
+    c_headers->size = _size;
+  }
+
+  RawMessage::~RawMessage() {
+    if ( c_iscopy ) free(c_data);
+  }
+
+  const void* RawMessage::serialize() const {
+    return c_data;
+  }
+
+  /*
     MessageFactory
    */
   MessageFactory::MessageFactory() noexcept {
@@ -48,9 +73,8 @@ namespace aegir {
   MessageFactory::~MessageFactory() {
   }
 
-  std::shared_ptr<MessageFactory> MessageFactory::getInstance() {
-    static std::shared_ptr<MessageFactory> instance{new MessageFactory()};
-    return instance;
+  void MessageFactory::bailout() {
+    c_handlers.clear();
   }
 
   message_type MessageFactory::parse(const char* _buffer, std::uint16_t _len) {

@@ -9,8 +9,17 @@
 #include <cstdint>
 
 #include "common/misc.hh"
+#include "common/ServiceManager.hh"
 
 #include <catch2/catch_test_macros.hpp>
+
+class MessageTestSM: public aegir::ServiceManager {
+public:
+  MessageTestSM() {
+    add<aegir::MessageFactory>();
+  };
+  virtual ~MessageTestSM() {};
+};
 
 class TestMessage: public aegir::Message {
 public:
@@ -46,7 +55,8 @@ private:
 };
 
 TEST_CASE("Message", "[common]") {
-  auto f = aegir::MessageFactory::getInstance();
+  MessageTestSM sm;
+  auto f = sm.get<aegir::MessageFactory>();
 
   f->registerHandler<TestMessage>();
 

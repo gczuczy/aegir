@@ -9,14 +9,18 @@
 
 #include <chrono>
 
+#include "common/ServiceManager.hh"
+#include "common/Message.hh"
+
 #include <catch2/catch_test_macros.hpp>
 
 #define CFG_TEST_FILE "tests/data/aegir-brewd.yaml"
 
-class TestThread: public aegir::ThreadManager::Thread {
-
-private:
-  TestThread(): c_initialized(false) {};
+class TestThread: public aegir::Thread,
+		  public aegir::Service {
+  friend aegir::ServiceManager;
+protected:
+  TestThread(): Thread(), Service(), c_initialized(false) {};
 
 public:
   virtual ~TestThread() {
@@ -25,6 +29,10 @@ public:
     c_initialized = true;
   }
 
+  virtual void bailout() {
+    stop();
+  };
+
   virtual void worker() {
     std::chrono::milliseconds s(50);
 
@@ -32,20 +40,19 @@ public:
       std::this_thread::sleep_for(s);
     }
   }
-  static std::shared_ptr<TestThread> getInstance() {
-    static std::shared_ptr<TestThread> instance{new TestThread()};
-    return instance;
-  };
   inline bool isInitialized() const { return c_initialized; };
 
 private:
   std::atomic<bool> c_initialized;
 };
 
-class TestPool: public aegir::ThreadManager::ThreadPool {
+class TestPool: public aegir::ThreadPool,
+		public aegir::Service {
 
-private:
-  TestPool(): c_initialized(false), c_spin(false),
+  friend aegir::ServiceManager;
+protected:
+  TestPool(): ThreadPool(), Service(),
+	      c_initialized(false), c_spin(false),
 	      c_workers(0) {};
 
 public:
@@ -54,6 +61,10 @@ public:
   virtual void init() {
     c_initialized = true;
   }
+
+  virtual void bailout() {
+    stop();
+  };
 
   virtual void controller() {
     std::chrono::milliseconds s(50);
@@ -82,10 +93,6 @@ public:
     return 3;
   }
 
-  static std::shared_ptr<TestPool> getInstance() {
-    static std::shared_ptr<TestPool> instance{new TestPool()};
-    return instance;
-  };
   inline bool isInitialized() const { return c_initialized; };
   inline std::uint32_t getCurrentWorkers() const { return c_workers; };
   void spin(bool _val) {
@@ -99,8 +106,8 @@ private:
 };
 
 class TestManager: public aegir::ThreadManager {
-
-private:
+  friend class aegir::ServiceManager;
+protected:
   TestManager(): ThreadManager() {
     registerHandler<TestThread>("test");
     registerHandler<TestPool>("test");
@@ -108,35 +115,39 @@ private:
 public:
   virtual ~TestManager() {
   };
-  static std::shared_ptr<TestManager> getInstance() {
-    static std::shared_ptr<TestManager> instance{new TestManager()};
-    return instance;
-  };
 };
 
-std::atomic<bool> g_run(true);
+class ThreadManagerTestSM: public aegir::ServiceManager {
+public:
+  ThreadManagerTestSM() {
+    add<aegir::MessageFactory>();
+    add<TestThread>();
+    add<TestPool>();
+    add<TestManager>();
+  };
+  virtual ~ThreadManagerTestSM() {};
+};
 
-void runManager() {
-  auto tm = TestManager::getInstance();
+static void runManager() {
+  auto tm = aegir::ServiceManager::get<TestManager>();
 
   tm->run();
 }
 
-TEST_CASE("ThreadPool", "[common]") {
-  auto tm = TestManager::getInstance();
-
-  g_run = true;
+TEST_CASE("ThreadPool", "[common][threading]") {
+  ThreadManagerTestSM sm;
+  auto tm = sm.get<TestManager>();
 
   std::thread tmt(runManager);
 
-  auto testthread = TestThread::getInstance();
+  auto testthread = sm.get<TestThread>();
   std::chrono::milliseconds s(100);
   std::this_thread::sleep_for(s);
 
   REQUIRE(testthread->isInitialized());
 
   // scale up the pool
-  auto testpool = TestPool::getInstance();
+  auto testpool = sm.get<TestPool>();
   REQUIRE(testpool->getCurrentWorkers() == 1);
 
   // spin it up
@@ -150,13 +161,12 @@ TEST_CASE("ThreadPool", "[common]") {
   // spin down
   {
     testpool->spin(false);
-    auto s2 = std::chrono::seconds(5);
+    auto s2 = std::chrono::seconds(2);
     std::this_thread::sleep_for(s2);
   }
   REQUIRE(testpool->getCurrentWorkers() == 1);
 
   // shut it down
-  g_run = false;
   tm->stop();
   tmt.join();
 }

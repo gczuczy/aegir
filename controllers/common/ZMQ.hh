@@ -138,9 +138,11 @@ namespace aegir {
     void setRecvTimeout(int _to);
     void setSendTimeout(int _to);
     void setEnvelope(const std::string& _env);
+    void setLinger(int msecc=-1);
 
     // message
     message_type recv(bool _wait=false);
+    std::shared_ptr<RawMessage> recvRaw(bool _wait=false);
     bool recv(char *_buff, std::uint16_t _len, bool _wait=false);
     inline void send(message_type _msg, bool _wait=false) {
       send(_msg->serialize(), _msg->size(), _wait);

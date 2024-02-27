@@ -6,15 +6,29 @@
 
 #include <stdio.h>
 
+#include "common/ServiceManager.hh"
+#include "DBConnection.hh"
+#include "common/Message.hh"
+
 #include <catch2/catch_test_macros.hpp>
 
+class DBTestSM: public aegir::ServiceManager {
+public:
+  DBTestSM() {
+    add<aegir::MessageFactory>();
+    add<aegir::fermd::DB::Connection>();
+  };
+  virtual ~DBTestSM() {};
+};
+
 static auto makeDBInstance() {
-  auto db = aegir::fermd::DB::Connection::getInstance();
+  auto db = aegir::ServiceManager::get<aegir::fermd::DB::Connection>();
   db->setConnectionFile(tmpnam(0));
   return db;
 }
 
 TEST_CASE("DB", "[db][fermd]") {
+  DBTestSM sm;
   auto db = makeDBInstance();
 
   db->init();

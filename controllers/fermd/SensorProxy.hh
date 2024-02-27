@@ -7,22 +7,25 @@
 
 #include "common/ThreadManager.hh"
 #include "common/ZMQ.hh"
+#include "common/ServiceManager.hh"
 
 namespace aegir {
   namespace fermd {
 
     class SensorProxy;
     typedef std::shared_ptr<SensorProxy> sensorproxy_type;
-    class SensorProxy: public aegir::ThreadManager::Thread {
+    class SensorProxy: public aegir::Thread,
+		       public Service {
+      friend class aegir::ServiceManager;
     public:
       virtual ~SensorProxy();
-      static sensorproxy_type getInstance();
 
       virtual void init();
       virtual void worker();
       virtual void stop();
+      virtual void bailout();
 
-    private:
+    protected:
       SensorProxy();
       SensorProxy(const SensorProxy&)=delete;
       SensorProxy(SensorProxy&&)=delete;

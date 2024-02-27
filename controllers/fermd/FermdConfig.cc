@@ -17,14 +17,14 @@ namespace aegir {
     /*
      * Config
      */
-    FermdConfig::FermdConfig(): ConfigBase(),
+    FermdConfig::FermdConfig(): ConfigBase(), Service(),
 				c_loglevel(blt::severity_level::info) {
       registerHandler("loglevel", c_loglevel);
 
       // pull in submodules
       registerHandler<MainLoop>("threads");
-      registerHandler<Bluetooth>("bluetooth");
       registerHandler<ZMQConfig>("zeromq");
+      registerHandler<Bluetooth>("bluetooth");
       registerHandler<DB::Connection>("db");
     }
 
@@ -32,9 +32,7 @@ namespace aegir {
       save();
     }
 
-    std::shared_ptr<FermdConfig> FermdConfig::getInstance() {
-      static std::shared_ptr<FermdConfig> instance{new FermdConfig()};
-      return instance;
+    void FermdConfig::bailout() {
     }
 
     FermdConfig &FermdConfig::setLogLevel(const std::string& _level) {

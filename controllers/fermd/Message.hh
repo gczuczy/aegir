@@ -2,8 +2,8 @@
   fermd-specific messages
  */
 
-#ifndef AEGIR_FERMD_H
-#define AEGIR_FERMD_H
+#ifndef AEGIR_FERMD_MESSAGE_H
+#define AEGIR_FERMD_MESSAGE_H
 
 #include <time.h>
 
