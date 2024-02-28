@@ -7,6 +7,9 @@
 #include "fermd/ZMQConfig.hh"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
 
 #include <chrono>
 #include <filesystem>
@@ -118,6 +121,27 @@ TEST_CASE("pr_nocmd", "[fermd][pr]") {
       root["command"] = "bullShit";
       root["data"] |= ryml::MAP;
       std::string output = ryml::emitrs_yaml<std::string>(tree);
+      csock->send(output, true);
+
+      auto msg = csock->recvRaw(true);
+      CHECK( msg );
+      CHECK( isError(msg) );
+  });
+}
+
+TEST_CASE("pr_randomdata", "[fermd][pr]") {
+  // let's disable this, due to a bug in ryml:
+  // https://github.com/biojppm/rapidyaml/blob/8c1d6221dea11259bd63b9fadb081002fe064766/src/c4/yml/common.cpp#L42
+  doTest([](aegir::zmqsocket_type csock) {
+    std::string output("foo");
+      output.resize(32);
+      srand(time(0));
+
+      for (int i=0; i<32; i += sizeof(int) ) {
+	int rnd = rand();
+	memcpy((void*)(output.data()+i), &rnd, sizeof(int));
+      }
+
       csock->send(output, true);
 
       auto msg = csock->recvRaw(true);

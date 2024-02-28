@@ -6,6 +6,7 @@
 
 #include "common/logging.hh"
 #include "common/LogChannel.hh"
+#include "common/ryml.hh"
 #include "FermdConfig.hh"
 #include "common/Exception.hh"
 #include "MainLoop.hh"
@@ -54,6 +55,8 @@ int main(int argc, char* argv[]) {
 
   if ( vm.count("init-config") ) initcfg = true;
   if ( vm.count("daemonize") ) daemonize = true;
+
+  aegir::init_ryml();
 
   // initialize logging
   aegir::logging::init();

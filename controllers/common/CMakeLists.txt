@@ -30,6 +30,7 @@ list(APPEND fermd_FILES
   ZMQ.cc
   Message.hh
   Message.cc
+  ryml.cc
 )
 
 target_sources(brewd

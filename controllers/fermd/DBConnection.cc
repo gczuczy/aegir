@@ -31,7 +31,11 @@ namespace aegir {
 
       Connection::~Connection() {
 	c_statements.clear();
-	if ( c_db ) sqlite3_close_v2(c_db);
+	if ( c_db ) {
+	  info("Closing database");
+	  sqlite3_close_v2(c_db);
+	}
+	sqlite3_config(SQLITE_CONFIG_LOG, 0, 0);
       }
 
       void Connection::bailout() {

@@ -26,4 +26,8 @@
 
 #pragma clang diagnostic pop
 
+namespace aegir {
+  void init_ryml();
+}
+
 #endif

@@ -22,8 +22,6 @@ namespace aegir {
       REGCMD(getFermenterTypes);
       REGCMD(getFermenters);
       REGCMD(getTilthydrometers);
-
-      info("PR ctor shouldRun is: %c", shouldRun()?'t':'f');
     }
 
     PRThread::~PRThread() {
