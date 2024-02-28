@@ -14,6 +14,7 @@
 #include <chrono>
 #include <filesystem>
 #include <functional>
+#include <set>
 
 #include "common/ServiceManager.hh"
 #include "DBConnection.hh"
@@ -130,12 +131,9 @@ TEST_CASE("pr_nocmd", "[fermd][pr]") {
 }
 
 TEST_CASE("pr_randomdata", "[fermd][pr]") {
-  // let's disable this, due to a bug in ryml:
-  // https://github.com/biojppm/rapidyaml/blob/8c1d6221dea11259bd63b9fadb081002fe064766/src/c4/yml/common.cpp#L42
   doTest([](aegir::zmqsocket_type csock) {
     std::string output("foo");
       output.resize(32);
-      srand(time(0));
 
       for (int i=0; i<32; i += sizeof(int) ) {
 	int rnd = rand();
@@ -147,5 +145,50 @@ TEST_CASE("pr_randomdata", "[fermd][pr]") {
       auto msg = csock->recvRaw(true);
       CHECK( msg );
       CHECK( isError(msg) );
+  });
+}
+
+TEST_CASE("pr_getFermenterTypes", "[fermd][pr]") {
+  doTest([](aegir::zmqsocket_type csock) {
+    std::string cmd("{\"command\": \"getFermenterTypes\"}");
+
+      csock->send(cmd, true);
+
+      auto msg = csock->recvRaw(true);
+      CHECK( msg );
+      CHECK( !isError(msg) );
+      INFO("Response: " << ((char*)msg->data()));
+
+      // now verify these
+      auto dbfts = aegir::ServiceManager
+	::get<aegir::fermd::DB::Connection>()->getFermenterTypes();
+
+      auto indata = c4::to_csubstr((char*)msg->data());
+      ryml::Tree tree = ryml::parse_in_arena(indata);
+      ryml::NodeRef root = tree.rootref();
+
+      std::set<int> ids;
+      for (ryml::ConstNodeRef node: root["data"].children()) {
+	aegir::fermd::DB::fermenter_types ft;
+	node["id"] >> ft.id;
+	node["capacity"] >> ft.capacity;
+	node["name"] >> ft.name;
+	node["imageurl"] >> ft.imageurl;
+	ids.insert(ft.id);
+
+	bool found{false};
+	for (auto& dbit: dbfts) {
+	  if ( dbit->id == ft.id ) {
+	    found = true;
+	    break;
+	  }
+	}
+	REQUIRE(found);
+      }
+      for (auto& dbit: dbfts) {
+	INFO("Checking id: " << dbit->id);
+	REQUIRE( ids.find(dbit->id) != ids.end() );
+      }
+
   });
 }

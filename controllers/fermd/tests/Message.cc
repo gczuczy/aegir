@@ -13,7 +13,6 @@
 void init() {
   static bool initialized(false);
   if ( !initialized ) {
-    std::srand(std::time(0));
     initialized = true;
   }
 }

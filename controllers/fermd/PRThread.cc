@@ -129,8 +129,22 @@ namespace aegir {
     }
 
     PRCMD(getFermenterTypes) {
-      _rep |= ryml::MAP;
       auto fts = ServiceManager::get<DB::Connection>()->getFermenterTypes();
+
+      auto tree = _rep.tree();
+      _rep |= ryml::SEQ;
+
+      for (auto& it: fts) {
+	ryml::NodeRef node = _rep.append_child();
+	node |= ryml::MAP;
+	node["id"] << it->id;
+	node["capacity"] << it->capacity;
+
+	auto name = tree->to_arena(it->name);
+	node["name"] = name;
+	auto imageurl = tree->to_arena(it->imageurl);
+	node["imageurl"] = imageurl;
+      }
     }
 
     PRCMD(getFermenters) {

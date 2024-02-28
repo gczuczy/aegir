@@ -1,4 +1,6 @@
 
+#include <stdlib.h>
+
 #include <exception>
 
 #include <catch2/reporters/catch_reporter_event_listener.hpp>
@@ -12,6 +14,8 @@ public:
 
   void testRunStarting(Catch::TestRunInfo const&) override {
     aegir::init_ryml();
+    srand(time(0));
+    std::srand(std::time(0));
   }
 };
 
