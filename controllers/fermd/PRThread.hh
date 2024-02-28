@@ -11,6 +11,7 @@
 #include "common/ryml.hh"
 #include "common/LogChannel.hh"
 #include "common/ServiceManager.hh"
+#include "DBTypes.hh"
 
 #define PRCMD(NAME) void handle_##NAME(ryml::ConstNodeRef&, ryml::NodeRef&)
 
@@ -36,6 +37,9 @@ namespace aegir {
       virtual uint32_t maxWorkers() const;
 
     private:
+      // helpers
+      void setFermenterType(ryml::NodeRef& _node,
+			    DB::fermenter_types::cptr _ft);
       // handlers
       PRCMD(getFermenterTypes);
       PRCMD(getFermenters);

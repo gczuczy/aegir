@@ -192,3 +192,48 @@ TEST_CASE("pr_getFermenterTypes", "[fermd][pr]") {
 
   });
 }
+
+TEST_CASE("pr_getFermenters", "[fermd][pr]") {
+  doTest([](aegir::zmqsocket_type csock) {
+    std::string cmd("{\"command\": \"getFermenters\"}");
+
+      csock->send(cmd, true);
+
+      auto msg = csock->recvRaw(true);
+      CHECK( msg );
+      CHECK( !isError(msg) );
+      INFO("Response: " << ((char*)msg->data()));
+
+      // now verify these
+      auto dbfs = aegir::ServiceManager
+	::get<aegir::fermd::DB::Connection>()->getFermenters();
+
+      auto indata = c4::to_csubstr((char*)msg->data());
+      ryml::Tree tree = ryml::parse_in_arena(indata);
+      ryml::NodeRef root = tree.rootref();
+
+      std::set<int> ids;
+      for (ryml::ConstNodeRef node: root["data"].children()) {
+	aegir::fermd::DB::fermenter f;
+	int ftid;
+	node["id"] >> f.id;
+	node["name"] >> f.name;
+	node["type"]["id"] >> ftid;
+	ids.insert(f.id);
+
+	bool found{false};
+	for (auto& dbit: dbfs) {
+	  if ( dbit->id == f.id ) {
+	    found = true;
+	    break;
+	  }
+	}
+	REQUIRE(found);
+      }
+      for (auto& dbit: dbfs) {
+	INFO("Checking id: " << dbit->id);
+	REQUIRE( ids.find(dbit->id) != ids.end() );
+      }
+
+  });
+}
