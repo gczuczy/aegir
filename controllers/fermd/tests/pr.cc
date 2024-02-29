@@ -237,3 +237,45 @@ TEST_CASE("pr_getFermenters", "[fermd][pr]") {
 
   });
 }
+
+TEST_CASE("pr_getTilthydrometers", "[fermd][pr]") {
+  doTest([](aegir::zmqsocket_type csock) {
+    std::string cmd("{\"command\": \"getTilthydrometers\"}");
+
+      csock->send(cmd, true);
+
+      auto msg = csock->recvRaw(true);
+      CHECK( msg );
+      CHECK( !isError(msg) );
+      INFO("Response: " << ((char*)msg->data()));
+
+      // now verify these
+      auto dbth = aegir::ServiceManager
+	::get<aegir::fermd::DB::Connection>()->getTilthydrometers();
+
+      auto indata = c4::to_csubstr((char*)msg->data());
+      ryml::Tree tree = ryml::parse_in_arena(indata);
+      ryml::NodeRef root = tree.rootref();
+
+      std::set<int> ids;
+      for (ryml::ConstNodeRef node: root["data"].children()) {
+	aegir::fermd::DB::tilthydrometer th;
+	node["id"] >> th.id;
+	ids.insert(th.id);
+
+	bool found{false};
+	for (auto& dbit: dbth) {
+	  if ( dbit->id == th.id ) {
+	    found = true;
+	    break;
+	  }
+	}
+	REQUIRE(found);
+      }
+      for (auto& dbit: dbth) {
+	INFO("Checking id: " << dbit->id);
+	REQUIRE( ids.find(dbit->id) != ids.end() );
+      }
+
+  });
+}

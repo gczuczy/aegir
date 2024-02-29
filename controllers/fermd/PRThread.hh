@@ -37,9 +37,6 @@ namespace aegir {
       virtual uint32_t maxWorkers() const;
 
     private:
-      // helpers
-      void setFermenterType(ryml::NodeRef& _node,
-			    DB::fermenter_types::cptr _ft);
       // handlers
       PRCMD(getFermenterTypes);
       PRCMD(getFermenters);

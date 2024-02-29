@@ -128,18 +128,6 @@ namespace aegir {
       return 4;
     }
 
-    void PRThread::setFermenterType(ryml::NodeRef& _node,
-				    DB::fermenter_types::cptr _ft) {
-      auto tree = _node.tree();
-      _node |= ryml::MAP;
-      _node["id"] << _ft->id;
-      _node["capacity"] << _ft->capacity;
-
-      auto name = tree->to_arena(_ft->name);
-      _node["name"] = name;
-      auto imageurl = tree->to_arena(_ft->imageurl);
-      _node["imageurl"] = imageurl;
-    }
     PRCMD(getFermenterTypes) {
       auto fts = ServiceManager::get<DB::Connection>()->getFermenterTypes();
 
@@ -147,7 +135,7 @@ namespace aegir {
 
       for (auto& it: fts) {
 	ryml::NodeRef node = _rep.append_child();
-	setFermenterType(node, it);
+	node << *it;
       }
     }
 
@@ -159,17 +147,20 @@ namespace aegir {
 
       for (auto& it: fs) {
 	ryml::NodeRef node = _rep.append_child();
-	node |= ryml::MAP;
-	node["id"] << it->id;
-	auto name = tree->to_arena(it->name);
-	node["name"] = name;
-
-	ryml::NodeRef ftype = node["type"];
-	setFermenterType(ftype, it->fermenter_type);
+	node << *it;
       }
     }
 
     PRCMD(getTilthydrometers) {
+      auto th = ServiceManager::get<DB::Connection>()->getTilthydrometers();
+
+      auto tree = _rep.tree();
+      _rep |= ryml::SEQ;
+
+      for (auto& it: th) {
+	ryml::NodeRef node = _rep.append_child();
+	node << *it;
+      }
     }
   }
 }
