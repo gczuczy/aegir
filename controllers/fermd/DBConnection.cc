@@ -112,16 +112,16 @@ namespace aegir {
 	prepare("begin", "BEGIN IMMEDIATE;");
 	prepare("commit", "COMMIT;");
 	prepare("get_tilthydrometers",
-		"SELECT id,color,uuid,active,enabled,fermenterid,"
+		"SELECT id,color,uuid,enabled,fermenterid,"
 		"calibr_null,calibr_at,calibr_sg "
 		"FROM tilthydrometers");
 	prepare("set_tilthydrometer",
 		"UPDATE tilthydrometers "
-		"SET active=:active,enabled=:enabled,"
+		"SET enabled=:enabled,"
 		"fermenterid=:fermenterid,calibr_null=:calibrnull,"
 		"calibr_at=:calibrat,calibr_sg=:calibrsg "
 		"WHERE id=:id "
-		"RETURNING id,active,enabled,fermenterid,"
+		"RETURNING id,enabled,fermenterid,"
 		"calibr_null,calibr_at,calibr_sg");
 
 	// fermenter types
@@ -227,7 +227,6 @@ namespace aegir {
 	std::unique_lock g(c_mtx_tilthydrometers);
 	auto& stmt(c_statements.find("set_tilthydrometer")->second);
 	stmt.bind(":id", _item.id);
-	stmt.bind(":active", _item.active?1:0);
 	stmt.bind(":enabled", _item.enabled?1:0);
 
 	if ( _item.calibr_null ) {

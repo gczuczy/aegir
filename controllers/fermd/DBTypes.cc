@@ -107,7 +107,6 @@ namespace aegir {
 	if ( r.hasField("uuid") )
 	  uuid = r.fetch<uuid_t>("uuid");
 
-	active = r.fetch<bool>("active");
 	enabled = r.fetch<bool>("enabled");
 
 	if ( r.hasField("calibr_null") && !r.isNull("calibr_null") ) {
@@ -147,7 +146,6 @@ namespace aegir {
 	_node["color"] << color;
 	auto uuid = tree->to_arena(boost::uuids::to_string(_th.uuid));
 	_node["uuid"] << uuid;
-	_node["active"] << ryml::fmt::boolalpha(_th.active);
 	_node["enabled"] << ryml::fmt::boolalpha(_th.enabled);
 
 	if ( _th.calibr_null ) {
@@ -187,8 +185,6 @@ namespace aegir {
 	  _th.uuid = g_uuidstrgen(uuid);
 	}
 
-	if ( _node.has_child("active") )
-	  _node["active"] >> _th.active;
 	if ( _node.has_child("enabled") )
 	  _node["enabled"] >> _th.enabled;
 

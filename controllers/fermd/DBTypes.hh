@@ -81,7 +81,6 @@ namespace aegir {
 	int id;
 	std::string color;
 	uuid_t uuid;
-	bool active;
 	bool enabled;
 	std::shared_ptr<calibration> calibr_null;
 	std::shared_ptr<calibration> calibr_sg;

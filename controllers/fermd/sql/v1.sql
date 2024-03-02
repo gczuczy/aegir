@@ -70,13 +70,11 @@ CREATE TABLE tilthydrometers (
   id integer PRIMARY KEY,
   color text NOT NULL,
   uuid text NOT NULL,
-  active int NOT NULL DEFAULT 0,
   enabled int NOT NULL DEFAULT 0,
   fermenterid int,
   calibr_null real,
   calibr_at real,
   calibr_sg real,
-  CHECK (active == 0 OR active == 1),
   CHECK (enabled == 0 OR enabled == 1),
   FOREIGN KEY (fermenterid) REFERENCES fermenters(id) ON DELETE SET NULL,
   CHECK ( (calibr_null IS NULL) OR
