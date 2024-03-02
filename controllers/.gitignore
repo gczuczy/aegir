@@ -11,3 +11,7 @@ DartConfiguration.tcl
 Makefile
 Testing/
 _deps
+fermd_coverage.*
+fermd_coverage
+coverage
+cov.info

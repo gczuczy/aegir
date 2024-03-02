@@ -14,13 +14,7 @@ if ( (NOT DEFINED CMAKE_BUILD_TYPE) OR CMAKE_BUILD_TYPE STREQUAL "")
 endif()
 
 include(FetchContent)
-
-#FetchContent_Declare(
-#  battery-embed
-#  GIT_REPOSITORY https://github.com/batterycenter/embed.git
-#  GIT_TAG        v1.2.8
-#)
-#FetchContent_MakeAvailable(battery-embed)
+include(CTestCoverageCollectGCOV)
 
 add_executable(brewd)
 add_executable(fermd)
@@ -37,6 +31,19 @@ add_subdirectory(brewd)
 add_subdirectory(fermd)
 add_subdirectory(common)
 add_subdirectory(tests)
+
+# coverage
+FetchContent_Declare(cmake_modules
+  GIT_REPOSITORY https://github.com/bilke/cmake-modules.git
+  GIT_TAG "master"
+  GIT_SHALLOW FALSE
+)
+FetchContent_MakeAvailable(cmake_modules)
+list(APPEND CMAKE_MODULE_PATH ${cmake_modules_SOURCE_DIR})
+set(CODE_COVERAGE_VERBOSE TRUE)
+include(CodeCoverage)
+append_coverage_compiler_flags_to_target(tests_fermd)
+message("Project binary dir: ${PROJECT_BINARY_DIR}")
 
 set_target_properties(
   brewd
@@ -212,11 +219,17 @@ target_link_libraries(tests
   ryml::ryml
 )
 
+target_compile_options(tests_fermd
+  PRIVATE
+  -fprofile-arcs -ftest-coverage
+)
+
 target_link_options(tests_fermd
   PRIVATE
   -L/usr/local/lib
   -L${Boost_LIBRARY_DIRS}
   Threads::Threads
+  --coverage
 )
 
 target_link_libraries(tests_fermd
@@ -249,6 +262,13 @@ target_compile_features(tests_fermd PRIVATE cxx_std_20)
 
 # and finally enable testing
 enable_testing()
+setup_target_for_coverage_lcov(
+  NAME fermd_coverage
+  EXECUTABLE bin/tests-fermd
+  DEPENDENCIES tests_fermd
+  EXCLUDE "/usr/include/*" "/usr/local/include/*" "${ryml_SOURCE_DIR}/*"
+)
+
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Generated with config types: ${CMAKE_CONFIGURATION_TYPES}")
