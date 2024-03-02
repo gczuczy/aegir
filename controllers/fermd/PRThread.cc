@@ -231,15 +231,15 @@ namespace aegir {
     }
 
     PRCMD(updateTilthydrometer) {
-      auto th = ServiceManager::get<DB::Connection>()->getTilthydrometers();
+      requireFields(_req, {"id"});
 
-      auto tree = _rep.tree();
-      _rep |= ryml::SEQ;
-
-      for (auto& it: th) {
-	ryml::NodeRef node = _rep.append_child();
-	node << *it;
-      }
+      int id;
+      _req["id"] >> id;
+      auto db = ServiceManager::get<DB::Connection>();
+      auto dbth = db->getTilthydrometerByID(id);
+      DB::tilthydrometer th = *dbth;
+      _req >> th;
+      db->txn().setTilthydrometer(th);
     }
   }
 }

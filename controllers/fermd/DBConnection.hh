@@ -57,6 +57,7 @@ namespace aegir {
       public:
 	tilthydrometer_cdb getTilthydrometers() const;
 	tilthydrometer::cptr getTilthydrometerByUUID(uuid_t _uuid) const;
+	tilthydrometer::cptr getTilthydrometerByID(int _id) const;
       protected:
 	void setTilthydrometer(const tilthydrometer& _item);
 

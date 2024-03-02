@@ -1,6 +1,8 @@
 
 #include "DBTypes.hh"
 
+#include <iostream>
+
 #include "common/ryml.hh"
 #include <boost/uuid/uuid_io.hpp>
 
@@ -205,21 +207,21 @@ namespace aegir {
 	  } else {
 	    if ( !_th.calibr_sg )
 	      _th.calibr_sg = std::make_shared<tilthydrometer::calibration>();
-	    _node["calibr_sg"] >> _th.calibr_sg->at;
-	    _node["calibr_at"] >> _th.calibr_sg->sg;
+	    _node["calibr_at"] >> _th.calibr_sg->at;
+	    _node["calibr_sg"] >> _th.calibr_sg->sg;
 	  }
 	}
 
 	if ( _node.has_child("fermenter") ) {
-	  if ( _node["fermenter"].val_is_null() ) {
-	    _th.fermenter = nullptr;
+	  if ( _node["fermenter"].has_child("id") ) {
+	    int fid;
+	    _node["fermenter"]["id"] >> fid;
+	    _th.fermenter = ServiceManager::get<DB::Connection>()
+	      ->getFermenterByID(fid);
+	    if ( !_th.fermenter )
+	      throw Exception("Fermenter with id %i not found", fid);
 	  } else {
-	    if ( _node["fermenter"].has_child("id") ) {
-	      int fid;
-	      _node["fermenter"]["id"] >> fid;
-	      _th.fermenter = ServiceManager::get<DB::Connection>()
-		->getFermenterByID(fid);
-	    }
+	    _th.fermenter = nullptr;
 	  }
 	}
 	return _node;

@@ -20,8 +20,11 @@
 #include "DBConnection.hh"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_all.hpp>
 
 #define CFG_TEST_FILE "tests/data/aegir-brewd.yaml"
+
+using Catch::Matchers::WithinRel;
 
 class PRManager: public aegir::ThreadManager {
 
@@ -471,5 +474,47 @@ TEST_CASE("pr_getTilthydrometers", "[fermd][pr]") {
       REQUIRE( ids.find(dbit->id) != ids.end() );
     }
 
+  });
+}
+
+TEST_CASE("pr_updateTilthydrometer", "[fermd][pr]") {
+  doTest([](aegir::zmqsocket_type csock) {
+    auto db = aegir::ServiceManager::get<aegir::fermd::DB::Connection>();
+    int thid = db->getTilthydrometers().front()->id;
+    int fid = db->getFermenters().front()->id;
+    bool enabled = true;
+    float calibr_null=1.002,
+      calibr_sg = 1.042, calibr_at = 1.069;
+
+    char buff[512];
+    size_t bufflen;
+    bufflen = snprintf(buff, sizeof(buff)-1,
+		       "{\"command\": \"updateTilthydrometer\","
+		       "\"data\": {\"id\": %i, \"enabled\": %s, "
+		       "\"fermenter\": {\"id\": %i},"
+		       "\"calibr_null\": %.3f, "
+		       "\"calibr_sg\": %.3f, \"calibr_at\": %.3f}}",
+		       thid, enabled?"true":"false", fid,
+		       calibr_null, calibr_sg, calibr_at);
+    std::string cmd(buff, bufflen);
+    INFO("Request: " << cmd);
+
+    csock->send(cmd, true);
+
+    auto msg = csock->recvRaw(true);
+    CHECK( msg );
+    INFO("Response: " << (char*)msg->data());
+    CHECK( !isError(msg) );
+
+    // verify the update
+    auto th = db->getTilthydrometerByID(thid);
+    REQUIRE( th->enabled == enabled );
+    REQUIRE( th->fermenter );
+    REQUIRE( th->fermenter->id == fid);
+    REQUIRE( th->calibr_null );
+    REQUIRE( th->calibr_sg );
+    REQUIRE_THAT( th->calibr_null->sg, WithinRel(calibr_null) );
+    REQUIRE_THAT( th->calibr_sg->at, WithinRel(calibr_at) );
+    REQUIRE_THAT( th->calibr_sg->sg, WithinRel(calibr_sg) );
   });
 }

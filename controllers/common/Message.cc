@@ -48,7 +48,8 @@ namespace aegir {
 					      (uint8_t)MessageType::RAW),
 				      c_iscopy(_copy) {
     if ( _copy ) {
-      c_data = malloc(_size);
+      c_data = malloc(_size+1);
+      memset(c_data, 0, _size+1);
       memcpy(c_data, _data, _size);
     } else {
       c_data = (void*)_data;

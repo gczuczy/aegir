@@ -223,6 +223,13 @@ namespace aegir {
 	return nullptr;
       }
 
+      tilthydrometer::cptr Connection::getTilthydrometerByID(int _id) const {
+	std::shared_lock g(c_mtx_tilthydrometers);
+	for (auto it: cache_tilthydrometers)
+	  if ( it->id == _id) return it;
+	return nullptr;
+      }
+
       void Connection::setTilthydrometer(const tilthydrometer& _item) {
 	std::unique_lock g(c_mtx_tilthydrometers);
 	auto& stmt(c_statements.find("set_tilthydrometer")->second);
@@ -244,6 +251,11 @@ namespace aegir {
 	}
 
 	// TODO: add fermenters
+	if ( _item.fermenter ) {
+	  stmt.bind(":fermenterid", _item.fermenter->id);
+	} else {
+	  stmt.bind(":fermenterid");
+	}
 
 	// run the query
 	auto r(stmt.execute());
