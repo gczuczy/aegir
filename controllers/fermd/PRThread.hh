@@ -49,6 +49,7 @@ namespace aegir {
       PRCMD(addFermenter);
       PRCMD(updateFermenter);
       PRCMD(getTilthydrometers);
+      PRCMD(updateTilthydrometer);
 
     private:
       zmqproxy_type c_proxy;

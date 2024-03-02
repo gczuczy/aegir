@@ -25,6 +25,7 @@ namespace aegir {
       REGCMD(addFermenter);
       REGCMD(updateFermenter);
       REGCMD(getTilthydrometers);
+      REGCMD(updateTilthydrometer);
     }
 
     PRThread::~PRThread() {
@@ -218,6 +219,18 @@ namespace aegir {
     }
 
     PRCMD(getTilthydrometers) {
+      auto th = ServiceManager::get<DB::Connection>()->getTilthydrometers();
+
+      auto tree = _rep.tree();
+      _rep |= ryml::SEQ;
+
+      for (auto& it: th) {
+	ryml::NodeRef node = _rep.append_child();
+	node << *it;
+      }
+    }
+
+    PRCMD(updateTilthydrometer) {
       auto th = ServiceManager::get<DB::Connection>()->getTilthydrometers();
 
       auto tree = _rep.tree();
