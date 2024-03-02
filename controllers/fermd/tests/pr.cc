@@ -333,6 +333,61 @@ TEST_CASE("pr_getFermenters", "[fermd][pr]") {
   });
 }
 
+TEST_CASE("pr_addFermenter", "[fermd][pr]") {
+  doTest([](aegir::zmqsocket_type csock) {
+    std::string name{"unittest"};
+    auto db = aegir::ServiceManager::get<aegir::fermd::DB::Connection>();
+    int ftid = db->getFermenterTypes().front()->id;
+
+    char buff[512];
+    size_t bufflen;
+    bufflen = snprintf(buff, sizeof(buff)-1,
+		       "{\"command\": \"addFermenter\","
+		       "\"data\": {\"name\": \"%s\","
+		       "\"type\": {\"id\": %i}}}",
+		       name.c_str(), ftid);
+    std::string cmd(buff, bufflen);
+    INFO("Request: " << cmd);
+
+    csock->send(cmd, true);
+
+    auto msg = csock->recvRaw(true);
+    CHECK( msg );
+    CHECK( !isError(msg) );
+    INFO("Response: " << ((char*)msg->data()));
+
+    // verify we have the new tuple returned
+    auto indata = c4::to_csubstr((char*)msg->data());
+    ryml::Tree tree = ryml::parse_in_arena(indata);
+    ryml::NodeRef root = tree.rootref();
+    ryml::ConstNodeRef node = root["data"];
+
+    CHECK( node.has_child("id") );
+    CHECK( node.has_child("name") );
+    CHECK( node.has_child("type") );
+    CHECK( node["type"].has_child("id") );
+
+    int fid;
+    {
+      int nftid;
+      std::string nname;
+
+      node["id"] >> fid;
+      node["name"] >> nname;
+      node["type"]["id"] >> nftid;
+
+      CHECK( nname == name );
+      CHECK( nftid == ftid );
+    }
+
+    // now verify the new one in the DB
+    auto dbf = db->getFermenterByID(fid);
+
+    CHECK( dbf->name == name );
+    CHECK( dbf->fermenter_type->id == ftid );
+  });
+}
+
 TEST_CASE("pr_getTilthydrometers", "[fermd][pr]") {
   doTest([](aegir::zmqsocket_type csock) {
     std::string cmd("{\"command\": \"getTilthydrometers\"}");

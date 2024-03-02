@@ -22,7 +22,8 @@ namespace aegir {
       REGCMD(getFermenterTypes);
       REGCMD(addFermenterTypes);
       REGCMD(updateFermenterTypes);
-      REGCMD(getFermenters);
+      REGCMD(addFermenter);
+      REGCMD(updateFermenter);
       REGCMD(getTilthydrometers);
     }
 
@@ -185,6 +186,35 @@ namespace aegir {
 	ryml::NodeRef node = _rep.append_child();
 	node << *it;
       }
+    }
+
+    PRCMD(addFermenter) {
+      requireFields(_req, {"name", "type"});
+      DB::fermenter f;
+      _req >> f;
+
+      if ( !f.fermenter_type )
+	throw Exception("Fermenter type not found");
+
+      DB::fermenter::cptr nf;
+      {
+	auto txn = ServiceManager::get<DB::Connection>()->txn();
+	nf = txn.addFermenter(f);
+      }
+      _rep << *nf;
+    }
+
+    PRCMD(updateFermenter) {
+      requireFields(_req, {"id"});
+
+      auto db = ServiceManager::get<DB::Connection>();
+      int id;
+      _req["id"] >> id;
+      auto dbf = db->getFermenterByID(id);
+      DB::fermenter f = *dbf;
+      _req >> f;
+
+      db->txn().updateFermenter(f);
     }
 
     PRCMD(getTilthydrometers) {

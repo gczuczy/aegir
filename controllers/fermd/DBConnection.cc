@@ -361,6 +361,8 @@ namespace aegir {
 	std::unique_lock g(c_mtx_fermenters);
 	auto& stmt(c_statements.find("insert_fermenters")->second);
 	stmt.bind(":name", _item.name);
+	if ( !_item.fermenter_type )
+	  throw Exception("Connection::addFermenter(): fermenter_type unset");
 	stmt.bind(":typeid", _item.fermenter_type->id);
 
 	auto r(stmt.execute());

@@ -46,6 +46,8 @@ namespace aegir {
       PRCMD(addFermenterTypes);
       PRCMD(updateFermenterTypes);
       PRCMD(getFermenters);
+      PRCMD(addFermenter);
+      PRCMD(updateFermenter);
       PRCMD(getTilthydrometers);
 
     private:
