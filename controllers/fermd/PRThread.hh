@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 
 #include "common/ThreadManager.hh"
@@ -37,8 +38,13 @@ namespace aegir {
       virtual uint32_t maxWorkers() const;
 
     private:
+      // helpers
+      void requireFields(ryml::ConstNodeRef&,
+			 const std::set<std::string>);
       // handlers
       PRCMD(getFermenterTypes);
+      PRCMD(addFermenterTypes);
+      PRCMD(updateFermenterTypes);
       PRCMD(getFermenters);
       PRCMD(getTilthydrometers);
 

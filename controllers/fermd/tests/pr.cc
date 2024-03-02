@@ -116,17 +116,17 @@ bool isError(aegir::RawMessage::ptr& msg) {
 TEST_CASE("pr_nocmd", "[fermd][pr]") {
 
   doTest([](aegir::zmqsocket_type csock) {
-      ryml::Tree tree;
-      ryml::NodeRef root = tree.rootref();
-      root |= ryml::MAP;
-      root["command"] = "bullShit";
-      root["data"] |= ryml::MAP;
-      std::string output = ryml::emitrs_yaml<std::string>(tree);
-      csock->send(output, true);
+    ryml::Tree tree;
+    ryml::NodeRef root = tree.rootref();
+    root |= ryml::MAP;
+    root["command"] = "bullShit";
+    root["data"] |= ryml::MAP;
+    std::string output = ryml::emitrs_yaml<std::string>(tree);
+    csock->send(output, true);
 
-      auto msg = csock->recvRaw(true);
-      CHECK( msg );
-      CHECK( isError(msg) );
+    auto msg = csock->recvRaw(true);
+    CHECK( msg );
+    CHECK( isError(msg) );
   });
 }
 
@@ -152,44 +152,101 @@ TEST_CASE("pr_getFermenterTypes", "[fermd][pr]") {
   doTest([](aegir::zmqsocket_type csock) {
     std::string cmd("{\"command\": \"getFermenterTypes\"}");
 
-      csock->send(cmd, true);
+    csock->send(cmd, true);
 
-      auto msg = csock->recvRaw(true);
-      CHECK( msg );
-      CHECK( !isError(msg) );
-      INFO("Response: " << ((char*)msg->data()));
+    auto msg = csock->recvRaw(true);
+    CHECK( msg );
+    CHECK( !isError(msg) );
+    INFO("Response: " << ((char*)msg->data()));
 
-      // now verify these
-      auto dbfts = aegir::ServiceManager
-	::get<aegir::fermd::DB::Connection>()->getFermenterTypes();
+    // now verify these
+    auto dbfts = aegir::ServiceManager
+      ::get<aegir::fermd::DB::Connection>()->getFermenterTypes();
 
-      auto indata = c4::to_csubstr((char*)msg->data());
-      ryml::Tree tree = ryml::parse_in_arena(indata);
-      ryml::NodeRef root = tree.rootref();
+    auto indata = c4::to_csubstr((char*)msg->data());
+    ryml::Tree tree = ryml::parse_in_arena(indata);
+    ryml::NodeRef root = tree.rootref();
 
-      std::set<int> ids;
-      for (ryml::ConstNodeRef node: root["data"].children()) {
-	aegir::fermd::DB::fermenter_types ft;
-	node["id"] >> ft.id;
-	node["capacity"] >> ft.capacity;
-	node["name"] >> ft.name;
-	node["imageurl"] >> ft.imageurl;
-	ids.insert(ft.id);
+    std::set<int> ids;
+    for (ryml::ConstNodeRef node: root["data"].children()) {
+      aegir::fermd::DB::fermenter_types ft;
+      node["id"] >> ft.id;
+      node["capacity"] >> ft.capacity;
+      node["name"] >> ft.name;
+      node["imageurl"] >> ft.imageurl;
+      ids.insert(ft.id);
 
-	bool found{false};
-	for (auto& dbit: dbfts) {
-	  if ( dbit->id == ft.id ) {
-	    found = true;
-	    break;
-	  }
-	}
-	REQUIRE(found);
-      }
+      bool found{false};
       for (auto& dbit: dbfts) {
-	INFO("Checking id: " << dbit->id);
-	REQUIRE( ids.find(dbit->id) != ids.end() );
+	if ( dbit->id == ft.id ) {
+	  found = true;
+	  break;
+	}
       }
+      REQUIRE(found);
+    }
+    for (auto& dbit: dbfts) {
+      INFO("Checking id: " << dbit->id);
+      REQUIRE( ids.find(dbit->id) != ids.end() );
+    }
 
+  });
+}
+
+TEST_CASE("pr_addFermenterTypes", "[fermd][pr]") {
+  doTest([](aegir::zmqsocket_type csock) {
+    int capacity{42};
+    std::string name{"unittest"};
+    std::string imageurl{"http://dev.null/"};
+
+    char buff[512];
+    size_t bufflen;
+    bufflen = snprintf(buff, sizeof(buff)-1,
+		       "{\"command\": \"addFermenterTypes\","
+		       "\"data\": {\"capacity\": %i, \"name\": \"%s\","
+		       "\"imageurl\": \"%s\"}}", capacity,
+		       name.c_str(), imageurl.c_str());
+    std::string cmd(buff, bufflen);
+
+    csock->send(cmd, true);
+
+    auto msg = csock->recvRaw(true);
+    CHECK( msg );
+    CHECK( !isError(msg) );
+    INFO("Response: " << ((char*)msg->data()));
+
+    // verify we have the new tuple returned
+    auto indata = c4::to_csubstr((char*)msg->data());
+    ryml::Tree tree = ryml::parse_in_arena(indata);
+    ryml::NodeRef root = tree.rootref();
+    ryml::ConstNodeRef node = root["data"];
+
+    CHECK( node.has_child("id") );
+    CHECK( node.has_child("capacity") );
+    CHECK( node.has_child("name") );
+    CHECK( node.has_child("imageurl") );
+
+    int ftid;
+    {
+      int ncapacity;
+      std::string nname, nimageurl;
+      node["id"] >> ftid;
+      node["capacity"] >> ncapacity;
+      node["name"] >> nname;
+      node["imageurl"] >> nimageurl;
+
+      CHECK( ncapacity == capacity );
+      CHECK( nname == name );
+      CHECK( nimageurl == imageurl );
+    }
+
+    // now verify the new one in the DB
+    auto dbft = aegir::ServiceManager
+      ::get<aegir::fermd::DB::Connection>()->getFermenterTypeByID(ftid);
+
+    CHECK( dbft->capacity == capacity );
+    CHECK( dbft->name == name );
+    CHECK( dbft->imageurl == imageurl );
   });
 }
 
@@ -197,43 +254,43 @@ TEST_CASE("pr_getFermenters", "[fermd][pr]") {
   doTest([](aegir::zmqsocket_type csock) {
     std::string cmd("{\"command\": \"getFermenters\"}");
 
-      csock->send(cmd, true);
+    csock->send(cmd, true);
 
-      auto msg = csock->recvRaw(true);
-      CHECK( msg );
-      CHECK( !isError(msg) );
-      INFO("Response: " << ((char*)msg->data()));
+    auto msg = csock->recvRaw(true);
+    CHECK( msg );
+    CHECK( !isError(msg) );
+    INFO("Response: " << ((char*)msg->data()));
 
-      // now verify these
-      auto dbfs = aegir::ServiceManager
-	::get<aegir::fermd::DB::Connection>()->getFermenters();
+    // now verify these
+    auto dbfs = aegir::ServiceManager
+      ::get<aegir::fermd::DB::Connection>()->getFermenters();
 
-      auto indata = c4::to_csubstr((char*)msg->data());
-      ryml::Tree tree = ryml::parse_in_arena(indata);
-      ryml::NodeRef root = tree.rootref();
+    auto indata = c4::to_csubstr((char*)msg->data());
+    ryml::Tree tree = ryml::parse_in_arena(indata);
+    ryml::NodeRef root = tree.rootref();
 
-      std::set<int> ids;
-      for (ryml::ConstNodeRef node: root["data"].children()) {
-	aegir::fermd::DB::fermenter f;
-	int ftid;
-	node["id"] >> f.id;
-	node["name"] >> f.name;
-	node["type"]["id"] >> ftid;
-	ids.insert(f.id);
+    std::set<int> ids;
+    for (ryml::ConstNodeRef node: root["data"].children()) {
+      aegir::fermd::DB::fermenter f;
+      int ftid;
+      node["id"] >> f.id;
+      node["name"] >> f.name;
+      node["type"]["id"] >> ftid;
+      ids.insert(f.id);
 
-	bool found{false};
-	for (auto& dbit: dbfs) {
-	  if ( dbit->id == f.id ) {
-	    found = true;
-	    break;
-	  }
-	}
-	REQUIRE(found);
-      }
+      bool found{false};
       for (auto& dbit: dbfs) {
-	INFO("Checking id: " << dbit->id);
-	REQUIRE( ids.find(dbit->id) != ids.end() );
+	if ( dbit->id == f.id ) {
+	  found = true;
+	  break;
+	}
       }
+      REQUIRE(found);
+    }
+    for (auto& dbit: dbfs) {
+      INFO("Checking id: " << dbit->id);
+      REQUIRE( ids.find(dbit->id) != ids.end() );
+    }
 
   });
 }
@@ -242,40 +299,40 @@ TEST_CASE("pr_getTilthydrometers", "[fermd][pr]") {
   doTest([](aegir::zmqsocket_type csock) {
     std::string cmd("{\"command\": \"getTilthydrometers\"}");
 
-      csock->send(cmd, true);
+    csock->send(cmd, true);
 
-      auto msg = csock->recvRaw(true);
-      CHECK( msg );
-      CHECK( !isError(msg) );
-      INFO("Response: " << ((char*)msg->data()));
+    auto msg = csock->recvRaw(true);
+    CHECK( msg );
+    CHECK( !isError(msg) );
+    INFO("Response: " << ((char*)msg->data()));
 
-      // now verify these
-      auto dbth = aegir::ServiceManager
-	::get<aegir::fermd::DB::Connection>()->getTilthydrometers();
+    // now verify these
+    auto dbth = aegir::ServiceManager
+      ::get<aegir::fermd::DB::Connection>()->getTilthydrometers();
 
-      auto indata = c4::to_csubstr((char*)msg->data());
-      ryml::Tree tree = ryml::parse_in_arena(indata);
-      ryml::NodeRef root = tree.rootref();
+    auto indata = c4::to_csubstr((char*)msg->data());
+    ryml::Tree tree = ryml::parse_in_arena(indata);
+    ryml::NodeRef root = tree.rootref();
 
-      std::set<int> ids;
-      for (ryml::ConstNodeRef node: root["data"].children()) {
-	aegir::fermd::DB::tilthydrometer th;
-	node["id"] >> th.id;
-	ids.insert(th.id);
+    std::set<int> ids;
+    for (ryml::ConstNodeRef node: root["data"].children()) {
+      aegir::fermd::DB::tilthydrometer th;
+      node["id"] >> th.id;
+      ids.insert(th.id);
 
-	bool found{false};
-	for (auto& dbit: dbth) {
-	  if ( dbit->id == th.id ) {
-	    found = true;
-	    break;
-	  }
-	}
-	REQUIRE(found);
-      }
+      bool found{false};
       for (auto& dbit: dbth) {
-	INFO("Checking id: " << dbit->id);
-	REQUIRE( ids.find(dbit->id) != ids.end() );
+	if ( dbit->id == th.id ) {
+	  found = true;
+	  break;
+	}
       }
+      REQUIRE(found);
+    }
+    for (auto& dbit: dbth) {
+      INFO("Checking id: " << dbit->id);
+      REQUIRE( ids.find(dbit->id) != ids.end() );
+    }
 
   });
 }

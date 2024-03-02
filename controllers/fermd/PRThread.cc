@@ -20,6 +20,8 @@ namespace aegir {
       c_proxy = ServiceManager::get<ZMQConfig>()->proxy("pr");
 
       REGCMD(getFermenterTypes);
+      REGCMD(addFermenterTypes);
+      REGCMD(updateFermenterTypes);
       REGCMD(getFermenters);
       REGCMD(getTilthydrometers);
     }
@@ -128,6 +130,14 @@ namespace aegir {
       return 4;
     }
 
+    void PRThread::requireFields(ryml::ConstNodeRef& _node,
+				 const std::set<std::string> _fields) {
+      for (auto& it: _fields) {
+	if ( !_node.has_child(c4::to_csubstr(it)) )
+	  throw Exception("Misisng field \"%s\"", it.c_str());
+      }
+    }
+
     PRCMD(getFermenterTypes) {
       auto fts = ServiceManager::get<DB::Connection>()->getFermenterTypes();
 
@@ -137,6 +147,22 @@ namespace aegir {
 	ryml::NodeRef node = _rep.append_child();
 	node << *it;
       }
+    }
+
+    PRCMD(addFermenterTypes) {
+      requireFields(_req, {"capacity", "name", "imageurl"});
+
+      DB::fermenter_types ft;
+      _req >> ft;
+      DB::fermenter_types::cptr nft;
+      {
+	auto txn = ServiceManager::get<DB::Connection>()->txn();
+	nft = txn.addFermenterType(ft);
+      }
+      _rep << *nft;
+    }
+
+    PRCMD(updateFermenterTypes) {
     }
 
     PRCMD(getFermenters) {

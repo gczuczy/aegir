@@ -18,14 +18,29 @@
   typedef std::shared_ptr<T> ptr; \
   typedef std::shared_ptr<const T> cptr
 
+#define DBTLISTS(T) \
+  typedef std::list<T::ptr> T##_db; \
+  typedef const std::list<T::cptr> T##_cdb
+
+#define DBTOPS(T) \
+  ryml::NodeRef& operator<<(ryml::NodeRef&, const T&);	\
+  ryml::ConstNodeRef& operator>>(ryml::ConstNodeRef&, T&)
+
+#define DBTSTUFF(T) \
+  DBTASSERT(T); \
+  DBTLISTS(T); \
+  DBTOPS(T);
+
 namespace c4 {
   namespace yml {
     class NodeRef;
+    class ConstNodeRef;
   }
 }
 
 namespace ryml {
   using c4::yml::NodeRef;
+  using c4::yml::ConstNodeRef;
 }
 
 namespace aegir {
@@ -43,10 +58,7 @@ namespace aegir {
 	std::string name;
 	std::string imageurl;
       };
-      typedef std::list<fermenter_types::ptr> fermenter_types_db;
-      typedef const std::list<fermenter_types::cptr> fermenter_types_cdb;
-      DBTASSERT(fermenter_types);
-      ::c4::yml::NodeRef& operator<<(::c4::yml::NodeRef&, const fermenter_types&);
+      DBTSTUFF(fermenter_types);
 
       // fermenters
       struct fermenter {
@@ -56,10 +68,7 @@ namespace aegir {
 	std::string name;
 	fermenter_types::cptr fermenter_type;
       };
-      typedef std::list<fermenter::ptr> fermenter_db;
-      typedef const std::list<fermenter::cptr> fermenter_cdb;
-      DBTASSERT(fermenter);
-      ryml::NodeRef& operator<<(ryml::NodeRef&, const fermenter&);
+      DBTSTUFF(fermenter);
 
       // Tilt Hydrometer
       struct tilthydrometer {
@@ -78,10 +87,7 @@ namespace aegir {
 	std::shared_ptr<calibration> calibr_sg;
 	fermenter::cptr fermenter;
       };
-      typedef std::list<tilthydrometer::ptr> tilthydrometer_db;
-      typedef const std::list<tilthydrometer::cptr> tilthydrometer_cdb;
-      DBTASSERT(tilthydrometer_cdb);
-      ryml::NodeRef& operator<<(ryml::NodeRef&, const tilthydrometer&);
+      DBTSTUFF(tilthydrometer);
     } // ns DB
   } // ns fermd
 } // ns aegir

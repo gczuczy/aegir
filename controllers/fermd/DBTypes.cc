@@ -27,8 +27,8 @@ namespace aegir {
 	return *this;
       }
 
-      ::c4::yml::NodeRef& operator<<(::c4::yml::NodeRef& _node,
-				     const fermenter_types& _ft) {
+      ryml::NodeRef& operator<<(ryml::NodeRef& _node,
+				const fermenter_types& _ft) {
 	auto tree = _node.tree();
 	_node |= ryml::MAP;
 	_node["id"] << _ft.id;
@@ -38,6 +38,20 @@ namespace aegir {
 	_node["name"] = name;
 	auto imageurl = tree->to_arena(_ft.imageurl);
 	_node["imageurl"] = imageurl;
+	return _node;
+      }
+
+      ryml::ConstNodeRef& operator>>(ryml::ConstNodeRef& _node,
+				fermenter_types& _ft) {
+	if ( _node.has_child("id") )
+	  _node["id"] >> _ft.id;
+	if ( _node.has_child("capacity") )
+	  _node["capacity"] >> _ft.capacity;
+	if ( _node.has_child("name") )
+	  _node["name"] >> _ft.name;
+	if ( _node.has_child("imageurl") )
+	  _node["imageurl"] >> _ft.imageurl;
+
 	return _node;
       }
 
@@ -63,6 +77,23 @@ namespace aegir {
 
 	ryml::NodeRef ftype = _node["type"];
 	ftype << *(_f.fermenter_type);
+	return _node;
+      }
+
+      ryml::ConstNodeRef& operator>>(ryml::ConstNodeRef& _node,
+				fermenter& _ft) {
+	if ( _node.has_child("id") )
+	  _node["id"] >> _ft.id;
+	if ( _node.has_child("name") )
+	  _node["name"] >> _ft.name;
+
+	if ( _node.has_child("type") && _node["type"].has_child("id") ) {
+	  int ftid;
+	  _node["type"]["id"] >> ftid;
+	  _ft.fermenter_type = ServiceManager::get<DB::Connection>()
+	    ->getFermenterTypeByID(ftid);
+	}
+
 	return _node;
       }
 
@@ -106,7 +137,8 @@ namespace aegir {
 	return *this;
       }
 
-      ryml::NodeRef& operator<<(ryml::NodeRef& _node, const tilthydrometer& _th) {
+      ryml::NodeRef& operator<<(ryml::NodeRef& _node,
+				const tilthydrometer& _th) {
 	auto tree = _node.tree();
 	_node |= ryml::MAP;
 	_node["id"] << _th.id;
@@ -140,6 +172,63 @@ namespace aegir {
 	}
 	return _node;
       }
-    }
-  }
-}
+
+      ryml::ConstNodeRef& operator>>(ryml::ConstNodeRef& _node,
+				tilthydrometer& _th) {
+	if ( _node.has_child("id") )
+	     _node["id"] >> _th.id;
+
+	if ( _node.has_child("color") )
+	  _node["color"] >> _th.color;
+
+	if ( _node.has_child("uuid") ) {
+	  std::string uuid;
+	  _node["uuid"] >> uuid;
+	  _th.uuid = g_uuidstrgen(uuid);
+	}
+
+	if ( _node.has_child("active") )
+	  _node["active"] >> _th.active;
+	if ( _node.has_child("enabled") )
+	  _node["enabled"] >> _th.enabled;
+
+	if ( _node.has_child("calibr_null") ) {
+	  if ( _node["calibr_null"].val_is_null() ) {
+	    _th.calibr_null = nullptr;
+	  } else {
+	    if ( !_th.calibr_null )
+	      _th.calibr_null = std::make_shared<tilthydrometer::calibration>();
+	    _node["calibr_null"] >> _th.calibr_null->sg;
+	  }
+	}
+
+	if ( _node.has_child("calibr_sg") &&  _node.has_child("calibr_at") ) {
+	  if ( _node["calibr_sg"].val_is_null() &&
+	       _node["calibr_at"].val_is_null() ) {
+	    _th.calibr_sg = nullptr;
+	  } else {
+	    if ( !_th.calibr_sg )
+	      _th.calibr_sg = std::make_shared<tilthydrometer::calibration>();
+	    _node["calibr_sg"] >> _th.calibr_sg->at;
+	    _node["calibr_at"] >> _th.calibr_sg->sg;
+	  }
+	}
+
+	if ( _node.has_child("fermenter") ) {
+	  if ( _node["fermenter"].val_is_null() ) {
+	    _th.fermenter = nullptr;
+	  } else {
+	    if ( _node["fermenter"].has_child("id") ) {
+	      int fid;
+	      _node["fermenter"]["id"] >> fid;
+	      _th.fermenter = ServiceManager::get<DB::Connection>()
+		->getFermenterByID(fid);
+	    }
+	  }
+	}
+	return _node;
+      }
+    } // ns DB
+  } // ns fermd
+} // ns aegir
+
