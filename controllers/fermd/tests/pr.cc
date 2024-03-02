@@ -128,8 +128,9 @@ TEST_CASE("pr_nocmd", "[fermd][pr]") {
     csock->send(output, true);
 
     auto msg = csock->recvRaw(true);
-    CHECK( msg );
-    CHECK( isError(msg) );
+    REQUIRE( msg );
+    INFO("Response: " << ((char*)msg->data()));
+    REQUIRE( isError(msg) );
   });
 }
 
@@ -146,8 +147,9 @@ TEST_CASE("pr_randomdata", "[fermd][pr]") {
       csock->send(output, true);
 
       auto msg = csock->recvRaw(true);
-      CHECK( msg );
-      CHECK( isError(msg) );
+      REQUIRE( msg );
+      INFO("Response: " << ((char*)msg->data()));
+      REQUIRE( isError(msg) );
   });
 }
 
@@ -159,9 +161,9 @@ TEST_CASE("pr_getFermenterTypes", "[fermd][pr]") {
     csock->send(cmd, true);
 
     auto msg = csock->recvRaw(true);
-    CHECK( msg );
-    CHECK( !isError(msg) );
+    REQUIRE( msg );
     INFO("Response: " << ((char*)msg->data()));
+    REQUIRE( !isError(msg) );
 
     // now verify these
     auto dbfts = aegir::ServiceManager
@@ -216,9 +218,9 @@ TEST_CASE("pr_addFermenterTypes", "[fermd][pr]") {
     csock->send(cmd, true);
 
     auto msg = csock->recvRaw(true);
-    CHECK( msg );
-    CHECK( !isError(msg) );
+    REQUIRE( msg );
     INFO("Response: " << ((char*)msg->data()));
+    REQUIRE( !isError(msg) );
 
     // verify we have the new tuple returned
     auto indata = c4::to_csubstr((char*)msg->data());
@@ -226,10 +228,10 @@ TEST_CASE("pr_addFermenterTypes", "[fermd][pr]") {
     ryml::NodeRef root = tree.rootref();
     ryml::ConstNodeRef node = root["data"];
 
-    CHECK( node.has_child("id") );
-    CHECK( node.has_child("capacity") );
-    CHECK( node.has_child("name") );
-    CHECK( node.has_child("imageurl") );
+    REQUIRE( node.has_child("id") );
+    REQUIRE( node.has_child("capacity") );
+    REQUIRE( node.has_child("name") );
+    REQUIRE( node.has_child("imageurl") );
 
     int ftid;
     {
@@ -240,18 +242,18 @@ TEST_CASE("pr_addFermenterTypes", "[fermd][pr]") {
       node["name"] >> nname;
       node["imageurl"] >> nimageurl;
 
-      CHECK( ncapacity == capacity );
-      CHECK( nname == name );
-      CHECK( nimageurl == imageurl );
+      REQUIRE( ncapacity == capacity );
+      REQUIRE( nname == name );
+      REQUIRE( nimageurl == imageurl );
     }
 
     // now verify the new one in the DB
     auto dbft = aegir::ServiceManager
       ::get<aegir::fermd::DB::Connection>()->getFermenterTypeByID(ftid);
 
-    CHECK( dbft->capacity == capacity );
-    CHECK( dbft->name == name );
-    CHECK( dbft->imageurl == imageurl );
+    REQUIRE( dbft->capacity == capacity );
+    REQUIRE( dbft->name == name );
+    REQUIRE( dbft->imageurl == imageurl );
   });
 }
 
@@ -280,17 +282,17 @@ TEST_CASE("pr_updateFermenterTypes", "[fermd][pr]") {
     csock->send(cmd, true);
 
     auto msg = csock->recvRaw(true);
-    CHECK( msg );
-    CHECK( !isError(msg) );
+    REQUIRE( msg );
     INFO("Response: " << ((char*)msg->data()));
+    REQUIRE( !isError(msg) );
 
     // now verify the new one in the DB
     auto dbft = aegir::ServiceManager
       ::get<aegir::fermd::DB::Connection>()->getFermenterTypeByID(ft.id);
 
-    CHECK( dbft->capacity == newcapacity );
-    CHECK( dbft->name == newname );
-    CHECK( dbft->imageurl == newimageurl );
+    REQUIRE( dbft->capacity == newcapacity );
+    REQUIRE( dbft->name == newname );
+    REQUIRE( dbft->imageurl == newimageurl );
   });
 }
 
@@ -302,9 +304,9 @@ TEST_CASE("pr_getFermenters", "[fermd][pr]") {
     csock->send(cmd, true);
 
     auto msg = csock->recvRaw(true);
-    CHECK( msg );
-    CHECK( !isError(msg) );
+    REQUIRE( msg );
     INFO("Response: " << ((char*)msg->data()));
+    REQUIRE( !isError(msg) );
 
     // now verify these
     auto dbfs = aegir::ServiceManager
@@ -359,9 +361,9 @@ TEST_CASE("pr_addFermenter", "[fermd][pr]") {
     csock->send(cmd, true);
 
     auto msg = csock->recvRaw(true);
-    CHECK( msg );
-    CHECK( !isError(msg) );
+    REQUIRE( msg );
     INFO("Response: " << ((char*)msg->data()));
+    REQUIRE( !isError(msg) );
 
     // verify we have the new tuple returned
     auto indata = c4::to_csubstr((char*)msg->data());
@@ -369,10 +371,10 @@ TEST_CASE("pr_addFermenter", "[fermd][pr]") {
     ryml::NodeRef root = tree.rootref();
     ryml::ConstNodeRef node = root["data"];
 
-    CHECK( node.has_child("id") );
-    CHECK( node.has_child("name") );
-    CHECK( node.has_child("type") );
-    CHECK( node["type"].has_child("id") );
+    REQUIRE( node.has_child("id") );
+    REQUIRE( node.has_child("name") );
+    REQUIRE( node.has_child("type") );
+    REQUIRE( node["type"].has_child("id") );
 
     int fid;
     {
@@ -383,15 +385,15 @@ TEST_CASE("pr_addFermenter", "[fermd][pr]") {
       node["name"] >> nname;
       node["type"]["id"] >> nftid;
 
-      CHECK( nname == name );
-      CHECK( nftid == ftid );
+      REQUIRE( nname == name );
+      REQUIRE( nftid == ftid );
     }
 
     // now verify the new one in the DB
     auto dbf = db->getFermenterByID(fid);
 
-    CHECK( dbf->name == name );
-    CHECK( dbf->fermenter_type->id == ftid );
+    REQUIRE( dbf->name == name );
+    REQUIRE( dbf->fermenter_type->id == ftid );
   });
 }
 
@@ -423,14 +425,14 @@ TEST_CASE("pr_updateFermenter", "[fermd][pr]") {
     csock->send(cmd, true);
 
     auto msg = csock->recvRaw(true);
-    CHECK( msg );
-    CHECK( !isError(msg) );
+    REQUIRE( msg );
     INFO("Response: " << ((char*)msg->data()));
+    REQUIRE( !isError(msg) );
 
     // verify the update
     auto uf = db->getFermenterByID(f.id);
-    CHECK( uf->name == newname );
-    CHECK( uf->fermenter_type->id == ftid);
+    REQUIRE( uf->name == newname );
+    REQUIRE( uf->fermenter_type->id == ftid);
   });
 }
 
@@ -442,9 +444,9 @@ TEST_CASE("pr_getTilthydrometers", "[fermd][pr]") {
     csock->send(cmd, true);
 
     auto msg = csock->recvRaw(true);
-    CHECK( msg );
-    CHECK( !isError(msg) );
+    REQUIRE( msg );
     INFO("Response: " << ((char*)msg->data()));
+    REQUIRE( !isError(msg) );
 
     // now verify these
     auto dbth = aegir::ServiceManager
@@ -502,9 +504,9 @@ TEST_CASE("pr_updateTilthydrometer", "[fermd][pr]") {
     csock->send(cmd, true);
 
     auto msg = csock->recvRaw(true);
-    CHECK( msg );
+    REQUIRE( msg );
     INFO("Response: " << (char*)msg->data());
-    CHECK( !isError(msg) );
+    REQUIRE( !isError(msg) );
 
     // verify the update
     auto th = db->getTilthydrometerByID(thid);

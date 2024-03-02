@@ -22,6 +22,7 @@ namespace aegir {
       REGCMD(getFermenterTypes);
       REGCMD(addFermenterTypes);
       REGCMD(updateFermenterTypes);
+      REGCMD(getFermenters);
       REGCMD(addFermenter);
       REGCMD(updateFermenter);
       REGCMD(getTilthydrometers);
@@ -76,7 +77,12 @@ namespace aegir {
 	  // parse the input
 	  auto indata = c4::to_csubstr((const char*)msg->data());
 	  ryml::Tree reqtree = ryml::parse_in_arena(indata);
+	  if ( reqtree.empty() )
+	    throw Exception("Request is malformed");
+
 	  ryml::ConstNodeRef reqroot = reqtree.rootref();
+	  if ( reqroot.empty() || !reqroot.has_children() )
+	    throw Exception("Request is malformed");
 
 	  // check for the command member
 	  if ( !reqroot.has_child("command") )
