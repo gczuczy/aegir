@@ -151,6 +151,7 @@ TEST_CASE("pr_randomdata", "[fermd][pr]") {
 TEST_CASE("pr_getFermenterTypes", "[fermd][pr]") {
   doTest([](aegir::zmqsocket_type csock) {
     std::string cmd("{\"command\": \"getFermenterTypes\"}");
+    INFO("Request: " << cmd);
 
     csock->send(cmd, true);
 
@@ -207,6 +208,7 @@ TEST_CASE("pr_addFermenterTypes", "[fermd][pr]") {
 		       "\"imageurl\": \"%s\"}}", capacity,
 		       name.c_str(), imageurl.c_str());
     std::string cmd(buff, bufflen);
+    INFO("Request: " << cmd);
 
     csock->send(cmd, true);
 
@@ -270,6 +272,7 @@ TEST_CASE("pr_updateFermenterTypes", "[fermd][pr]") {
 		       newcapacity, newname.c_str(),
 		       newimageurl.c_str(), ft.id);
     std::string cmd(buff, bufflen);
+    INFO("Request: " << cmd);
 
     csock->send(cmd, true);
 
@@ -291,6 +294,7 @@ TEST_CASE("pr_updateFermenterTypes", "[fermd][pr]") {
 TEST_CASE("pr_getFermenters", "[fermd][pr]") {
   doTest([](aegir::zmqsocket_type csock) {
     std::string cmd("{\"command\": \"getFermenters\"}");
+    INFO("Request: " << cmd);
 
     csock->send(cmd, true);
 
@@ -388,9 +392,49 @@ TEST_CASE("pr_addFermenter", "[fermd][pr]") {
   });
 }
 
+TEST_CASE("pr_updateFermenter", "[fermd][pr]") {
+  doTest([](aegir::zmqsocket_type csock) {
+    auto db = aegir::ServiceManager::get<aegir::fermd::DB::Connection>();
+    auto dbfts = db->getFermenterTypes();
+    std::string newname{"unittest"};
+
+    auto f = *db->getFermenters().front();
+    int ftid;
+    for (const auto& it: dbfts) {
+      if ( it->id != f.fermenter_type->id ) {
+	ftid = it->id;
+	break;
+      }
+    }
+
+    char buff[512];
+    size_t bufflen;
+    bufflen = snprintf(buff, sizeof(buff)-1,
+		       "{\"command\": \"updateFermenter\","
+		       "\"data\": {\"name\": \"%s\", \"id\": %i, "
+		       "\"type\": {\"id\": %i}}}",
+		       newname.c_str(), f.id, ftid);
+    std::string cmd(buff, bufflen);
+    INFO("Request: " << cmd);
+
+    csock->send(cmd, true);
+
+    auto msg = csock->recvRaw(true);
+    CHECK( msg );
+    CHECK( !isError(msg) );
+    INFO("Response: " << ((char*)msg->data()));
+
+    // verify the update
+    auto uf = db->getFermenterByID(f.id);
+    CHECK( uf->name == newname );
+    CHECK( uf->fermenter_type->id == ftid);
+  });
+}
+
 TEST_CASE("pr_getTilthydrometers", "[fermd][pr]") {
   doTest([](aegir::zmqsocket_type csock) {
     std::string cmd("{\"command\": \"getTilthydrometers\"}");
+    INFO("Request: " << cmd);
 
     csock->send(cmd, true);
 
