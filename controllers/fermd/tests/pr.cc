@@ -250,6 +250,44 @@ TEST_CASE("pr_addFermenterTypes", "[fermd][pr]") {
   });
 }
 
+TEST_CASE("pr_updateFermenterTypes", "[fermd][pr]") {
+  doTest([](aegir::zmqsocket_type csock) {
+    int newcapacity{42};
+    std::string newname{"unittest"};
+    std::string newimageurl{"http://dev.null/"};
+
+    auto dbfts = aegir::ServiceManager
+      ::get<aegir::fermd::DB::Connection>()->getFermenterTypes();
+
+    auto ft = *dbfts.front();
+
+    char buff[512];
+    size_t bufflen;
+    bufflen = snprintf(buff, sizeof(buff)-1,
+		       "{\"command\": \"updateFermenterTypes\","
+		       "\"data\": {\"capacity\": %i, \"name\": \"%s\","
+		       "\"imageurl\": \"%s\", \"id\": %i}}",
+		       newcapacity, newname.c_str(),
+		       newimageurl.c_str(), ft.id);
+    std::string cmd(buff, bufflen);
+
+    csock->send(cmd, true);
+
+    auto msg = csock->recvRaw(true);
+    CHECK( msg );
+    CHECK( !isError(msg) );
+    INFO("Response: " << ((char*)msg->data()));
+
+    // now verify the new one in the DB
+    auto dbft = aegir::ServiceManager
+      ::get<aegir::fermd::DB::Connection>()->getFermenterTypeByID(ft.id);
+
+    CHECK( dbft->capacity == newcapacity );
+    CHECK( dbft->name == newname );
+    CHECK( dbft->imageurl == newimageurl );
+  });
+}
+
 TEST_CASE("pr_getFermenters", "[fermd][pr]") {
   doTest([](aegir::zmqsocket_type csock) {
     std::string cmd("{\"command\": \"getFermenters\"}");

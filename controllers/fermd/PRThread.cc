@@ -163,6 +163,16 @@ namespace aegir {
     }
 
     PRCMD(updateFermenterTypes) {
+      requireFields(_req, {"id"});
+
+      auto db = ServiceManager::get<DB::Connection>();
+      int id;
+      _req["id"] >> id;
+      auto dbft = db->getFermenterTypeByID(id);
+      DB::fermenter_types ft = *dbft;
+      _req >> ft;
+
+      db->txn().updateFermenterType(ft);
     }
 
     PRCMD(getFermenters) {
