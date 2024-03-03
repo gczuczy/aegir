@@ -155,3 +155,21 @@ export interface apiBrewLoadProgramRequest {
   startmode: LoadProgramStartMode,
   volume: number
 }
+
+export interface apiFermdData {
+  id?: number,
+  name: string,
+  address: string,
+}
+
+export interface apiFermds {
+  status: string,
+  data: apiFermdData[],
+  errors: string[]
+}
+
+export interface apiFermd {
+  status: string,
+  data: apiFermdData,
+  errors: string[]
+}

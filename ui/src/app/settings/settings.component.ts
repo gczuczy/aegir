@@ -1,17 +1,20 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Validators, FormGroup, FormControl, AbstractControl} from '@angular/forms';
 import { switchMap } from 'rxjs/operators';
+import { faPlus } from '@fortawesome/free-solid-svg-icons';
 
 import { ApiService } from '../api.service';
 
-import { apiConfig } from '../api.types';
+import { apiConfig, apiFermdData } from '../api.types';
 
 @Component({
   selector: 'app-settings',
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.css']
 })
-export class SettingsComponent {
+export class SettingsComponent implements OnInit {
+  faPlus = faPlus;
+  public showAddFermd: boolean = false;
   public settingsForm: FormGroup = new FormGroup({
     tempaccuracy: new FormControl("", [
       Validators.required,
@@ -31,14 +34,34 @@ export class SettingsComponent {
       (control: AbstractControl) => Validators.max(30)(control)]),
     loglevel: new FormControl("info", [Validators.required]),
   });
+  public addFermdForm: FormGroup = new FormGroup({
+    name: new FormControl("", [Validators.required,
+      Validators.minLength(3)]),
+    address: new FormControl("", [Validators.required,
+      Validators.pattern("^tcp://[a-z0-9]+:[0-9]+$")]),
+  });
+  public fermdForm: FormGroup = new FormGroup({
+    name: new FormControl("", [Validators.required]),
+    address: new FormControl("", [Validators.required]),
+  });
 
   public errors: string[] = [];
+  public fermds: apiFermdData[] = [];
 
   constructor(private api: ApiService) {
   }
 
   ngOnInit() {
     this.updateConfig();
+    this.api.fermds$.subscribe(
+      (data:apiFermdData[]|null) => {
+	if ( data != null ) {
+	  this.fermds = data;
+	} else {
+	  this.fermds = [];
+	}
+      }
+    );
   }
 
   updateConfig() {
@@ -52,6 +75,8 @@ export class SettingsComponent {
 	  hedelay: res.hedelay,
 	  loglevel: res.loglevel,
 	});
+      },
+      (err:any) => {
       }
     );
   }
@@ -76,6 +101,29 @@ export class SettingsComponent {
 	this.updateConfig();
       }
     );
+  }
+
+  addFermd(model: FormGroup) {
+    console.log('Clicked', model);
+    this.errors = [];
+    let fermd: apiFermdData = {
+      name: model.get('name')!.value,
+      address: model.get('address')!.value,
+    };
+    this.api.addFermd(fermd).subscribe(
+      (data:apiFermdData) => {
+	this.api.updateFermds(0);
+	this.showAddFermd = false;
+	this.addFermdForm.reset();
+      },
+      (err:any) => {
+	console.log(err);
+	this.errors.push(err.error!.message);
+      });
+  }
+
+  toggleAddFermd() {
+    this.showAddFermd = !this.showAddFermd;
   }
 
 }

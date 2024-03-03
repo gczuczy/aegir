@@ -11,6 +11,7 @@ from pprint import pprint
 
 import aegir.db
 import aegir.zmq
+import aegir.config
 
 def init(app, api):
     api.add_resource(BrewProgram, '/api/brewd/program')
@@ -21,6 +22,10 @@ def init(app, api):
     api.add_resource(BrewMaintenance, '/api/brewd/maintenance')
     api.add_resource(BrewOverride, '/api/brewd/override')
     api.add_resource(BrewStateCoolTemp, '/api/brewd/state/cooltemp')
+    pass
+
+def brewdAddr():
+    return 'tcp://127.0.0.1:{port}'.format(port = aegir.config.config['prport'])
     pass
 
 class BrewProgram(flask_restful.Resource):
@@ -81,7 +86,8 @@ class BrewProgram(flask_restful.Resource):
         #pprint(['loading', zreq])
         zresp = None
         try:
-            zresp = aegir.zmq.prmessage("loadProgram", zreq)
+            zmq = aegir.zmq.ZMQReq(brewdAddr())
+            zresp = zmq.prmessage("loadProgram", zreq)
         except Exception as e:
             return {"status": "error",
                     "errors": [str(e)]}, 422
@@ -97,7 +103,8 @@ class BrewConfig(flask_restful.Resource):
     def get(self):
         zresp = None
         try:
-            zresp = aegir.zmq.prmessage("getConfig", None)
+            zmq = aegir.zmq.ZMQReq(brewdAddr())
+            zresp = zmq.prmessage("getConfig", None)
         except Exception as e:
             pprint(e)
             return {"status": "error", "errors": [str(e)]}, 422
@@ -134,7 +141,8 @@ class BrewConfig(flask_restful.Resource):
 
 
         try:
-            zresp = aegir.zmq.prmessage('setConfig', zdata)
+            zmq = aegir.zmq.ZMQReq(brewdAddr())
+            zresp = zmq.prmessage('setConfig', zdata)
         except Exception as e:
             #pprint(['error', zresp, e]);
             return {"status": "error", "errors": [str(e)]}, 422
@@ -157,7 +165,8 @@ class BrewState(flask_restful.Resource):
 
         zresp = None
         try:
-            zresp = aegir.zmq.prmessage("getState", {"history": needhistory})
+            zmq = aegir.zmq.ZMQReq(brewdAddr())
+            zresp = zmq.prmessage("getState", {"history": needhistory})
         except Exception as e:
             #pprint(e)
             return {"status": "error", "errors": [str(e)]}, 422
@@ -200,7 +209,8 @@ class BrewState(flask_restful.Resource):
             return {"status": "error", "errors": ['Unknown command']}, 422
 
         try:
-            zresp = aegir.zmq.prmessage(zcmd, zdata)
+            zmq = aegir.zmq.ZMQReq(brewdAddr())
+            zresp = zmq.prmessage(zcmd, zdata)
         except Exception as e:
             #pprint(['error', zresp, e]);
             return {"status": "error", "errors": [str(e)]}, 422
@@ -227,7 +237,8 @@ class BrewStateVolume(flask_restful.Resource):
         zcmd = 'getVolume'
         zresp = None
         try:
-            zresp = aegir.zmq.prmessage(zcmd, None)
+            zmq = aegir.zmq.ZMQReq(brewdAddr())
+            zresp = zmq.prmessage(zcmd, None)
         except Exception as e:
             #pprint(['error', zresp, e]);
             return {"status": "error", "errors": [str(e)]}, 422
@@ -248,7 +259,8 @@ class BrewStateVolume(flask_restful.Resource):
         zcmd = 'setVolume';
         zdata = {'volume': data['volume']}
         try:
-            zresp = aegir.zmq.prmessage(zcmd, zdata)
+            zmq = aegir.zmq.ZMQReq(brewdAddr())
+            zresp = zmq.prmessage(zcmd, zdata)
         except Exception as e:
             return {"status": "error", "errors": [str(e)]}, 422
 
@@ -275,7 +287,8 @@ class BrewStateTempHistory(flask_restful.Resource):
 
         zresp = None
         try:
-            zresp = aegir.zmq.prmessage(zcmd, data)
+            zmq = aegir.zmq.ZMQReq(brewdAddr())
+            zresp = zmq.prmessage(zcmd, data)
         except Exception as e:
             #pprint(['error', zresp, e]);
             return {"status": "error", "errors": [str(e)]}, 422
@@ -317,7 +330,8 @@ class BrewMaintenance(flask_restful.Resource):
 
         zresp = None
         try:
-            zresp = aegir.zmq.prmessage(zcmd, None)
+            zmq = aegir.zmq.ZMQReq(brewdAddr())
+            zresp = zmq.prmessage(zcmd, None)
         except Exception as e:
             return {"status": "error", "errors": [str(e)]}, 422
 
@@ -350,7 +364,8 @@ class BrewMaintenance(flask_restful.Resource):
 
         zresp = None
         try:
-            zresp = aegir.zmq.prmessage('setMaintenance', zdata)
+            zmq = aegir.zmq.ZMQReq(brewdAddr())
+            zresp = zmq.prmessage('setMaintenance', zdata)
         except Exception as e:
             return {"status": "error", "errors": [str(e)]}, 422
 
@@ -374,7 +389,8 @@ class BrewOverride(flask_restful.Resource):
         zresp = None
         #pprint([data, zdata])
         try:
-            zresp = aegir.zmq.prmessage('override', zdata)
+            zmq = aegir.zmq.ZMQReq(brewdAddr())
+            zresp = zmq.prmessage('override', zdata)
         except Exception as e:
             return {"status": "error", "errors": [str(e)]}, 422
 
@@ -402,7 +418,8 @@ class BrewStateCoolTemp(flask_restful.Resource):
 
         zdata = {'cooltemp': data['cooltemp']}
         try:
-            zresp = aegir.zmq.prmessage(zcmd, zdata)
+            zmq = aegir.zmq.ZMQReq(brewdAddr())
+            zresp = zmq.prmessage(zcmd, zdata)
         except Exception as e:
             return {"status": "error", "errors": [str(e)]}, 422
 

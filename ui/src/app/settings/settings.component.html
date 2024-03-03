@@ -1,105 +1,151 @@
 <div class="container">
-  <form [formGroup]="settingsForm" novalidate (ngSubmit)="save(settingsForm)">
-    <div class="container">
-      <!-- API errors -->
-      <div class="container" [hidden]="!errors">
-	<div *ngFor="let error of errors"
-	     class="alert alert-danger" role="alert">
-	  <strong>Error:</strong>&nbsp;{{error}}
-	</div>
-      </div>
-
-      <!-- Form errors -->
-      <div *ngIf="settingsForm.errors && settingsForm.errors['mashboil']" class="container">
-	<div class="alert alert-danger" role="alert">At least mash or boil is required</div>
-      </div>
-
-      <!-- tempaccuracy -->
-      <div class="row">
-	<div class="col form-group">
-	  <label>Temperature accuracy [C]</label>
-	</div>
-	<div class="col form-group">
-	  <small [hidden]="settingsForm.controls['tempaccuracy'].valid" class="text-danger">
-	    Must be between 0.0 and 1.0
-	  </small>
-	  <input class="form-control" formControlName="tempaccuracy">
-	</div>
-      </div>
-
-      <!-- Cool temp -->
-      <div class="row">
-	<div class="col form-group">
-	  <label>Cooling target temperature [C]</label>
-	</div>
-	<div class="col form-group">
-	  <small [hidden]="settingsForm.controls['cooltemp'].valid" class="text-danger">
-	    Must be between 20 and 30
-	  </small>
-	  <input class="form-control" formControlName="cooltemp">
-	</div>
-      </div>
-
-      <!-- HEpower -->
-      <div class="row">
-	<div class="col form-group">
-	  <label>Heating Element's power [W]</label>
-	</div>
-	<div class="col form-group">
-	  <small [hidden]="settingsForm.controls['hepower'].valid" class="text-danger">
-	    Must be between 1000 and 10000
-	  </small>
-	  <input class="form-control" formControlName="hepower">
-	</div>
-      </div>
-
-      <!-- HE heat overhead -->
-      <div class="row">
-	<div class="col form-group">
-	  <label>Heating overhead [C]</label>
-	</div>
-	<div class="col form-group">
-	  <small [hidden]="settingsForm.controls['heatoverhead'].valid" class="text-danger">
-	    Must be between 0.1 and 5
-	  </small>
-	  <input class="form-control" formControlName="heatoverhead">
-	</div>
-      </div>
-
-      <!-- HE heat overhead -->
-      <div class="row">
-	<div class="col form-group">
-	  <label>HE delay [s]</label>
-	</div>
-	<div class="col form-group">
-	  <small [hidden]="settingsForm.controls['hedelay'].valid" class="text-danger">
-	    Must be between 0.1 and 5
-	  </small>
-	  <input class="form-control" formControlName="hedelay">
-	</div>
-      </div>
-
-      <!-- loglevel -->
-      <div class="row">
-	<div class="col form-group">
-	  <label>Log level</label>
-	</div>
-	<div class="col form-group">
-	  <select class="form-control form-control-sm" formControlName="loglevel">
-	    <option value="trace">trace</option>
-	    <option value="debug">debug</option>
-	    <option value="info">info</option>
-	    <option value="warning">warning</option>
-	    <option value="error">error</option>
-	    <option value="fatal">fatal</option>
-	  </select>
-	</div>
-      </div>
-
-      <!-- submit -->
-      <div class="row">
-	<button type="submit" class="btn-warning" [disabled]="!settingsForm.valid">Save</button>
+  <div class="container">
+    <!-- API errors -->
+    <div class="container" [hidden]="!errors">
+      <div *ngFor="let error of errors"
+	   class="alert alert-danger" role="alert">
+	<strong>Error:</strong>&nbsp;{{error}}
       </div>
     </div>
-  </form>
+
+    <!-- Form errors -->
+    <div *ngIf="settingsForm.errors && settingsForm.errors['mashboil']" class="container">
+      <div class="alert alert-danger" role="alert">At least mash or boil is required</div>
+    </div>
+
+    <div class="row">
+      <div class="col-sm">
+	<form [formGroup]="settingsForm" novalidate (ngSubmit)="save(settingsForm)">
+	  <!-- tempaccuracy -->
+	  <div class="row">
+	    <div class="col form-group">
+	      <label>Temperature accuracy [C]</label>
+	    </div>
+	    <div class="col form-group">
+	      <small [hidden]="settingsForm.controls['tempaccuracy'].valid" class="text-danger">
+		Must be between 0.0 and 1.0
+	      </small>
+	      <input class="form-control" formControlName="tempaccuracy">
+	    </div>
+	  </div>
+
+	  <!-- Cool temp -->
+	  <div class="row">
+	    <div class="col form-group">
+	      <label>Cooling target temperature [C]</label>
+	    </div>
+	    <div class="col form-group">
+	      <small [hidden]="settingsForm.controls['cooltemp'].valid" class="text-danger">
+		Must be between 20 and 30
+	      </small>
+	      <input class="form-control" formControlName="cooltemp">
+	    </div>
+	  </div>
+
+	  <!-- HEpower -->
+	  <div class="row">
+	    <div class="col form-group">
+	      <label>Heating Element's power [W]</label>
+	    </div>
+	    <div class="col form-group">
+	      <small [hidden]="settingsForm.controls['hepower'].valid" class="text-danger">
+		Must be between 1000 and 10000
+	      </small>
+	      <input class="form-control" formControlName="hepower">
+	    </div>
+	  </div>
+
+	  <!-- HE heat overhead -->
+	  <div class="row">
+	    <div class="col form-group">
+	      <label>Heating overhead [C]</label>
+	    </div>
+	    <div class="col form-group">
+	      <small [hidden]="settingsForm.controls['heatoverhead'].valid" class="text-danger">
+		Must be between 0.1 and 5
+	      </small>
+	      <input class="form-control" formControlName="heatoverhead">
+	    </div>
+	  </div>
+
+	  <!-- HE heat overhead -->
+	  <div class="row">
+	    <div class="col form-group">
+	      <label>HE delay [s]</label>
+	    </div>
+	    <div class="col form-group">
+	      <small [hidden]="settingsForm.controls['hedelay'].valid" class="text-danger">
+		Must be between 0.1 and 5
+	      </small>
+	      <input class="form-control" formControlName="hedelay">
+	    </div>
+	  </div>
+
+	  <!-- loglevel -->
+	  <div class="row">
+	    <div class="col form-group">
+	      <label>Log level</label>
+	    </div>
+	    <div class="col form-group">
+	      <select class="form-control form-control-sm" formControlName="loglevel">
+		<option value="trace">trace</option>
+		<option value="debug">debug</option>
+		<option value="info">info</option>
+		<option value="warning">warning</option>
+		<option value="error">error</option>
+		<option value="fatal">fatal</option>
+	      </select>
+	    </div>
+	  </div>
+
+	  <!-- submit -->
+	  <div class="row">
+	    <button type="submit" class="btn-warning" [disabled]="!settingsForm.valid">Save</button>
+	  </div>
+	</form>
+
+      </div>
+      <!-- fermd -->
+      <div class="col-sm">
+	<h1>Fermd
+	  <button class="btn btn-default" type="reset" (click)="toggleAddFermd()">
+	    <fa-icon [icon]="faPlus"></fa-icon>
+	  </button>
+	</h1>
+	<div class="container" [hidden]="!showAddFermd">
+	  <form [formGroup]="addFermdForm" novalidate
+		(ngSubmit)="addFermd(addFermdForm)">
+	    <div class="form-group">
+	      <label for="name">Name</label>
+	      <input type="text" class="form-control" id="name"
+		     formControlName="name" placeholder="fermd name">
+	    </div>
+	    <div class="form-group">
+	      <label for="address">Name</label>
+	      <input type="text" class="form-control" id="address"
+		     formControlName="address" placeholder="tcp://host:42691">
+	    </div>
+	    <button type="submit" class="btn btn-small btn-primary"
+		    [disabled]="!addFermdForm.valid">Add</button>
+	  </form>
+	</div>
+	<table class="table-sm">
+	  <thead>
+	    <tr>
+	      <th>Name</th>
+	      <th>Address</th>
+	      <th>&nbsp;</th>
+	    </tr>
+	  </thead>
+	  <tbody>
+	    <tr *ngFor="let fermd of fermds">
+	      <td>{{fermd.name}}</td>
+	      <td>{{fermd.address}}</td>
+	      <td>reserved</td>
+	    </tr>
+	  </tbody>
+	</table>
+      </div>
+    </div>
+  </div>
 </div>

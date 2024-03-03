@@ -1,19 +1,22 @@
 import { Injectable } from '@angular/core';
 
-import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpHeaders,
+  HttpErrorResponse } from '@angular/common/http';
 
-import { timer, Observable, BehaviorSubject } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { timer, Observable, BehaviorSubject, throwError,
+  interval } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 
 import { apiStateResponse, apiStateData,
-	 apiConfigResponse, apiConfig,
-	 apiProgramsResponse, apiProgram,
-	 apiProgramResponse, apiProgramDeleteResponse,
-	 apiAddProgramResponse, apiAddProgramData,
-	 apiSaveProgramResponse, apiSaveProgramData,
-	 apiBrewStateVolume, apiBrewStateVolumeData,
-	 apiBrewTempHistoryResponse, apiBrewTempHistoryData,
-	 apiBrewLoadProgramRequest
+  apiConfigResponse, apiConfig,
+  apiProgramsResponse, apiProgram,
+  apiProgramResponse, apiProgramDeleteResponse,
+  apiAddProgramResponse, apiAddProgramData,
+  apiSaveProgramResponse, apiSaveProgramData,
+  apiBrewStateVolume, apiBrewStateVolumeData,
+  apiBrewTempHistoryResponse, apiBrewTempHistoryData,
+  apiBrewLoadProgramRequest,
+  apiFermds, apiFermdData, apiFermd,
        } from './api.types';
 
 @Injectable({
@@ -43,22 +46,39 @@ export class ApiService {
       RIMS: 0
     }
   });
+  public fermds$ = new BehaviorSubject<apiFermdData[]|null>(null);
+  private timer_fermds;
+  private timer_fermds_sub;
 
   constructor(private http: HttpClient) {
     //console.log('ApiService ctor');
     this.timer_state = timer(1000, 1000);
-    this.timer_state_sub = this.timer_state.subscribe((t:any) => {this.updateState(t)});
-    this.timer_temphistory = timer(1000,5000);
+    this.timer_state_sub = this.timer_state.subscribe(
+      (t:any) => {this.updateState(t)}
+    );
+    this.timer_temphistory = timer(1000, 1000);
     this.timer_temphistory_sub = this.timer_temphistory.subscribe(
       (t:any) => {
-	this.updateTempHistory(t)
+	if ( t%5 == 0 ) this.updateTempHistory(t)
       }
     );
+    this.timer_fermds = timer(100, 1000);
+    this.timer_fermds_sub = this.timer_state.subscribe(
+      (t:any) => {
+	if ( t%10 == 0 ) this.updateFermds(t);
+      }
+    );
+  }
+
+  private handleErrors(error: HttpErrorResponse) {
+    //console.log("Error code: ", error.status);
+    return throwError(() => new Error('lofasz'));
   }
 
   updateState(t:any) {
     this.http.get('/api/brewd/state')
       .pipe(
+	catchError(this.handleErrors),
 	map(res => <apiStateResponse>res)
       )
       .subscribe((res:apiStateResponse) => {
@@ -75,7 +95,6 @@ export class ApiService {
 	}
 	this.state.next(res.data);
       }, (err:any) => {
-	console.log('updateState/err', err);
       });
   }
 
@@ -150,6 +169,7 @@ export class ApiService {
   getConfig(): Observable<apiConfig> {
     return this.http.get('/api/brewd/config')
       .pipe(
+	catchError(this.handleErrors),
 	map(res => (<apiConfigResponse>res).data)
       );
   }
@@ -158,8 +178,6 @@ export class ApiService {
     let body = JSON.stringify(cfg);
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
-
-    //console.log('calling /api/brewd/state', body, options);
 
     return this.http.post('/api/brewd/config', body, options);
   }
@@ -216,8 +234,6 @@ export class ApiService {
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
 
-    //console.log('calling /api/brewd/state', body, options);
-
     return this.http.post('/api/brewd/state', body, options);
   }
 
@@ -225,8 +241,6 @@ export class ApiService {
     let body = JSON.stringify({'command': 'spargeDone'});
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
-
-    //console.log('calling /api/brewd/state', body, options);
 
     return this.http.post('/api/brewd/state', body, options);
   }
@@ -236,8 +250,6 @@ export class ApiService {
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
 
-    //console.log('calling /api/brewd/state', body, options);
-
     return this.http.post('/api/brewd/state', body, options);
   }
 
@@ -246,14 +258,13 @@ export class ApiService {
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
 
-    //console.log('calling /api/brewd/state', body, options);
-
     return this.http.post('/api/brewd/state', body, options);
   }
 
   getVolume(): Observable<apiBrewStateVolumeData> {
     return this.http.get('/api/brewd/state/volume').
       pipe(
+	catchError(this.handleErrors),
 	map(res => (<apiBrewStateVolume>res).data)
       );
   }
@@ -273,8 +284,6 @@ export class ApiService {
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
 
-    //console.log('calling /api/brewd/state', body, options);
-
     return this.http.post('/api/brewd/state', body, options);
   }
 
@@ -282,8 +291,6 @@ export class ApiService {
     let body = JSON.stringify({'command': 'reset'});
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
-
-    //console.log('calling /api/brewd/state', body, options);
 
     return this.http.post('/api/brewd/state', body, options);
   }
@@ -303,8 +310,6 @@ export class ApiService {
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
 
-    //console.log("Setting volume to ", volume, body, headers, options);
-
     return this.http.post('/api/brewd/state/cooltemp', body, options);
   }
 
@@ -314,6 +319,31 @@ export class ApiService {
     let options = {'headers': headers};
 
     return this.http.post('/api/brewd/program', body, options);
+  }
+
+  updateFermds(t: any) {
+    this.http.get('/api/fermds').
+      pipe(
+	catchError(this.handleErrors),
+	map(res => (<apiFermds>res).data)
+      ).subscribe(
+	(data:apiFermdData[]) => {
+	  this.fermds$.next(data);
+	},
+	(err:any) => {
+	  this.fermds$.next(null);
+	}
+      );
+  }
+
+  addFermd(data: apiFermdData): Observable<apiFermdData> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post('/api/fermds', body, options)
+      .pipe(
+	map(res => (<apiFermd>res).data)
+      );
   }
 
 }
