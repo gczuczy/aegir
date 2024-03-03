@@ -265,7 +265,12 @@ setup_target_for_coverage_lcov(
   NAME fermd_coverage
   EXECUTABLE bin/tests-fermd
   DEPENDENCIES tests_fermd
-  EXCLUDE "/usr/include/*" "/usr/local/include/*" "${ryml_SOURCE_DIR}/*"
+  EXCLUDE
+"/usr/include/*"
+"/usr/local/include/*"
+"${ryml_SOURCE_DIR}/*"
+"${CMAKE_CURRENT_SOURCE_DIR}/fermd/tests/*"
+"${CMAKE_CURRENT_SOURCE_DIR}/common/tests/*"
 )
 
 
