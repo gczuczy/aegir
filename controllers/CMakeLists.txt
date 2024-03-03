@@ -40,7 +40,6 @@ FetchContent_Declare(cmake_modules
 )
 FetchContent_MakeAvailable(cmake_modules)
 list(APPEND CMAKE_MODULE_PATH ${cmake_modules_SOURCE_DIR})
-set(CODE_COVERAGE_VERBOSE TRUE)
 include(CodeCoverage)
 append_coverage_compiler_flags_to_target(tests_fermd)
 message("Project binary dir: ${PROJECT_BINARY_DIR}")
