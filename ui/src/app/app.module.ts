@@ -21,6 +21,7 @@ import { AddProgramComponent } from './add-program/add-program.component';
 import { EditProgramComponent } from './edit-program/edit-program.component';
 import { LoadProgramComponent } from './load-program/load-program.component';
 import { NgChartsModule } from 'ng2-charts';
+import { FermdComponent } from './fermd.component';
 
 @NgModule({
   declarations: [
@@ -32,7 +33,8 @@ import { NgChartsModule } from 'ng2-charts';
     ProgramComponent,
     AddProgramComponent,
     EditProgramComponent,
-    LoadProgramComponent
+    LoadProgramComponent,
+    FermdComponent
   ],
   imports: [
     BrowserModule,

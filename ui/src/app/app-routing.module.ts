@@ -11,6 +11,8 @@ import { AddProgramComponent } from './add-program/add-program.component';
 import { EditProgramComponent } from './edit-program/edit-program.component';
 import { LoadProgramComponent } from './load-program/load-program.component';
 
+import { FermdComponent } from './fermd.component';
+
 export const PROGRAMS_ROUTES: Routes = [
   { path: '', redirectTo: 'add', pathMatch: 'full' },
   { path: 'add', component: AddProgramComponent },
@@ -25,7 +27,8 @@ const routes: Routes = [
   { path: 'programs', component: ProgramsComponent ,
     children: PROGRAMS_ROUTES},
   { path: 'maintenance', component: MaintenanceComponent},
-  { path: 'settings', component: SettingsComponent }
+  { path: 'settings', component: SettingsComponent },
+  { path: 'fermd/:fermdid', component: FermdComponent },
 ];
 
 @NgModule({
