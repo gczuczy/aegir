@@ -14,6 +14,7 @@ import aegir.zmq
 
 def init(app, api):
     api.add_resource(Fermds, '/api/fermds')
+    api.add_resource(TiltHydrometers, '/api/fermds/<int:fermdid>/tilthydrometers')
     pass
 
 class Fermds(flask_restful.Resource):
@@ -44,7 +45,6 @@ class Fermds(flask_restful.Resource):
                     'message': 'Unable to contact fermd: {m}'.format(m=str(e))}, 400
 
         fermd = None
-        db = aegir.db.Connection()
         try:
             fermd = db.addFermd(data['name'],
                                 data['address'])
@@ -54,4 +54,20 @@ class Fermds(flask_restful.Resource):
 
         return {'status': 'success',
                 'data': fermd.json}
+    pass
+
+class TiltHydrometers(flask_restful.Resource):
+    def get(self, fermdid):
+        db = aegir.db.Connection()
+        try:
+            fermd = db.getFermd(fermdid)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'No such fermd: {e}'.format(e=str(e))},400
+
+        zmq = aegir.zmq.ZMQReq(data['address'])
+        resp = zmq.prmessage('getTilthydrometers')
+        pprint(resp)
+        return {'status': 'success',
+                'data': resp['data']}
     pass

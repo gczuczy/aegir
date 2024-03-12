@@ -7,7 +7,7 @@ import { faRefresh, faCheck, faHourglass, faEllipsisH } from '@fortawesome/free-
 import { ApiService } from '../api.service';
 
 import { apiProgram,
-	 apiStateData, apiBrewTempHistoryData,
+	 apiStateData, apiBrewTempHistory,
 	 apiBrewStateVolumeData,
 	 apiStateMashStep, apiStateHopping
        } from '../api.types';
@@ -120,7 +120,7 @@ export class BrewComponent implements OnInit {
 	});
     this.api.temphistory$
       .subscribe(
-	(data: apiBrewTempHistoryData|null) => {
+	(data: apiBrewTempHistory|null) => {
 	  if ( data ) this.updateTempHistory(data);
 	});
     this.onVolumeReset();
@@ -253,7 +253,7 @@ export class BrewComponent implements OnInit {
     return ret;
   }
 
-  updateTempHistory(data: apiBrewTempHistoryData) {
+  updateTempHistory(data: apiBrewTempHistory) {
     //console.log('Updating temphistory with ', data);
 
     // get the merged data from the apiService

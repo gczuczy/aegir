@@ -132,6 +132,14 @@ class Connection():
                      {'name': name,
                       'address': address})
         return Fermd(self, data=res.fetchone())
+
+    def getFermd(self, fermdid):
+        curs = self._conn.cursor()
+        res = curs.execute('''
+        SELECT * FROM fermds WHERE id = :id
+        ''', {'id': fermdid})
+        return Fermd(self, data=res.fetchone())
+
     pass
 
 class Program():

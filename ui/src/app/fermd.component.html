@@ -1,8 +1,43 @@
-<h1>LOFASZ</h1>
-<nav
-     class="navbar navbar-expand-sm navbar-dark navvbar-inverse navbar-fixed-top">
-  <div class="container-fluid">
-    <span class="navbar-brand mb-0 h1">asdf</span>
+<div class="container-fluid">
+  <div class="row flex-nowrap">
+    <div class="col-auto col-md-3 col-xl-2 px-sm-2 px-0 bg-dark">
+      <div *ngIf="fermd != null"
+	   class="d-flex flex-column align-items-center align-items-sm-start px-3 pt-2 text-white min-vh-100">
+      <!-- "Menu" heading -->
+	  <span class="fs-5 d-none d-sm-inline">Menu</span>
+
+	  <!-- menu items -->
+	  <ul class="nav nav-pills flex-column mb-sm-auto mb-0 align-items-center align-items-sm-start" id="menu">
+	    <li class="nav-items">
+	      <a class="nav-link align-middle px-0"
+		 routerLink="/fermd/{{fermd.id}}/fermenters" routerLinkActive="active">
+		<i class="fs-4 hi-house"></i>
+		<span class="ms-1 d-none d-sm-inline">Fermenters</span>
+	      </a>
+	    </li>
+	    <li class="nav-items">
+	      <a class="nav-link align-middle px-0"
+		 routerLink="/fermd/{{fermd.id}}/tilthydrometers" routerLinkActive="active">
+		<i class="fs-4 hi-house"></i>
+		<span class="ms-1 d-none d-sm-inline">Tilt Hydrometers</span>
+	      </a>
+	    </li>
+	  </ul>
+	  <hr>
+	  <div class="dropdown pb-4">
+	    <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
+	      <li *ngFor="let f of fermds">
+		<a class="dropdown-item"
+		   routerLink="/fermd/{{f.id}}">
+		  {{f.name}}
+		</a>
+	      </li>
+	    </ul>
+	  </div>
+      </div>
+    </div>
+    <div class="col py-3">
+      <router-outlet></router-outlet>
+    </div>
   </div>
-</nav>
-<router-outlet></router-outlet>
+</div>

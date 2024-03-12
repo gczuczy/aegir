@@ -4,7 +4,7 @@ import { faGear } from '@fortawesome/free-solid-svg-icons';
 
 import { ApiService } from './api.service';
 
-import { apiStateData, apiFermdData } from './api.types';
+import { apiStateData, apiFermd } from './api.types';
 
 @Component({
   selector: 'app-root',
@@ -17,7 +17,7 @@ export class AppComponent {
 
   canmaint:boolean = true;
 
-  public fermds: apiFermdData[]|null = null;
+  public fermds: apiFermd[]|null = null;
 
   constructor(private api: ApiService) {
   }
@@ -29,7 +29,7 @@ export class AppComponent {
     });
 
     this.api.fermds$.subscribe(
-      (data:apiFermdData[]|null) => {
+      (data:apiFermd[]|null) => {
 	this.fermds = data;
       }
     );

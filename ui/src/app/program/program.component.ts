@@ -3,7 +3,7 @@ import { ActivatedRoute, Params, Router } from '@angular/router';
 import { switchMap } from 'rxjs/operators';
 
 import { ApiService } from '../api.service';
-import { apiProgram, apiProgramDeleteResponse } from '../api.types';
+import { apiProgram, apiResponse } from '../api.types';
 
 @Component({
   selector: 'app-program',
@@ -41,7 +41,7 @@ export class ProgramComponent {
     if ( confirm("Are you sure to delete this program?") ) {
       this.api.delProgram(this.program!.id!)
 	.subscribe(
-	  (resp:apiProgramDeleteResponse) => {
+	  (resp:apiResponse) => {
 	    this.api.announceUpdate();
 	    this.router.navigate(['programs']);
 	    //console.log('Program Added with response: ', resp);

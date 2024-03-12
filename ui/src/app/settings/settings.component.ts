@@ -5,7 +5,7 @@ import { faPlus } from '@fortawesome/free-solid-svg-icons';
 
 import { ApiService } from '../api.service';
 
-import { apiConfig, apiFermdData } from '../api.types';
+import { apiConfig, apiFermd } from '../api.types';
 
 @Component({
   selector: 'app-settings',
@@ -46,7 +46,7 @@ export class SettingsComponent implements OnInit {
   });
 
   public errors: string[] = [];
-  public fermds: apiFermdData[] = [];
+  public fermds: apiFermd[] = [];
 
   constructor(private api: ApiService) {
   }
@@ -54,7 +54,7 @@ export class SettingsComponent implements OnInit {
   ngOnInit() {
     this.updateConfig();
     this.api.fermds$.subscribe(
-      (data:apiFermdData[]|null) => {
+      (data:apiFermd[]|null) => {
 	if ( data != null ) {
 	  this.fermds = data;
 	} else {
@@ -106,12 +106,12 @@ export class SettingsComponent implements OnInit {
   addFermd(model: FormGroup) {
     console.log('Clicked', model);
     this.errors = [];
-    let fermd: apiFermdData = {
+    let fermd: apiFermd = {
       name: model.get('name')!.value,
       address: model.get('address')!.value,
     };
     this.api.addFermd(fermd).subscribe(
-      (data:apiFermdData) => {
+      (data:apiFermd) => {
 	this.api.updateFermds(0);
 	this.showAddFermd = false;
 	this.addFermdForm.reset();

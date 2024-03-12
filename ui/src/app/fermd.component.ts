@@ -3,7 +3,7 @@ import { ActivatedRoute, Params, Router } from '@angular/router';
 import { switchMap } from 'rxjs/operators';
 
 import { ApiService } from './api.service';
-import { apiFermdData } from './api.types';
+import { apiFermd } from './api.types';
 
 
 @Component({
@@ -14,8 +14,8 @@ import { apiFermdData } from './api.types';
 export class FermdComponent implements OnInit {
 
   private fermdid: number|null = null;
-  public fermd: apiFermdData|null = null;
-  private fermds: apiFermdData[]|null = null;
+  public fermd: apiFermd|null = null;
+  public fermds: apiFermd[]|null = null;
 
   constructor(private api: ApiService,
     private route: ActivatedRoute,
@@ -24,7 +24,7 @@ export class FermdComponent implements OnInit {
 
   ngOnInit() {
     this.api.fermds$.subscribe(
-      (data:apiFermdData[]|null) => {
+      (data:apiFermd[]|null) => {
 	this.fermds = data;
 	if ( this.fermdid != null && this.fermd == null && this.fermds != null)
 	  this.setFermd();
