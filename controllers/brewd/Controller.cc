@@ -1044,7 +1044,8 @@ namespace aegir {
     c_correctionfactor = std::min(c_correctionfactor, c_cfg->getMaxCorrectionFactor());
 
     // apply the correction factor
-    heratio = std::min(heratio * c_correctionfactor, 1.0f);
+    if ( c_correctionfactor > 1.0 )
+      heratio = std::min(heratio * c_correctionfactor, 1.0f);
 
     c_log.info("Controller::tempControl(%.2f, %.2f): dT_rims:%.2f dT_MT_tgt:%.2f P_he:%.2f P_mt:%.2f P_rims:%.2f R:%.3f(MT:%.2f / RIMS:%.2f) corr:%.2f",
 	       c_temptarget, c_tempoverheat,
