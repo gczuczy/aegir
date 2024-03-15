@@ -980,7 +980,7 @@ namespace aegir {
 #if 0
     printf("handleSetMaintenance() mtpump has:%c set:%c\n",
 	   haspump ? 't' : 'f', mtpump ? 't' : 'f');
-    printf("handleSetMaintenance() has:%c temp:%.2f\n", hastemp?'t':'f', temp);
+    printf("handleSetMaintenance() hastemp:%c temp:%.2f\n", hastemp?'t':'f', temp);
     printf("handleSetMaintenance() heat has:%c set:%c\n",
 	   hasheat ? 't' : 'f', heat ? 't' : 'f');
     printf("handleSetMaintenance() bkpump has:%c set:%c\n",
