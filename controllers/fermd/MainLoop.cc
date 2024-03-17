@@ -7,6 +7,7 @@
 #include "DBConnection.hh"
 #include "PRThread.hh"
 #include "common/ServiceManager.hh"
+#include "SensorCache.hh"
 
 namespace aegir {
   namespace fermd {
@@ -15,6 +16,7 @@ namespace aegir {
       registerHandler<Bluetooth>("bluetooth");
       registerHandler<SensorProxy>("sensorproxy");
       registerHandler<PRThread>("PR");
+      registerHandler<SensorCache>("SensorCache");
 
       auto msf = aegir::ServiceManager::get<MessageFactory>();
 

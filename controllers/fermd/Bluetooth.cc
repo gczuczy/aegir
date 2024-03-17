@@ -320,6 +320,7 @@ namespace aegir {
 
       // and start the sensorbus
       c_sensorbus->brrr();
+      c_sensorbus->setEnvelope("tilthydrometer");
     }
 
     void Bluetooth::worker() {
@@ -367,7 +368,7 @@ namespace aegir {
 	  }
 	  if ( auto msg = handleData(buffer, evlist[i].data) ) {
 	    c_sensorbus->send(msg);
-#if 1
+#if 0
 	    auto tl = msg->as<TiltReadingMessage>();
 	    printf("UUID:%s %.2fC %.4fSG\n",
 		   boost::lexical_cast<std::string>(tl->uuid()).c_str(),

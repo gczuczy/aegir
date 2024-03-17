@@ -42,14 +42,17 @@ namespace aegir {
       void requireFields(ryml::ConstNodeRef&,
 			 const std::set<std::string>);
       // handlers
+      PRCMD(hello);
       PRCMD(getFermenterTypes);
       PRCMD(addFermenterTypes);
       PRCMD(updateFermenterTypes);
+      PRCMD(deleteFermenterTypes);
       PRCMD(getFermenters);
       PRCMD(addFermenter);
       PRCMD(updateFermenter);
       PRCMD(getTilthydrometers);
       PRCMD(updateTilthydrometer);
+      PRCMD(getSensorCache);
 
     private:
       zmqproxy_type c_proxy;

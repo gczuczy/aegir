@@ -25,13 +25,12 @@ namespace aegir {
       }
 
       Statement::~Statement() {
-	if ( c_statement ) sqlite3_finalize(c_statement);
+	if ( c_statement ) {
+	  sqlite3_finalize(c_statement);
+	}
       }
 
       Result Statement::execute() {
-	int rc = sqlite3_reset(c_statement);
-	evalrc(rc, c_statement);
-
 	return Result(c_statement);
       }
 

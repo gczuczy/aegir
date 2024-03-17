@@ -1,1 +1,2 @@
 
+#define AEGIR_VERSION "${brewd_VERSION}"

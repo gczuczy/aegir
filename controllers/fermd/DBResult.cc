@@ -25,6 +25,8 @@ namespace aegir {
       Result::~Result() {
 	if ( c_statement ) {
 	  sqlite3_clear_bindings(c_statement);
+	  int rc = sqlite3_reset(c_statement);
+	  evalrc(rc, c_statement);
 	}
       }
 
