@@ -3,7 +3,6 @@ list(APPEND brewd_HEADERS
   Controller.hh
   DirectSelect.hh
   ElapsedTime.hh
-  Exception.hh
   GPIO.hh
   IOHandler.hh
   JSONMessage.hh
@@ -17,12 +16,9 @@ list(APPEND brewd_HEADERS
   SPI.hh
   ThreadManager.hh
   ZMQ.hh
-  cmakeconfig.hh
   TSDB.hh
   types.hh
   Environment.hh
-  logging.hh
-  LogChannel.hh
 )
 
 # disabled due to
@@ -33,12 +29,10 @@ list(APPEND brewd_HEADERS
 
 target_sources(brewd
   PRIVATE
-  LogChannel.cc
   Config.cc
   Controller.cc
   DirectSelect.cc
   ElapsedTime.cc
-  Exception.cc
   GPIO.cc
   IOHandler.cc
   JSONMessage.cc
@@ -56,17 +50,14 @@ target_sources(brewd
   TSDB.cc
   types.cc
   Environment.cc
-  logging.cc
   ${brewd_HEADERS}
 )
 
 target_sources(tests
   PRIVATE
   TSDB.cc
-  Exception.cc
   types.cc
   Config.cc
   Message.cc
-  logging.cc
   ${brewd_HEADERS}
 )

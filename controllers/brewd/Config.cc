@@ -338,7 +338,7 @@ namespace aegir {
 	YAML::Node ct = config["maxcorrection"];
 	c_maxcorrectionfactor = ct.as<float>();
 	if ( c_maxcorrectionfactor < 1.10f || c_maxcorrectionfactor > 1.25f )
-	  throw Exception("Cooling MaxCorrectionFactor must be between 1.10 and 1.25");
+	  throw Exception("Cooling MaxCorrectionFactor(%.2f) must be between 1.10 and 1.25", c_maxcorrectionfactor);
       }
 
     }

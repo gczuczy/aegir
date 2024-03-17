@@ -1,0 +1,13 @@
+target_sources(tests_fermd
+  PRIVATE
+  FermdConfig.cc
+  Bluetooth.cc
+  Message.cc
+  db.cc
+  prbase.cc
+  prbase.hh
+  pr_generic.cc
+  pr_fermenter_types.cc
+  pr_fermenters.cc
+  pr_tilthydrometers.cc
+)
