@@ -49,7 +49,7 @@ class ZMQReq:
             raise Exception("Error while sending message: {msg}"
                             .format(msg = str(e)))
         try:
-            reslt = self._socket.recv_json()
+            result = self._socket.recv_json()
         except Exception as e:
             #pprint(['zmq_recv', e])
             raise Exception("Cannot parse response: {err}"
@@ -58,7 +58,7 @@ class ZMQReq:
         if 'status' in result and result['status'] == 'error':
             if 'message' in result:
                 raise Exception('{cmd} error: {msg}'.format(cmd = command,
-                                                            msg = resuilt['message']))
+                                                            msg = result['message']))
             else:
                 raise Exception('Unknown {cmd} error'.format(cmd = command))
             pass

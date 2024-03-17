@@ -12,7 +12,8 @@ import { apiResponse,
 	 apiAddProgram, apiSaveProgramData,
 	 apiBrewStateVolume, apiBrewStateVolumeData,
 	 apiBrewTempHistory, apiBrewLoadProgramRequest,
-	 apiFermd, apiTilthydrometer,
+	 apiFermd, apiTilthydrometer, apiFermenterType,
+	 apiFermenter
        } from './api.types';
 
 @Injectable({
@@ -347,6 +348,68 @@ export class ApiService {
       .pipe(
 	catchError(this.handleErrors),
 	map(res => <apiTilthydrometer[]>((<apiResponse>res).data))
+      )
+  }
+
+  updateTilthydrometer(fermdid: number,
+		       tiltid: number,
+		       data: Map<string, string|number|boolean>): Observable<apiTilthydrometer> {
+    let body = JSON.stringify(Object.fromEntries(data.entries()));
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post(`/api/fermds/${fermdid}/tilthydrometers/${tiltid}`,
+			  body, options)
+      .pipe(
+	map(res => <apiTilthydrometer>((<apiResponse>res).data))
+      );
+  }
+
+  getFermenterTypes(fermdid: number): Observable<apiFermenterType[]> {
+    return this.http.get(`/api/fermds/${fermdid}/fermentertypes`)
+      .pipe(
+	catchError(this.handleErrors),
+	map(res => <apiFermenterType[]>((<apiResponse>res).data))
+      )
+  }
+
+  addFermenterType(fermdid: number,
+		   data: apiFermenterType): Observable<apiFermenterType> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post(`/api/fermds/${fermdid}/fermentertypes`,
+			  body, options)
+      .pipe(
+	map(res => <apiFermenterType>((<apiResponse>res).data))
+      );
+  }
+
+  updateFermenterType(fermdid: number,
+		      ftid: number,
+		      data: apiFermenterType): Observable<apiFermenterType> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post(`/api/fermds/${fermdid}/fermentertypes/${ftid}`,
+			  body, options)
+      .pipe(
+	map(res => <apiFermenterType>((<apiResponse>res).data))
+      );
+  }
+
+  delFermenterType(fermdid: number,
+		   ftid: number): Observable<any> {
+    return this.http.delete(`/api/fermds/${fermdid}/fermentertypes/${ftid}`)
+      .pipe(
+	map(res => <apiResponse>res)
+      );
+  }
+
+  getFermenters(fermdid: number): Observable<apiFermenter[]> {
+    return this.http.get(`/api/fermds/${fermdid}/fermenters`)
+      .pipe(
+	catchError(this.handleErrors),
+	map(res => <apiFermenter[]>((<apiResponse>res).data))
       )
   }
 

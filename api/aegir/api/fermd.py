@@ -15,6 +15,10 @@ import aegir.zmq
 def init(app, api):
     api.add_resource(Fermds, '/api/fermds')
     api.add_resource(TiltHydrometers, '/api/fermds/<int:fermdid>/tilthydrometers')
+    api.add_resource(TiltHydrometer, '/api/fermds/<int:fermdid>/tilthydrometers/<int:tiltid>')
+    api.add_resource(FermenterTypes, '/api/fermds/<int:fermdid>/fermentertypes')
+    api.add_resource(FermenterType, '/api/fermds/<int:fermdid>/fermentertypes/<int:ftid>')
+    api.add_resource(Fermenters, '/api/fermds/<int:fermdid>/fermenters')
     pass
 
 class Fermds(flask_restful.Resource):
@@ -65,9 +69,124 @@ class TiltHydrometers(flask_restful.Resource):
             return {'status': 'error',
                     'message': 'No such fermd: {e}'.format(e=str(e))},400
 
-        zmq = aegir.zmq.ZMQReq(data['address'])
+        zmq = aegir.zmq.ZMQReq(fermd.address)
         resp = zmq.prmessage('getTilthydrometers')
-        pprint(resp)
         return {'status': 'success',
                 'data': resp['data']}
+    pass
+
+class TiltHydrometer(flask_restful.Resource):
+    def post(self, fermdid, tiltid):
+        data = flask.request.get_json();
+        db = aegir.db.Connection()
+        try:
+            fermd = db.getFermd(fermdid)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'No such fermd: {e}'.format(e=str(e))},400
+
+        data['id'] = tiltid
+        try:
+            zmq = aegir.zmq.ZMQReq(fermd.address)
+            resp = zmq.prmessage('updateTilthydrometer', data)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': str(e)},400
+        return {'status': 'success',
+                'data': resp['data']}
+    pass
+
+class FermenterTypes(flask_restful.Resource):
+    def get(self, fermdid):
+        db = aegir.db.Connection()
+        try:
+            fermd = db.getFermd(fermdid)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'No such fermd: {e}'.format(e=str(e))},400
+
+        zmq = aegir.zmq.ZMQReq(fermd.address)
+        resp = zmq.prmessage('getFermenterTypes')
+        return {'status': 'success',
+                'data': resp['data']}
+
+    def post(self, fermdid):
+        '''
+        Adds a new fermenter type
+        '''
+        data = flask.request.get_json();
+
+        for field in ['name', 'capacity', 'imageurl']:
+            if not field in data:
+                return {'status': 'error',
+                        'message': 'field {f} missing'.format(f=field)}, 400
+            pass
+
+        db = aegir.db.Connection()
+        try:
+            fermd = db.getFermd(fermdid)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'No such fermd: {e}'.format(e=str(e))},400
+
+        zmq = aegir.zmq.ZMQReq(fermd.address)
+        resp = zmq.prmessage('addFermenterTypes', data)
+        return {'status': 'success',
+                'data': resp['data']}
+    pass
+
+class FermenterType(flask_restful.Resource):
+    def delete(self, fermdid, ftid):
+        db = aegir.db.Connection()
+        try:
+            fermd = db.getFermd(fermdid)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'No such fermd: {e}'.format(e=str(e))},400
+
+        zmq = aegir.zmq.ZMQReq(fermd.address)
+        resp = zmq.prmessage('deleteFermenterTypes', {'id': ftid})
+        return {'status': 'success'}
+
+    def post(self, fermdid, ftid):
+        '''
+        Updates a fermenter type
+        '''
+        data = flask.request.get_json();
+
+        for field in ['name', 'capacity', 'imageurl']:
+            if not field in data:
+                return {'status': 'error',
+                        'message': 'field {f} missing'.format(f=field)}, 400
+            pass
+
+        db = aegir.db.Connection()
+        try:
+            fermd = db.getFermd(fermdid)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'No such fermd: {e}'.format(e=str(e))},400
+
+        zmq = aegir.zmq.ZMQReq(fermd.address)
+        resp = zmq.prmessage('updateFermenterTypes', {'id': ftid,
+                                                      'name': data['name'],
+                                                      'capacity': int(data['capacity']),
+                                                      'imageurl': data['imageurl']})
+        return {'status': 'success'}
+    pass
+
+class Fermenters(flask_restful.Resource):
+    def get(self, fermdid):
+        db = aegir.db.Connection()
+        try:
+            fermd = db.getFermd(fermdid)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'No such fermd: {e}'.format(e=str(e))},400
+
+        zmq = aegir.zmq.ZMQReq(fermd.address)
+        resp = zmq.prmessage('getFermenters')
+        return {'status': 'success',
+                'data': resp['data']}
+
     pass

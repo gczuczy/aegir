@@ -292,6 +292,11 @@ class Fermd():
             pass
         pass
 
+    def __repr__(self):
+        return '<Fermd({i}, {name}, {address})>'.format(i = self._data['id'],
+                                                        name = self._data['name'],
+                                                        address = self._data['address'])
+
     @property
     def fermdid(self):
         return self._data['id']

@@ -104,7 +104,7 @@ export class SettingsComponent implements OnInit {
   }
 
   addFermd(model: FormGroup) {
-    console.log('Clicked', model);
+    //console.log('Clicked', model);
     this.errors = [];
     let fermd: apiFermd = {
       name: model.get('name')!.value,

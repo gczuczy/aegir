@@ -3,6 +3,8 @@ import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
+import { AccordionModule } from 'ngx-bootstrap/accordion';
+
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 
@@ -22,6 +24,9 @@ import { EditProgramComponent } from './edit-program/edit-program.component';
 import { LoadProgramComponent } from './load-program/load-program.component';
 import { NgChartsModule } from 'ng2-charts';
 import { FermdComponent } from './fermd.component';
+import { TilthydrometersComponent } from './tilthydrometers/tilthydrometers.component';
+import { FermentertypesComponent } from './fermentertypes/fermentertypes.component';
+import { FermentersComponent } from './fermenters/fermenters.component';
 
 @NgModule({
   declarations: [
@@ -34,7 +39,10 @@ import { FermdComponent } from './fermd.component';
     AddProgramComponent,
     EditProgramComponent,
     LoadProgramComponent,
-    FermdComponent
+    FermdComponent,
+    TilthydrometersComponent,
+    FermentertypesComponent,
+    FermentersComponent
   ],
   imports: [
     BrowserModule,
@@ -45,7 +53,8 @@ import { FermdComponent } from './fermd.component';
     FormsModule,
     ReactiveFormsModule,
     FontAwesomeModule,
-    NgChartsModule
+    NgChartsModule,
+    AccordionModule,
   ],
   providers: [],
   bootstrap: [AppComponent]

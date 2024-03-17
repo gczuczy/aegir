@@ -1,0 +1,47 @@
+<accordion>
+  <accordion-group heading="Assigned"
+		   [isOpen]="isopen_assigned">
+    Assigned
+  </accordion-group>
+  <accordion-group heading="Enabled"
+		   [isOpen]="isopen_enabled">
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+      <!-- a tilt -->
+      <div class="col"
+	   *ngFor="let tilt of enabledTilts()">
+	<div class="card h-100">
+	  <span class="card-img-top" style="background-color: {{tilt.color}}">
+	    &nbsp;</span>
+	  <div class="card-body">
+	    <h5 class="card-title">{{tilt.color}}</h5>
+	    <div class="card-text">
+	      <strong>{{tilt.uuid}}</strong>
+	      <button class="btn btn-danger btn-sm"
+		      (click)="disableTilt(tilt.id!)">Disable</button>
+	    </div>
+	  </div> <!-- body -->
+	</div> <!-- card -->
+      </div> <!-- row -->
+    </div> <!-- row for group -->
+  </accordion-group>
+  <accordion-group heading="disabled">
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+      <!-- a tilt -->
+      <div class="col"
+	   *ngFor="let tilt of disabledTilts()">
+	<div class="card h-100">
+	  <span class="card-img-top" style="background-color: {{tilt.color}}">
+	    &nbsp;</span>
+	  <div class="card-body">
+	    <h5 class="card-title">{{tilt.color}}</h5>
+	    <div class="card-text">
+	      <strong>{{tilt.uuid}}</strong>
+	      <button class="btn btn-success btn-sm"
+		      (click)="enableTilt(tilt.id!)">Enable</button>
+	    </div>
+	  </div> <!-- body -->
+	</div> <!-- card -->
+      </div> <!-- row -->
+    </div> <!-- row for group -->
+  </accordion-group>
+</accordion>

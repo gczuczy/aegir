@@ -40,7 +40,6 @@ export class FermdComponent implements OnInit {
   }
 
   setFermd() {
-    console.log('Loading fermd', this.fermdid, this.fermds)
     if ( this.fermdid == null ) return;
     if ( this.fermds == null ) return;
     for (var fermd of this.fermds!) {

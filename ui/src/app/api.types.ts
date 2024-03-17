@@ -129,6 +129,7 @@ export interface apiFermd {
 
 export interface apiFermenterType {
   id?: number,
+  name: string,
   capacity: number,
   imageurl: string,
 }
@@ -147,5 +148,5 @@ export interface apiTilthydrometer {
   calibr_null?: number,
   calibr_at?: number,
   calibr_sg?: number,
-  fermenter?: apiFermenter,
+  fermenter?: apiFermenter|string,
 }

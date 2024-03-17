@@ -12,6 +12,11 @@ import { EditProgramComponent } from './edit-program/edit-program.component';
 import { LoadProgramComponent } from './load-program/load-program.component';
 
 import { FermdComponent } from './fermd.component';
+import { TilthydrometersComponent
+       } from './tilthydrometers/tilthydrometers.component';
+import { FermentertypesComponent
+       } from './fermentertypes/fermentertypes.component';
+import { FermentersComponent } from './fermenters/fermenters.component';
 
 export const PROGRAMS_ROUTES: Routes = [
   { path: '', redirectTo: 'add', pathMatch: 'full' },
@@ -19,7 +24,14 @@ export const PROGRAMS_ROUTES: Routes = [
   { path: ':id/edit', component: EditProgramComponent },
   { path: ':id/view', component: ProgramComponent },
   { path: ':id/load', component: LoadProgramComponent },
-]
+];
+
+export const FERMD_ROUTES: Routes = [
+  { path: '', redirectTo: 'fermenters', pathMatch: 'full' },
+  { path: 'fermentertypes', component: FermentertypesComponent },
+  { path: 'fermenters', component: FermentersComponent },
+  { path: 'tilthydrometers', component: TilthydrometersComponent },
+];
 
 const routes: Routes = [
   { path: '', redirectTo: 'programs', pathMatch: 'full' },
@@ -28,7 +40,8 @@ const routes: Routes = [
     children: PROGRAMS_ROUTES},
   { path: 'maintenance', component: MaintenanceComponent},
   { path: 'settings', component: SettingsComponent },
-  { path: 'fermd/:fermdid', component: FermdComponent },
+  { path: 'fermd/:fermdid', component: FermdComponent,
+    children: FERMD_ROUTES },
 ];
 
 @NgModule({
