@@ -1,3 +1,11 @@
+
+export interface apiResponse {
+  status: string,
+  data?: any,
+  message?: string,
+  errors?: string[],
+};
+
 export interface apiStateTemps {
   BK: number;
   HLT: number;
@@ -40,11 +48,6 @@ export interface apiStateData {
   hopping?: apiStateHopping,
 };
 
-export interface apiStateResponse {
-  status: string;
-  data?: apiStateData;
-};
-
 export interface apiConfig {
   status?: string,
   hepower: string,
@@ -54,11 +57,6 @@ export interface apiConfig {
   hedelay: number,
   loglevel: string,
 };
-
-export interface apiConfigResponse {
-  data: apiConfig;
-  status: string
-}
 
 export interface apiProgramMashStep {
   id?: number,
@@ -86,39 +84,12 @@ export interface apiProgram {
   hops: apiProgramHopStep[]
 }
 
-export interface apiProgramsResponse {
-  data: apiProgram[],
-  status: string
-}
-
-export interface apiProgramResponse {
-  data: apiProgram,
-  status: string
-}
-
-export interface apiProgramDeleteResponse {
-  status: string,
-  errors: string[]
-}
-
-export interface apiAddProgramData {
+export interface apiAddProgram {
   progid: number,
-}
-
-export interface apiAddProgramResponse {
-  status: string,
-  data: apiAddProgramData,
-  errors: string[]
 }
 
 export interface apiSaveProgramData {
   progid: number,
-}
-
-export interface apiSaveProgramResponse {
-  status: string,
-  data: apiSaveProgramData,
-  errors: string[]
 }
 
 export interface apiBrewStateVolumeData {
@@ -131,17 +102,11 @@ export interface apiBrewStateVolume {
   errors: string[]
 }
 
-export interface apiBrewTempHistoryData {
+export interface apiBrewTempHistory {
   dt: number[],
   rims: number[],
   mt: number[],
   last: number,
-}
-
-export interface apiBrewTempHistoryResponse {
-  status: string,
-  data: apiBrewTempHistoryData,
-  errors: string[]
 }
 
 export enum LoadProgramStartMode {
@@ -154,4 +119,34 @@ export interface apiBrewLoadProgramRequest {
   startat: string,
   startmode: LoadProgramStartMode,
   volume: number
+}
+
+export interface apiFermd {
+  id?: number,
+  name: string,
+  address: string,
+}
+
+export interface apiFermenterType {
+  id?: number,
+  name: string,
+  capacity: number,
+  imageurl: string,
+}
+
+export interface apiFermenter {
+  id?: number,
+  name: string,
+  type: apiFermenterType,
+}
+
+export interface apiTilthydrometer {
+  id?: number,
+  color: string,
+  uuid: string,
+  enabled: boolean,
+  calibr_null?: number,
+  calibr_at?: number,
+  calibr_sg?: number,
+  fermenter?: apiFermenter|string,
 }

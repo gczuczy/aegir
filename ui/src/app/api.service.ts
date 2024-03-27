@@ -1,19 +1,19 @@
 import { Injectable } from '@angular/core';
 
-import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpHeaders,
+	 HttpErrorResponse } from '@angular/common/http';
 
-import { timer, Observable, BehaviorSubject } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { timer, Observable, BehaviorSubject, throwError,
+	 interval } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 
-import { apiStateResponse, apiStateData,
-	 apiConfigResponse, apiConfig,
-	 apiProgramsResponse, apiProgram,
-	 apiProgramResponse, apiProgramDeleteResponse,
-	 apiAddProgramResponse, apiAddProgramData,
-	 apiSaveProgramResponse, apiSaveProgramData,
+import { apiResponse,
+	 apiStateData, apiConfig, apiProgram,
+	 apiAddProgram, apiSaveProgramData,
 	 apiBrewStateVolume, apiBrewStateVolumeData,
-	 apiBrewTempHistoryResponse, apiBrewTempHistoryData,
-	 apiBrewLoadProgramRequest
+	 apiBrewTempHistory, apiBrewLoadProgramRequest,
+	 apiFermd, apiTilthydrometer, apiFermenterType,
+	 apiFermenter
        } from './api.types';
 
 @Injectable({
@@ -29,9 +29,9 @@ export class ApiService {
   private timer_temphistory;
   private timer_temphistory_sub;
   private state_data = 'Empty';
-  public temphistory$ = new BehaviorSubject<apiBrewTempHistoryData|null>(null);
+  public temphistory$ = new BehaviorSubject<apiBrewTempHistory|null>(null);
   private temphistory_last:number = 0;
-  private temphistory_data:apiBrewTempHistoryData|null = null;
+  private temphistory_data:apiBrewTempHistory|null = null;
   private state = new BehaviorSubject(<apiStateData>{
     levelerror: false,
     state: 'Empty',
@@ -43,25 +43,42 @@ export class ApiService {
       RIMS: 0
     }
   });
+  public fermds$ = new BehaviorSubject<apiFermd[]|null>(null);
+  private timer_fermds;
+  private timer_fermds_sub;
 
   constructor(private http: HttpClient) {
     //console.log('ApiService ctor');
     this.timer_state = timer(1000, 1000);
-    this.timer_state_sub = this.timer_state.subscribe((t:any) => {this.updateState(t)});
-    this.timer_temphistory = timer(1000,5000);
+    this.timer_state_sub = this.timer_state.subscribe(
+      (t:any) => {this.updateState(t)}
+    );
+    this.timer_temphistory = timer(1000, 1000);
     this.timer_temphistory_sub = this.timer_temphistory.subscribe(
       (t:any) => {
-	this.updateTempHistory(t)
+	if ( t%5 == 0 ) this.updateTempHistory(t)
       }
     );
+    this.timer_fermds = timer(100, 1000);
+    this.timer_fermds_sub = this.timer_state.subscribe(
+      (t:any) => {
+	if ( t%10 == 0 ) this.updateFermds(t);
+      }
+    );
+  }
+
+  private handleErrors(error: HttpErrorResponse) {
+    //console.log("Error code: ", error.status);
+    return throwError(() => new Error('lofasz'));
   }
 
   updateState(t:any) {
     this.http.get('/api/brewd/state')
       .pipe(
-	map(res => <apiStateResponse>res)
+	catchError(this.handleErrors),
+	map(res => <apiResponse>res)
       )
-      .subscribe((res:apiStateResponse) => {
+      .subscribe((res:apiResponse) => {
 	//console.log('ApiService::updateState', res);
 	if ( res.data == null ) return;
 
@@ -75,7 +92,6 @@ export class ApiService {
 	}
 	this.state.next(res.data);
       }, (err:any) => {
-	console.log('updateState/err', err);
       });
   }
 
@@ -93,10 +109,10 @@ export class ApiService {
 
     this.http.get(`/api/brewd/state/temphistory`, {'params': params})
       .pipe(
-	map(res => (<apiBrewTempHistoryResponse>res).data)
+	map(res => <apiBrewTempHistory>((<apiResponse>res).data))
       )
       .subscribe(
-	(data:apiBrewTempHistoryData) => {
+	(data:apiBrewTempHistory) => {
 	  //console.log('temphistory result', data);
 	  this.temphistory_last = data.last;
 
@@ -116,8 +132,8 @@ export class ApiService {
 	});
   }
 
-  getAllTempHistory(): apiBrewTempHistoryData {
-    return this.temphistory_data as apiBrewTempHistoryData;
+  getAllTempHistory(): apiBrewTempHistory {
+    return this.temphistory_data as apiBrewTempHistory;
   }
 
   startMaintenance(): Observable<any> {
@@ -150,7 +166,8 @@ export class ApiService {
   getConfig(): Observable<apiConfig> {
     return this.http.get('/api/brewd/config')
       .pipe(
-	map(res => (<apiConfigResponse>res).data)
+	catchError(this.handleErrors),
+	map(res => <apiConfig>((<apiResponse>res).data))
       );
   }
 
@@ -158,8 +175,6 @@ export class ApiService {
     let body = JSON.stringify(cfg);
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
-
-    //console.log('calling /api/brewd/state', body, options);
 
     return this.http.post('/api/brewd/config', body, options);
   }
@@ -171,32 +186,32 @@ export class ApiService {
   getPrograms(): Observable<apiProgram[]> {
     return this.http.get('/api/programs')
       .pipe(
-	map(res => (<apiProgramsResponse>res).data)
+	map(res => <apiProgram[]>((<apiResponse>res).data))
       );
   }
 
   getProgram(progid: number): Observable<apiProgram> {
     return this.http.get(`/api/programs/${progid}`)
       .pipe(
-	map(res => (<apiProgramResponse>res).data)
+	map(res => <apiProgram>((<apiResponse>res).data))
       );
   }
 
-  delProgram(progid: number): Observable<apiProgramDeleteResponse> {
+  delProgram(progid: number): Observable<apiResponse> {
     return this.http.delete(`/api/programs/${progid}`)
       .pipe(
-	map(res => <apiProgramDeleteResponse>res)
+	map(res => <apiResponse>res)
       );
   }
 
-  addProgram(data: apiProgram): Observable<apiAddProgramData> {
+  addProgram(data: apiProgram): Observable<apiAddProgram> {
     let body = JSON.stringify(data);
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
 
     return this.http.post('/api/programs', body, options).
       pipe(
-	map(res => (<apiAddProgramResponse>res).data)
+	map(res => <apiAddProgram>((<apiResponse>res).data))
       );
   }
 
@@ -207,7 +222,7 @@ export class ApiService {
 
     return this.http.post(`/api/programs/${data.id}`, body, options).
       pipe(
-	map(res => (<apiSaveProgramResponse>res).data)
+	map(res => <apiSaveProgramData>((<apiResponse>res).data))
       );
   }
 
@@ -215,8 +230,6 @@ export class ApiService {
     let body = JSON.stringify({'command': 'hasMalt'});
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
-
-    //console.log('calling /api/brewd/state', body, options);
 
     return this.http.post('/api/brewd/state', body, options);
   }
@@ -226,8 +239,6 @@ export class ApiService {
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
 
-    //console.log('calling /api/brewd/state', body, options);
-
     return this.http.post('/api/brewd/state', body, options);
   }
 
@@ -235,8 +246,6 @@ export class ApiService {
     let body = JSON.stringify({'command': 'coolingDone'});
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
-
-    //console.log('calling /api/brewd/state', body, options);
 
     return this.http.post('/api/brewd/state', body, options);
   }
@@ -246,14 +255,13 @@ export class ApiService {
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
 
-    //console.log('calling /api/brewd/state', body, options);
-
     return this.http.post('/api/brewd/state', body, options);
   }
 
   getVolume(): Observable<apiBrewStateVolumeData> {
     return this.http.get('/api/brewd/state/volume').
       pipe(
+	catchError(this.handleErrors),
 	map(res => (<apiBrewStateVolume>res).data)
       );
   }
@@ -273,8 +281,6 @@ export class ApiService {
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
 
-    //console.log('calling /api/brewd/state', body, options);
-
     return this.http.post('/api/brewd/state', body, options);
   }
 
@@ -282,8 +288,6 @@ export class ApiService {
     let body = JSON.stringify({'command': 'reset'});
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
-
-    //console.log('calling /api/brewd/state', body, options);
 
     return this.http.post('/api/brewd/state', body, options);
   }
@@ -303,8 +307,6 @@ export class ApiService {
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
 
-    //console.log("Setting volume to ", volume, body, headers, options);
-
     return this.http.post('/api/brewd/state/cooltemp', body, options);
   }
 
@@ -314,6 +316,101 @@ export class ApiService {
     let options = {'headers': headers};
 
     return this.http.post('/api/brewd/program', body, options);
+  }
+
+  updateFermds(t: any) {
+    this.http.get('/api/fermds').
+      pipe(
+	catchError(this.handleErrors),
+	map(res => <apiFermd[]>((<apiResponse>res).data))
+      ).subscribe(
+	(data:apiFermd[]) => {
+	  this.fermds$.next(data);
+	},
+	(err:any) => {
+	  this.fermds$.next(null);
+	}
+      );
+  }
+
+  addFermd(data: apiFermd): Observable<apiFermd> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post('/api/fermds', body, options)
+      .pipe(
+	map(res => <apiFermd>((<apiResponse>res).data))
+      );
+  }
+
+  getTilthydrometers(fermdid: number): Observable<apiTilthydrometer[]> {
+    return this.http.get(`/api/fermds/${fermdid}/tilthydrometers`)
+      .pipe(
+	catchError(this.handleErrors),
+	map(res => <apiTilthydrometer[]>((<apiResponse>res).data))
+      )
+  }
+
+  updateTilthydrometer(fermdid: number,
+		       tiltid: number,
+		       data: Map<string, string|number|boolean>): Observable<apiTilthydrometer> {
+    let body = JSON.stringify(Object.fromEntries(data.entries()));
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post(`/api/fermds/${fermdid}/tilthydrometers/${tiltid}`,
+			  body, options)
+      .pipe(
+	map(res => <apiTilthydrometer>((<apiResponse>res).data))
+      );
+  }
+
+  getFermenterTypes(fermdid: number): Observable<apiFermenterType[]> {
+    return this.http.get(`/api/fermds/${fermdid}/fermentertypes`)
+      .pipe(
+	catchError(this.handleErrors),
+	map(res => <apiFermenterType[]>((<apiResponse>res).data))
+      )
+  }
+
+  addFermenterType(fermdid: number,
+		   data: apiFermenterType): Observable<apiFermenterType> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post(`/api/fermds/${fermdid}/fermentertypes`,
+			  body, options)
+      .pipe(
+	map(res => <apiFermenterType>((<apiResponse>res).data))
+      );
+  }
+
+  updateFermenterType(fermdid: number,
+		      ftid: number,
+		      data: apiFermenterType): Observable<apiFermenterType> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post(`/api/fermds/${fermdid}/fermentertypes/${ftid}`,
+			  body, options)
+      .pipe(
+	map(res => <apiFermenterType>((<apiResponse>res).data))
+      );
+  }
+
+  delFermenterType(fermdid: number,
+		   ftid: number): Observable<any> {
+    return this.http.delete(`/api/fermds/${fermdid}/fermentertypes/${ftid}`)
+      .pipe(
+	map(res => <apiResponse>res)
+      );
+  }
+
+  getFermenters(fermdid: number): Observable<apiFermenter[]> {
+    return this.http.get(`/api/fermds/${fermdid}/fermenters`)
+      .pipe(
+	catchError(this.handleErrors),
+	map(res => <apiFermenter[]>((<apiResponse>res).data))
+      )
   }
 
 }

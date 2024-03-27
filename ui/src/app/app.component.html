@@ -11,6 +11,15 @@
       <!-- conditional maintenance -->
       <li *ngIf="canmaint" class="nav-item" routerLinkActive="active">
 	<a class="nav-link" routerLink="/maintenance" routerLinkActive="active">Maintenance</a></li>
+      <!-- fermentation -->
+      <li *ngIf="fermds != null" class="nav-item dropdown">
+	<a href="$" class="nav-link dropdown-toggle"
+	   data-bs-toggle="dropdown">Fermentation</a>
+	<div class="dropdown-menu dropdown-menu-dark">
+	  <a *ngFor="let fermd of fermds" class="dropdown-item"
+	     routerLink="/fermd/{{fermd.id}}" routerLinkActive="active">{{fermd.name}}</a>
+	</div>
+      </li>
     </ul>
     <!-- settings on the right -->
   </div>
