@@ -13,7 +13,7 @@ import { apiResponse,
 	 apiBrewStateVolume, apiBrewStateVolumeData,
 	 apiBrewTempHistory, apiBrewLoadProgramRequest,
 	 apiFermd, apiTilthydrometer, apiFermenterType,
-	 apiFermenter
+	 apiFermenter, apiSensorCache,
        } from './api.types';
 
 @Injectable({
@@ -353,7 +353,7 @@ export class ApiService {
 
   updateTilthydrometer(fermdid: number,
 		       tiltid: number,
-		       data: Map<string, string|number|boolean>): Observable<apiTilthydrometer> {
+		       data: Map<string, any>): Observable<apiTilthydrometer> {
     let body = JSON.stringify(Object.fromEntries(data.entries()));
     let headers = new HttpHeaders({'Content-Type': 'application/json'});
     let options = {'headers': headers};
@@ -410,6 +410,14 @@ export class ApiService {
       .pipe(
 	catchError(this.handleErrors),
 	map(res => <apiFermenter[]>((<apiResponse>res).data))
+      )
+  }
+
+  getSensorCache(fermdid: number): Observable<apiSensorCache> {
+    return this.http.get(`/api/fermds/${fermdid}/sensorcache`)
+      .pipe(
+	catchError(this.handleErrors),
+	map(res => <apiSensorCache>((<apiResponse>res).data))
       )
   }
 

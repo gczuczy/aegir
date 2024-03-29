@@ -19,6 +19,7 @@ def init(app, api):
     api.add_resource(FermenterTypes, '/api/fermds/<int:fermdid>/fermentertypes')
     api.add_resource(FermenterType, '/api/fermds/<int:fermdid>/fermentertypes/<int:ftid>')
     api.add_resource(Fermenters, '/api/fermds/<int:fermdid>/fermenters')
+    api.add_resource(SensorCache, '/api/fermds/<int:fermdid>/sensorcache')
     pass
 
 class Fermds(flask_restful.Resource):
@@ -69,10 +70,14 @@ class TiltHydrometers(flask_restful.Resource):
             return {'status': 'error',
                     'message': 'No such fermd: {e}'.format(e=str(e))},400
 
-        zmq = aegir.zmq.ZMQReq(fermd.address)
-        resp = zmq.prmessage('getTilthydrometers')
-        return {'status': 'success',
-                'data': resp['data']}
+        try:
+            zmq = aegir.zmq.ZMQReq(fermd.address)
+            resp = zmq.prmessage('getTilthydrometers')
+            return {'status': 'success',
+                    'data': resp['data']}
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'ZMQ error: {e}'.format(e=str(e))},400
     pass
 
 class TiltHydrometer(flask_restful.Resource):
@@ -105,10 +110,14 @@ class FermenterTypes(flask_restful.Resource):
             return {'status': 'error',
                     'message': 'No such fermd: {e}'.format(e=str(e))},400
 
-        zmq = aegir.zmq.ZMQReq(fermd.address)
-        resp = zmq.prmessage('getFermenterTypes')
-        return {'status': 'success',
-                'data': resp['data']}
+        try:
+            zmq = aegir.zmq.ZMQReq(fermd.address)
+            resp = zmq.prmessage('getFermenterTypes')
+            return {'status': 'success',
+                    'data': resp['data']}
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'ZMQ error: {e}'.format(e=str(e))},400
 
     def post(self, fermdid):
         '''
@@ -129,10 +138,14 @@ class FermenterTypes(flask_restful.Resource):
             return {'status': 'error',
                     'message': 'No such fermd: {e}'.format(e=str(e))},400
 
-        zmq = aegir.zmq.ZMQReq(fermd.address)
-        resp = zmq.prmessage('addFermenterTypes', data)
-        return {'status': 'success',
-                'data': resp['data']}
+        try:
+            zmq = aegir.zmq.ZMQReq(fermd.address)
+            resp = zmq.prmessage('addFermenterTypes', data)
+            return {'status': 'success',
+                    'data': resp['data']}
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'ZMQ error: {e}'.format(e=str(e))},400
     pass
 
 class FermenterType(flask_restful.Resource):
@@ -144,9 +157,13 @@ class FermenterType(flask_restful.Resource):
             return {'status': 'error',
                     'message': 'No such fermd: {e}'.format(e=str(e))},400
 
-        zmq = aegir.zmq.ZMQReq(fermd.address)
-        resp = zmq.prmessage('deleteFermenterTypes', {'id': ftid})
-        return {'status': 'success'}
+        try:
+            zmq = aegir.zmq.ZMQReq(fermd.address)
+            resp = zmq.prmessage('deleteFermenterTypes', {'id': ftid})
+            return {'status': 'success'}
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'ZMQ error: {e}'.format(e=str(e))},400
 
     def post(self, fermdid, ftid):
         '''
@@ -167,12 +184,17 @@ class FermenterType(flask_restful.Resource):
             return {'status': 'error',
                     'message': 'No such fermd: {e}'.format(e=str(e))},400
 
-        zmq = aegir.zmq.ZMQReq(fermd.address)
-        resp = zmq.prmessage('updateFermenterTypes', {'id': ftid,
-                                                      'name': data['name'],
-                                                      'capacity': int(data['capacity']),
-                                                      'imageurl': data['imageurl']})
-        return {'status': 'success'}
+        try:
+            zmq = aegir.zmq.ZMQReq(fermd.address)
+            resp = zmq.prmessage('updateFermenterTypes', {'id': ftid,
+                                                          'name': data['name'],
+                                                          'capacity': int(data['capacity']),
+                                                          'imageurl': data['imageurl']})
+            return {'status': 'success'}
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'ZMQ error: {e}'.format(e=str(e))},400
+
     pass
 
 class Fermenters(flask_restful.Resource):
@@ -184,9 +206,32 @@ class Fermenters(flask_restful.Resource):
             return {'status': 'error',
                     'message': 'No such fermd: {e}'.format(e=str(e))},400
 
-        zmq = aegir.zmq.ZMQReq(fermd.address)
-        resp = zmq.prmessage('getFermenters')
-        return {'status': 'success',
-                'data': resp['data']}
+        try:
+            zmq = aegir.zmq.ZMQReq(fermd.address)
+            resp = zmq.prmessage('getFermenters')
+            return {'status': 'success',
+                    'data': resp['data']}
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'ZMQ error: {e}'.format(e=str(e))},400
 
     pass
+
+class SensorCache(flask_restful.Resource):
+    def get(self, fermdid):
+        db = aegir.db.Connection()
+        try:
+            fermd = db.getFermd(fermdid)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'No such fermd: {e}'.format(e=str(e))},400
+
+        try:
+            zmq = aegir.zmq.ZMQReq(fermd.address)
+            resp = zmq.prmessage('getSensorCache')
+            return {'status': 'success',
+                    'data': resp['data']}
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'ZMQ error: {e}'.format(e=str(e))},400
+

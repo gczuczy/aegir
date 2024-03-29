@@ -150,3 +150,14 @@ export interface apiTilthydrometer {
   calibr_sg?: number,
   fermenter?: apiFermenter|string,
 }
+
+export interface apiSensorCacheTilthydrometer {
+  uuid: string,
+  time: string,
+  temp: number,
+  sg: number,
+};
+
+export interface apiSensorCache {
+  tilthydrometers: apiSensorCacheTilthydrometer[],
+};
