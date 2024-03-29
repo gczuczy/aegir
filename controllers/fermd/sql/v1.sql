@@ -30,8 +30,8 @@ CREATE TABLE fermenters (
 );
 
 INSERT INTO fermenters (name, typeid) VALUEs
-('Chronical2.0 1', 2),
-('Chronical2.0 2', 2)
+('Fermenter 1', 2),
+('Fermenter 2', 2)
 ;
 
 
