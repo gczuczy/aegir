@@ -213,15 +213,20 @@ namespace aegir {
 	}
 
 	if ( _node.has_child("fermenter") ) {
-	  if ( _node["fermenter"].has_child("id") ) {
+	  ryml::ConstNodeRef f = _node["fermenter"];
+	  if ( f.has_val() ) {
+	    if ( f.val_is_null() ) {
+	      _th.fermenter = nullptr;
+	    } else {
+	      throw Exception("fermenter is a scalar but not null");
+	    }
+	  } else if ( f.is_container() ) {
 	    int fid;
 	    _node["fermenter"]["id"] >> fid;
 	    _th.fermenter = ServiceManager::get<DB::Connection>()
 	      ->getFermenterByID(fid);
 	    if ( !_th.fermenter )
 	      throw Exception("Fermenter with id %i not found", fid);
-	  } else {
-	    _th.fermenter = nullptr;
 	  }
 	}
 	return _node;
