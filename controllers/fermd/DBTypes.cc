@@ -12,6 +12,9 @@
 
 #include <boost/core/demangle.hpp>
 
+#define CONDEXTRACT(FIELD) \
+  if ( _node.has_child(#FIELD) ) _node[#FIELD] >> _data.FIELD
+
 namespace aegir {
   namespace fermd {
     namespace DB {
@@ -229,6 +232,45 @@ namespace aegir {
 	      throw Exception("Fermenter with id %i not found", fid);
 	  }
 	}
+	return _node;
+      }
+
+      yeast& yeast::operator=(Result& r) {
+	if ( r.hasField("id") )
+	  id = r.fetch<int>("id");
+
+	name = r.fetch<std::string>("name");
+	attenuation = r.fetch<float>("attenuation");
+	abv = r.fetch<float>("abv");
+	mintemp = r.fetch<float>("mintemp");
+	maxtemp = r.fetch<float>("maxtemp");
+
+	return *this;
+      }
+
+      ryml::NodeRef& operator<<(ryml::NodeRef& _node, const yeast& _data) {
+	auto tree = _node.tree();
+	_node |= ryml::MAP;
+	_node["id"] << _data.id;
+	auto name = tree->to_arena(_data.name);
+	_node["name"] << name;
+	_node["attenuation"] << ryml::fmt::real(_data.attenuation, 1);
+	_node["abv"] << ryml::fmt::real(_data.abv, 1);
+	_node["mintemp"] << ryml::fmt::real(_data.mintemp, 1);
+	_node["maxtemp"] << ryml::fmt::real(_data.maxtemp, 1);
+	return _node;
+      }
+
+      ryml::ConstNodeRef& operator>>(ryml::ConstNodeRef& _node, yeast& _data) {
+	if ( _node.has_child("id") )
+	  _node["id"] >> _data.id;
+
+	CONDEXTRACT(name);
+	CONDEXTRACT(attenuation);
+	CONDEXTRACT(abv);
+	CONDEXTRACT(mintemp);
+	CONDEXTRACT(maxtemp);
+
 	return _node;
       }
     } // ns DB

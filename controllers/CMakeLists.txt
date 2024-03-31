@@ -233,7 +233,7 @@ target_link_options(tests_fermd
 
 target_link_libraries(tests_fermd
   PRIVATE
-  Catch2::Catch2WithMain
+  Catch2::Catch2
   Boost::log
   yaml-cpp::yaml-cpp
   zmq

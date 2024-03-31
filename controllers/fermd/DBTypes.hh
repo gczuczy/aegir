@@ -87,6 +87,18 @@ namespace aegir {
 	fermenter::cptr fermenter;
       };
       DBTSTUFF(tilthydrometer);
+
+      struct yeast {
+	DBTPTRS(yeast);
+	yeast& operator=(Result&);
+	int id;
+	std::string name;
+	float attenuation;
+	float abv;
+	float mintemp;
+	float maxtemp;
+      };
+      DBTSTUFF(yeast);
     } // ns DB
   } // ns fermd
 } // ns aegir

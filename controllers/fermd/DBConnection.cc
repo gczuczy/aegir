@@ -7,8 +7,14 @@ namespace aegir {
   namespace fermd {
     namespace DB {
       static void s3log(void* _logger, int _errcode, const char* _msg) {
+#if 0
 	LogChannel *lc = (LogChannel*)_logger;
+	printf("Logchannel: %p\n", (void*)lc);
 	lc->error("SQLite3(%i) error: %s", _errcode, _msg);
+#else
+	LogChannel lc("SQLite3");
+	lc.error("SQLite3(%i) error: %s", _errcode, _msg);
+#endif
       }
 
       Connection::Connection(): ConfigNode(), Service(), LogChannel("DB"),
@@ -157,6 +163,23 @@ namespace aegir {
 	prepare("delete_fermenters",
 		"DELETE FROM fermenters WHERE id=:id ");
 
+	// yeasts
+	prepare("get_yeasts",
+		"SELECT id,name,attenuation,abv,mintemp,maxtemp FROM yeasts");
+	prepare("update_yeasts",
+		"UPDATE yeasts "
+		"SET name=:name,attenuation=:attenuation,"
+		"abv=:abv,mintemp=:mintemp,maxtemp=:maxtemp "
+		"WHERE id=:id "
+		"RETURNING id,name,attenuation,abv,mintemp,maxtemp");
+	prepare("insert_yeasts",
+		"INSERT INTO yeasts "
+		"(name, attenuation, abv, mintemp, maxtemp) "
+		"VALUES (:name,:attenuation,:abv,:mintemp,:maxtemp) "
+		"RETURNING id,name,attenuation,abv,mintemp,maxtemp");
+	prepare("delete_yeasts",
+		"DELETE FROM yeasts WHERE id=:id ");
+
 	reload();
       } // init
 
@@ -170,6 +193,7 @@ namespace aegir {
 	reload_fermenter_types();
 	reload_fermenters();
 	reload_tilthydrometers();
+	reload_yeasts();
       }
 
       void Connection::reload_fermenter_types() {
@@ -208,6 +232,18 @@ namespace aegir {
 	}
       } // reload_tilthydrometers
 
+      void Connection::reload_yeasts() {
+	std::unique_lock g(c_mtx_yeasts);
+
+	cache_yeasts.clear();
+	for ( auto r=c_statements.find("get_yeasts")->second.execute();
+	      r; ++r ) {
+	  auto th = std::make_shared<yeast>();
+	  *th = r;
+	  cache_yeasts.emplace_back(th);
+	}
+      }
+
       tilthydrometer_cdb Connection::getTilthydrometers() const {
 	std::shared_lock g(c_mtx_tilthydrometers);
 	std::list<tilthydrometer::cptr> ret;
@@ -243,9 +279,12 @@ namespace aegir {
 	}
 
 	if ( _item.calibr_sg ) {
+	  //printf("Binding calibrat to %.2f\n", _item.calibr_sg->at);
 	  stmt.bind(":calibrat", _item.calibr_sg->at);
+	  //printf("Binding calibrsg to %.2f\n", _item.calibr_sg->sg);
 	  stmt.bind(":calibrsg", _item.calibr_sg->sg);
 	} else {
+	  //printf("binding calibr at+sg @ nul\n");
 	  stmt.bind(":calibrat");
 	  stmt.bind(":calibrsg");
 	}
@@ -397,6 +436,79 @@ namespace aegir {
 	  }
 	}
       }
+
+      /*
+       * Yeasts
+       */
+      yeast_cdb Connection::getYeasts() const {
+	std::shared_lock g(c_mtx_yeasts);
+	std::list<yeast::cptr> ret;
+	for (auto it: cache_yeasts)
+	  ret.emplace_back(std::const_pointer_cast<const yeast>(it));
+	return ret;
+      }
+
+      yeast::cptr Connection::getYeastByID(int _id) const {
+	std::shared_lock g(c_mtx_yeasts);
+	for (auto it: cache_yeasts)
+	  if ( it->id == _id) return it;
+	return nullptr;
+      }
+
+      void Connection::updateYeast(const yeast& _item) {
+	std::unique_lock g(c_mtx_yeasts);
+	auto& stmt(c_statements.find("update_yeasts")->second);
+	stmt.bind(":id", _item.id);
+	stmt.bind(":name", _item.name);
+	stmt.bind(":attenuation", _item.attenuation);
+	stmt.bind(":abv", _item.abv);
+	stmt.bind(":mintemp", _item.mintemp);
+	stmt.bind(":maxtemp", _item.maxtemp);
+
+	auto r(stmt.execute());
+	int id = r.fetch<int>("id");
+	for (auto& ft: cache_yeasts) {
+	  if ( ft->id == id ) {
+	    *ft = r;
+	    break;
+	  }
+	}
+      }
+
+      yeast::cptr Connection::addYeast(const yeast& _item) {
+	std::unique_lock g(c_mtx_yeasts);
+	auto& stmt(c_statements.find("insert_yeasts")->second);
+	stmt.bind(":name", _item.name);
+	stmt.bind(":attenuation", _item.attenuation);
+	stmt.bind(":abv", _item.abv);
+	stmt.bind(":mintemp", _item.mintemp);
+	stmt.bind(":maxtemp", _item.maxtemp);
+
+	auto r(stmt.execute());
+	auto ret = std::make_shared<yeast>();
+	*ret = r;
+	cache_yeasts.emplace_back(ret);
+	return ret;
+      }
+
+      void Connection::deleteYeast(int _id) {
+	std::unique_lock g(c_mtx_yeasts);
+	auto& stmt(c_statements.find("delete_yeasts")->second);
+	stmt.bind(":id", _id);
+	stmt.execute();
+
+	for (auto it = cache_yeasts.begin();
+	     it != cache_yeasts.end(); ++it) {
+	  if ( (*it)->id == _id ) {
+	    cache_yeasts.erase(it);
+	    break;
+	  }
+	}
+      }
+
+      /*
+       * txn stuff
+       */
 
       void Connection::begin() {
 	c_mtx.lock();

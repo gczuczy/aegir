@@ -28,6 +28,10 @@ namespace aegir {
 	void updateFermenter(const fermenter& _item);
 	fermenter::cptr addFermenter(const fermenter& _item);
 	void deleteFermenter(int _id);
+	// yeasts
+	void updateYeast(const yeast& _item);
+	yeast::cptr addYeast(const yeast& _item);
+	void deleteYeast(int _id);
 
       private:
 	Connection* c_db;

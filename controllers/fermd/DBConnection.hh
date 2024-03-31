@@ -52,6 +52,7 @@ namespace aegir {
 	void reload_fermenter_types();
 	void reload_fermenters();
 	void reload_tilthydrometers();
+	void reload_yeasts();
 
 	// Tilt Hydrometers
       public:
@@ -78,6 +79,15 @@ namespace aegir {
 	void updateFermenter(const fermenter& _item);
 	fermenter::cptr addFermenter(const fermenter& _item);
 	void deleteFermenter(int _id);
+
+	// yeasts
+      public:
+	yeast_cdb getYeasts() const;
+	yeast::cptr getYeastByID(int _id) const;
+      protected:
+	void updateYeast(const yeast& _item);
+	yeast::cptr addYeast(const yeast& _item);
+	void deleteYeast(int _id);
 
       public:
 	inline Transaction txn() {
@@ -106,6 +116,8 @@ namespace aegir {
 	fermenter_types_db cache_fermenter_types;
 	mutable std::shared_mutex c_mtx_fermenters;
 	fermenter_db cache_fermenters;
+	mutable std::shared_mutex c_mtx_yeasts;
+	yeast_db cache_yeasts;
       }; // class Connection
 
     } // ns DB

@@ -1,9 +1,15 @@
 target_sources(tests_fermd
   PRIVATE
+  catch2main.cc
   FermdConfig.cc
   Bluetooth.cc
   Message.cc
-  db.cc
+  dbbase.cc
+  dbbase.hh
+  db_fermenter_types.cc
+  db_fermenters.cc
+  db_tilts.cc
+  db_yeasts.cc
   prbase.cc
   prbase.hh
   pr_generic.cc

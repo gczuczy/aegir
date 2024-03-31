@@ -43,6 +43,18 @@ namespace aegir {
       void Transaction::deleteFermenter(int _id) {
 	c_db->deleteFermenter(_id);
       }
+
+      void Transaction::updateYeast(const yeast& _item) {
+	c_db->updateYeast(_item);
+      }
+
+      yeast::cptr Transaction::addYeast(const yeast& _item) {
+	return c_db->addYeast(_item);
+      }
+
+      void Transaction::deleteYeast(int _id) {
+	c_db->deleteYeast(_id);
+      }
     } // ns DB
   } // ns fermd
 } // ns aegir

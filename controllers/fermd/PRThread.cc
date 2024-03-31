@@ -284,13 +284,16 @@ namespace aegir {
       ryml::NodeRef ths = _rep["tilthydrometers"];
       for (auto& it: tilts) {
 	ryml::NodeRef node = ths.append_child();
-	auto c4uuid = tree->to_arena(c4::to_csubstr(boost::lexical_cast<std::string>(it.uuid)));
-	node["uuid"] << c4uuid;
+	node |= ryml::MAP;
+
+	std::string struuid = boost::lexical_cast<std::string>(it.uuid);
+	auto c4uuid = tree->to_arena(c4::to_csubstr(struuid));
+	node["uuid"] = c4uuid;
 
 	char buff[64];
 	std::strftime(buff, sizeof(buff)-1, "%F %TZ", std::gmtime(&it.time));
 	auto c4time = tree->to_arena(c4::to_csubstr(buff));
-	node["time"] << c4time;
+	node["time"] = c4time;
 
 	node["temp"] << ryml::fmt::real(it.temp, 1);
 	node["sg"] << ryml::fmt::real(it.sg, 3);
