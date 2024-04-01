@@ -17,6 +17,7 @@ import { TilthydrometersComponent
 import { FermentertypesComponent
        } from './fermentertypes/fermentertypes.component';
 import { FermentersComponent } from './fermenters/fermenters.component';
+import { YeastsComponent } from './yeasts/yeasts.component';
 
 export const PROGRAMS_ROUTES: Routes = [
   { path: '', redirectTo: 'add', pathMatch: 'full' },
@@ -31,6 +32,7 @@ export const FERMD_ROUTES: Routes = [
   { path: 'fermentertypes', component: FermentertypesComponent },
   { path: 'fermenters', component: FermentersComponent },
   { path: 'tilthydrometers', component: TilthydrometersComponent },
+  { path: 'yeasts', component: YeastsComponent },
 ];
 
 const routes: Routes = [

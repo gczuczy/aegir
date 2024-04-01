@@ -27,6 +27,7 @@ import { FermdComponent } from './fermd.component';
 import { TilthydrometersComponent } from './tilthydrometers/tilthydrometers.component';
 import { FermentertypesComponent } from './fermentertypes/fermentertypes.component';
 import { FermentersComponent } from './fermenters/fermenters.component';
+import { YeastsComponent } from './yeasts/yeasts.component';
 
 @NgModule({
   declarations: [
@@ -42,7 +43,8 @@ import { FermentersComponent } from './fermenters/fermenters.component';
     FermdComponent,
     TilthydrometersComponent,
     FermentertypesComponent,
-    FermentersComponent
+    FermentersComponent,
+    YeastsComponent
   ],
   imports: [
     BrowserModule,

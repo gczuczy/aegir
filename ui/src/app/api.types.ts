@@ -161,3 +161,12 @@ export interface apiSensorCacheTilthydrometer {
 export interface apiSensorCache {
   tilthydrometers: apiSensorCacheTilthydrometer[],
 };
+
+export interface apiYeast {
+  id?: number,
+  name: string,
+  attenuation: number,
+  abv: number,
+  mintemp: number,
+  maxtemp: number,
+};

@@ -13,7 +13,7 @@ import { apiResponse,
 	 apiBrewStateVolume, apiBrewStateVolumeData,
 	 apiBrewTempHistory, apiBrewLoadProgramRequest,
 	 apiFermd, apiTilthydrometer, apiFermenterType,
-	 apiFermenter, apiSensorCache,
+	 apiFermenter, apiSensorCache, apiYeast
        } from './api.types';
 
 @Injectable({
@@ -419,6 +419,43 @@ export class ApiService {
 	catchError(this.handleErrors),
 	map(res => <apiSensorCache>((<apiResponse>res).data))
       )
+  }
+
+  getYeasts(fermdid: number): Observable<apiYeast[]> {
+    return this.http.get(`/api/fermds/${fermdid}/yeasts`)
+      .pipe(
+	catchError(this.handleErrors),
+	map(res => <apiYeast[]>((<apiResponse>res).data))
+      )
+  }
+
+  addYeast(fermdid: number,
+	   data: apiYeast): Observable<apiYeast> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post(`/api/fermds/${fermdid}/yeasts`,
+			  body, options)
+      .pipe(
+	map(res => <apiYeast>((<apiResponse>res).data))
+      );
+  }
+
+  updateYeast(fermdid: number,
+	   data: apiYeast): Observable<apiYeast> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post(`/api/fermds/${fermdid}/yeasts/${data.id!}`,
+			  body, options)
+      .pipe(
+	map(res => <apiYeast>((<apiResponse>res).data))
+      );
+  }
+
+  deleteYeast(fermdid: number,
+	      yeastid: number): Observable<any> {
+    return this.http.delete(`/api/fermds/${fermdid}/yeasts/${yeastid}`);
   }
 
 }

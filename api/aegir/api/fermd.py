@@ -20,6 +20,8 @@ def init(app, api):
     api.add_resource(FermenterType, '/api/fermds/<int:fermdid>/fermentertypes/<int:ftid>')
     api.add_resource(Fermenters, '/api/fermds/<int:fermdid>/fermenters')
     api.add_resource(SensorCache, '/api/fermds/<int:fermdid>/sensorcache')
+    api.add_resource(Yeasts, '/api/fermds/<int:fermdid>/yeasts')
+    api.add_resource(Yeast, '/api/fermds/<int:fermdid>/yeasts/<int:yeastid>')
     pass
 
 class Fermds(flask_restful.Resource):
@@ -234,4 +236,99 @@ class SensorCache(flask_restful.Resource):
         except Exception as e:
             return {'status': 'error',
                     'message': 'ZMQ error: {e}'.format(e=str(e))},400
+
+class Yeasts(flask_restful.Resource):
+    def get(self, fermdid):
+        '''
+        Returns all yeasts
+        '''
+        db = aegir.db.Connection()
+        try:
+            fermd = db.getFermd(fermdid)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'No such fermd: {e}'.format(e=str(e))},400
+
+        try:
+            zmq = aegir.zmq.ZMQReq(fermd.address)
+            resp = zmq.prmessage('getYeasts')
+            return {'status': 'success',
+                    'data': resp['data']}
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'ZMQ error: {e}'.format(e=str(e))},400
+        pass
+
+    def post(self, fermdid):
+        '''
+        Adds a new yeast
+        '''
+        data = flask.request.get_json();
+
+        for field in ['name', 'abv', 'attenuation', 'mintemp', 'maxtemp']:
+            if not field in data:
+                return {'status': 'error',
+                        'message': 'field {f} missing'.format(f=field)}, 400
+            pass
+
+        db = aegir.db.Connection()
+        try:
+            fermd = db.getFermd(fermdid)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'No such fermd: {e}'.format(e=str(e))},400
+
+        try:
+            zmq = aegir.zmq.ZMQReq(fermd.address)
+            resp = zmq.prmessage('addYeast', data)
+            return {'status': 'success',
+                    'data': resp['data']}
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'ZMQ error: {e}'.format(e=str(e))},400
+        pass
+    pass
+
+class Yeast(flask_restful.Resource):
+    def post(self, fermdid, yeastid):
+        '''
+        Updates a yeast
+        '''
+        data = flask.request.get_json();
+        db = aegir.db.Connection()
+        try:
+            fermd = db.getFermd(fermdid)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'No such fermd: {e}'.format(e=str(e))},400
+
+        data['id'] = yeastid
+        try:
+            zmq = aegir.zmq.ZMQReq(fermd.address)
+            resp = zmq.prmessage('updateYeast', data)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': str(e)},400
+        return {'status': 'success',
+                'data': resp['data']}
+
+    def delete(self, fermdid, yeastid):
+        '''
+        Updates a yeast
+        '''
+        db = aegir.db.Connection()
+        try:
+            fermd = db.getFermd(fermdid)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'No such fermd: {e}'.format(e=str(e))},400
+
+        data = {'id': yeastid}
+        try:
+            zmq = aegir.zmq.ZMQReq(fermd.address)
+            resp = zmq.prmessage('deleteYeast', data)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': str(e)},400
+        return {'status': 'success'}
 
