@@ -16,4 +16,5 @@ target_sources(tests_fermd
   pr_fermenter_types.cc
   pr_fermenters.cc
   pr_tilthydrometers.cc
+  pr_yeasts.cc
 )

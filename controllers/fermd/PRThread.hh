@@ -53,6 +53,10 @@ namespace aegir {
       PRCMD(getTilthydrometers);
       PRCMD(updateTilthydrometer);
       PRCMD(getSensorCache);
+      PRCMD(getYeasts);
+      PRCMD(addYeast);
+      PRCMD(updateYeast);
+      PRCMD(deleteYeast);
 
     private:
       zmqproxy_type c_proxy;

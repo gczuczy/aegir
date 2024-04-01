@@ -19,6 +19,7 @@
 #include "Bluetooth.hh"
 #include "DBConnection.hh"
 #include "SensorProxy.hh"
+#include "SensorCache.hh"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -29,6 +30,7 @@ public:
   FermdConfigTestSM(): aegir::ServiceManager() {
     try {
       add<aegir::MessageFactory>();
+      add<aegir::fermd::SensorCache>();
       add<aegir::fermd::ZMQConfig>();
       add<aegir::fermd::SensorProxy>();
       add<aegir::fermd::PRThread>();

@@ -38,6 +38,10 @@ namespace aegir {
       REGCMD(getTilthydrometers);
       REGCMD(updateTilthydrometer);
       REGCMD(getSensorCache);
+      REGCMD(getYeasts);
+      REGCMD(addYeast);
+      REGCMD(updateYeast);
+      REGCMD(deleteYeast);
     }
 
     PRThread::~PRThread() {
@@ -298,6 +302,52 @@ namespace aegir {
 	node["temp"] << ryml::fmt::real(it.temp, 1);
 	node["sg"] << ryml::fmt::real(it.sg, 3);
       }
+    }
+
+    PRCMD(getYeasts) {
+      auto data = ServiceManager::get<DB::Connection>()->getYeasts();
+
+      _rep |= ryml::SEQ;
+
+      for (auto& it: data) {
+	ryml::NodeRef node = _rep.append_child();
+	node << *it;
+      }
+    }
+
+    PRCMD(addYeast) {
+      requireFields(_req, {"name", "attenuation", "abv", "mintemp", "maxtemp"});
+      DB::yeast y;
+      _req >> y;
+
+      DB::yeast::cptr ny;
+      {
+	auto txn = ServiceManager::get<DB::Connection>()->txn();
+	ny = txn.addYeast(y);
+      }
+      _rep << *ny;
+    }
+
+    PRCMD(updateYeast) {
+      requireFields(_req, {"id"});
+
+      int id;
+      _req["id"] >> id;
+      auto db = ServiceManager::get<DB::Connection>();
+      auto dby = db->getYeastByID(id);
+      DB::yeast y = *dby;
+      _req >> y;
+      db->txn().updateYeast(y);
+      _rep << (*db->getYeastByID(id));
+    }
+
+    PRCMD(deleteYeast) {
+      requireFields(_req, {"id"});
+
+      auto db = ServiceManager::get<DB::Connection>();
+      int id;
+      _req["id"] >> id;
+      db->txn().deleteYeast(id);
     }
   }
 }
