@@ -44,6 +44,18 @@ include(CodeCoverage)
 append_coverage_compiler_flags_to_target(tests_fermd)
 message("Project binary dir: ${PROJECT_BINARY_DIR}")
 
+# embed
+set(FETCH_EMBED OFF CACHE BOOL "Fetch battery-embed")
+if(FETCH_EMBED)
+FetchContent_Declare(
+  battery-embed
+  GIT_REPOSITORY https://github.com/batterycenter/embed.git
+  GIT_TAG        v1.2.8
+)
+FetchContent_MakeAvailable(battery-embed)
+endif()
+
+
 set_target_properties(
   brewd
   PROPERTIES
