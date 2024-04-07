@@ -21,17 +21,20 @@ list(APPEND fermd_HEADERS
 #  cmakeconfig.hh
 #)
 
-add_custom_command(
-  OUTPUT sql_v1_gen.cc
-  COMMAND xxd -i sql/v1.sql > sql_v1_gen.cc
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sql/v1.sql
-  VERBATIM
-)
-add_custom_target(embed_generators
-  DEPENDS sql_v1_gen.cc
-)
-add_dependencies(fermd embed_generators)
-add_dependencies(tests_fermd embed_generators)
+#add_custom_command(
+#  OUTPUT sql_v1_gen.cc
+#  COMMAND xxd -i sql/v1.sql > sql_v1_gen.cc
+#  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sql/v1.sql
+#  VERBATIM
+#)
+#add_custom_target(embed_generators
+#  DEPENDS sql_v1_gen.cc
+#)
+#add_dependencies(fermd embed_generators)
+#add_dependencies(tests_fermd embed_generators)
+# https://github.com/batterycenter/embed/issues/5
+#b_embed(fermd sql/v1.sql)
+#b_embed(tests_fermd sql/v1.sql)
 
 target_sources(fermd
   PRIVATE
@@ -51,7 +54,6 @@ target_sources(fermd
   DBTransaction.cc
   DBSchema.cc
   DBTypes.cc
-  sql_v1_gen.cc
   PRThread.cc
   SensorCache.cc
   ${fermd_HADERS}
@@ -73,7 +75,6 @@ target_sources(tests_fermd
   DBTransaction.cc
   DBSchema.cc
   DBTypes.cc
-  sql_v1_gen.cc
   PRThread.cc
   ServiceManager.cc
   SensorCache.cc

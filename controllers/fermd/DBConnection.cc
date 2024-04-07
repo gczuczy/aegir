@@ -1,7 +1,7 @@
 
 #include "DBConnection.hh"
-#include "generated.hh"
 #include "DB.hh"
+#include <battery/embed.hpp>
 
 namespace aegir {
   namespace fermd {
@@ -30,9 +30,13 @@ namespace aegir {
 	}
 
 	// load the schemas
+#if 0
 	c_schemas.emplace_back(Schema(1,
 				      std::string((char*)sql_v1_sql,
 						  sql_v1_sql_len)));
+#else
+	c_schemas.emplace_back(Schema(1, b::embed<"fermd/sql/v1.sql">()));
+#endif
       }
 
       Connection::~Connection() {

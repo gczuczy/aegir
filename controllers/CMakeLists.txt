@@ -27,11 +27,6 @@ include(Catch)
 catch_discover_tests(tests)
 catch_discover_tests(tests_fermd)
 
-add_subdirectory(brewd)
-add_subdirectory(fermd)
-add_subdirectory(common)
-add_subdirectory(tests)
-
 # coverage
 FetchContent_Declare(cmake_modules
   GIT_REPOSITORY https://github.com/bilke/cmake-modules.git
@@ -45,15 +40,23 @@ append_coverage_compiler_flags_to_target(tests_fermd)
 message("Project binary dir: ${PROJECT_BINARY_DIR}")
 
 # embed
-set(FETCH_EMBED OFF CACHE BOOL "Fetch battery-embed")
-if(FETCH_EMBED)
 FetchContent_Declare(
   battery-embed
   GIT_REPOSITORY https://github.com/batterycenter/embed.git
-  GIT_TAG        v1.2.8
+  GIT_TAG        v1.2.12
 )
 FetchContent_MakeAvailable(battery-embed)
-endif()
+add_subdirectory(brewd)
+add_subdirectory(fermd)
+add_subdirectory(common)
+add_subdirectory(tests)
+
+add_compile_definitions(B_PRODUCTION_MODE=1)
+
+# embed calls, move these under fermd/ once the issues is fixed
+# https://github.com/batterycenter/embed/issues/5
+b_embed(fermd fermd/sql/v1.sql)
+b_embed(tests_fermd fermd/sql/v1.sql)
 
 
 set_target_properties(
