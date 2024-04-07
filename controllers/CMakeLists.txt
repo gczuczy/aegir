@@ -43,7 +43,7 @@ message("Project binary dir: ${PROJECT_BINARY_DIR}")
 FetchContent_Declare(
   battery-embed
   GIT_REPOSITORY https://github.com/batterycenter/embed.git
-  GIT_TAG        v1.2.12
+  GIT_TAG        v1.2.13
 )
 FetchContent_MakeAvailable(battery-embed)
 add_subdirectory(brewd)
