@@ -9,6 +9,7 @@ set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 
 project(brewd VERSION 0.1.0 LANGUAGES CXX)
 
+option(CMAKE_BUILD_TYPE "")
 if ( (NOT DEFINED CMAKE_BUILD_TYPE) OR CMAKE_BUILD_TYPE STREQUAL "")
   set(CMAKE_BUILD_TYPE "Debug")
 endif()
@@ -26,6 +27,13 @@ include(CTest)
 include(Catch)
 catch_discover_tests(tests)
 catch_discover_tests(tests_fermd)
+
+# fermd_tests cleanup
+add_custom_command(TARGET tests_fermd POST_BUILD
+COMMAND find CMakeFiles/  -name '*.gcda' -delete
+COMMENT "Removing previous GCDA files"
+VERBATIM
+)
 
 # coverage
 FetchContent_Declare(cmake_modules

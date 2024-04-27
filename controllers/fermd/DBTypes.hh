@@ -4,7 +4,9 @@
 
 #include <string>
 #include <memory>
+#include <optional>
 #include <list>
+#include <concepts>
 
 #include "uuid.hh"
 
@@ -99,8 +101,49 @@ namespace aegir {
 	float maxtemp;
       };
       DBTSTUFF(yeast);
+
+      struct brew {
+	DBTPTRS(brew);
+	brew& operator=(Result&);
+	int id;
+	std::string name;
+	yeast::cptr yeast;
+	std::string brewdate;
+	std::optional<float> originalsg;
+	float sgoffset;
+	bool finished;
+	std::optional<std::string> metadata;
+      };
+      DBTSTUFF(brew);
+
+      struct transfer {
+	DBTPTRS(transfer);
+	transfer& operator=(Result&);
+	int id;
+	brew::cptr brew;
+	fermenter::cptr fermenter;
+	std::string transferdate;
+      };
+      DBTSTUFF(transfer);
+
+      struct fermentationlog {
+	DBTPTRS(fermentationlog);
+	fermentationlog& operator=(Result&);
+	int id;
+	brew::cptr brew;
+	int timestamp;
+	float sg;
+	float temperature;
+      };
+      DBTSTUFF(fermentationlog);
     } // ns DB
   } // ns fermd
 } // ns aegir
+
+#undef DBPTRS
+#undef DBSTUFF
+#undef DBTLISTS
+#undef DBTOPS
+#undef DBTASSERT
 
 #endif

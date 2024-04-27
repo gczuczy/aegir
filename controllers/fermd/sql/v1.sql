@@ -64,26 +64,6 @@ INSERT INTO yeasts (name, attenuation, mintemp, maxtemp, abv) VALUES
 ('YF-666 Yeastman', 100, 18, 20, 25)
 ;
 
-CREATE TABLE brews (
-  id integer PRIMARY KEY,
-  name text NOT NULL UNIQUE,
-  yeastid int NOT NULL,
-  brewdate text NOT NULL,
-  originalsg real,
-  metadata text,
-  FOREIGN KEY (yeastid) REFERENCES yeasts (id) ON DELETE RESTRICT,
-  CHECK (originalsg IS NULL OR (originalsg > 1.0 AND originalsg < 1.500))
-);
-
-CREATE TABLE fermentations (
-  id integer PRIMARY KEY,
-  brewid int NOT NULL,
-  fermenterid int NOT NULL,
-  transferdate text NOT NULL,
-  FOREIGN KEY (brewid) REFERENCES brews(id) ON DELETE RESTRICT,
-  FOREIGN KEY (fermenterid) REFERENCES fermenters(id) ON DELETE RESTRICT
-);
-
 CREATE TABLE tilthydrometers (
   id integer PRIMARY KEY,
   color text NOT NULL,
@@ -119,3 +99,38 @@ INSERT INTO tilthydrometers (uuid, color)
 VALUES ('a495bb70-c5b1-4b44-b512-1370f02d74de', 'Yellow');
 INSERT INTO tilthydrometers (uuid, color)
 VALUES ('a495bb80-c5b1-4b44-b512-1370f02d74de', 'Pink');
+
+CREATE TABLE brews (
+  id integer PRIMARY KEY,
+  name text NOT NULL UNIQUE,
+  yeastid int NOT NULL,
+  brewdate text NOT NULL,
+  originalsg real,
+  sgoffset real NOT NULL DEFAULT 0.0,
+  finished int NOT NULL DEFAULT 0,
+  metadata text,
+  FOREIGN KEY (yeastid) REFERENCES yeasts (id) ON DELETE RESTRICT,
+  CHECK (originalsg IS NULL OR (originalsg > 1.0 AND originalsg < 1.500)),
+  CHECK (sgoffset IS NULL OR (sgoffset >= 0.0 AND sgoffset < 0.500)),
+  CHECK (finished == 0 OR finished == 1)
+);
+
+CREATE TABLE transfers (
+  id integer PRIMARY KEY,
+  brewid int NOT NULL,
+  fermenterid int NOT NULL,
+  transferdate text NOT NULL,
+  FOREIGN KEY (brewid) REFERENCES brews(id) ON DELETE RESTRICT,
+  FOREIGN KEY (fermenterid) REFERENCES fermenters(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE fermentationlog (
+  id integer PRIMARY KEY,
+  brewid int NOT NULL,
+  timestamp int NOT NULL,
+  sg real NOT NULL,
+  temperature real NOT NULL,
+  FOREIGN KEY (brewid) REFERENCES brews(id) ON DELETE RESTRICT,
+  CHECK (sg >= 0.950 AND sg <= 1.500),
+  CHECK (temperature > -30 AND temperature < 50)
+);

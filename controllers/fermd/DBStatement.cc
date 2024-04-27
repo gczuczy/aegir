@@ -34,31 +34,34 @@ namespace aegir {
 	return Result(c_statement);
       }
 
-      void Statement::bind(const std::string& _field) {
+      Statement& Statement::bind(const std::string& _field) {
 	int idx = sqlite3_bind_parameter_index(c_statement, _field.c_str());
 	if ( idx == 0 )
 	  throw Exception("Parameter %s not found for query %s",
 			  _field.c_str(), sqlite3_sql(c_statement));
 	sqlite3_bind_null(c_statement, idx);
+	return *this;
       }
 
-      void Statement::bind(const std::string& _field, int _value) {
+      Statement& Statement::bind(const std::string& _field, int _value) {
 	int idx = sqlite3_bind_parameter_index(c_statement, _field.c_str());
 	if ( idx == 0 )
 	  throw Exception("Parameter %s not found for query %s",
 			  _field.c_str(), sqlite3_sql(c_statement));
 	sqlite3_bind_int(c_statement, idx, _value);
+	return *this;
       }
 
-      void Statement::bind(const std::string& _field, float _value) {
+      Statement& Statement::bind(const std::string& _field, float _value) {
 	int idx = sqlite3_bind_parameter_index(c_statement, _field.c_str());
 	if ( idx == 0 )
 	  throw Exception("Parameter %s not found for query %s",
 			  _field.c_str(), sqlite3_sql(c_statement));
 	sqlite3_bind_double(c_statement, idx, _value);
+	return *this;
       }
 
-      void Statement::bind(const std::string& _field,
+      Statement& Statement::bind(const std::string& _field,
 			   const std::string& _value) {
 	int idx = sqlite3_bind_parameter_index(c_statement, _field.c_str());
 	if ( idx == 0 )
@@ -67,6 +70,7 @@ namespace aegir {
 	sqlite3_bind_text(c_statement, idx,
 			  _value.c_str(), _value.size(),
 			  SQLITE_STATIC);
+	return *this;
       }
     } // ns DB
   } // ns fermd

@@ -184,6 +184,47 @@ namespace aegir {
 	prepare("delete_yeasts",
 		"DELETE FROM yeasts WHERE id=:id ");
 
+	// brews
+	prepare("get_brews",
+		"SELECT id,name,yeastid,brewdate,originalsg,"
+		"sgoffset,finished,metadata FROM brews");
+	prepare("update_brews",
+		"UPDATE brews "
+		"SET name=:name,yeastid=:yeastid,brewdate=:brewdate,"
+		"originalsg=:originalsg,sgoffset=:sgoffset,"
+		"finished=:finished,metadata=:metadata "
+		"WHERE id=:id "
+		"RETURNING id,name,yeastid,brewdate,originalsg,"
+		"sgoffset,finished,metadata");
+	prepare("insert_brews",
+		"INSERT INTO brews "
+		"(name,yeastid,brewdate,originalsg,sgoffset,finished,metadata) "
+		"VALUES (:name,:yeastid,:brewdate,:originalsg,"
+		":sgoffset,:finished,:metadata) "
+		"RETURNING id,name,yeastid,brewdate,originalsg,"
+		"sgoffset,finished,metadata");
+	prepare("delete_brews",
+		"DELETE FROM brews WHERE id=:id ");
+
+	// transfers
+	prepare("get_transfers",
+		"SELECT id,brewid,fermenterid,transferdate FROM transfers");
+	prepare("insert_transfers",
+		"INSERT INTO transfers "
+		"(brewid,fermenterid,transferdate) "
+		"VALUES (:brewid,:fermenterid,:transferdate) "
+		"RETURNING id,brewid,fermenterid,transferdate");
+
+	// femerntationlog
+	prepare("get_fermentationlog",
+		"SELECT id,brewid,timestamp,sg,temperature FROM fermentationlog "
+		"ORDER BY timestamp ASC");
+	prepare("insert_fermentationlog",
+		"INSERT INTO fermentationlog "
+		"(brewid,timestamp,sg,temperature) "
+		"VALUES (:brewid,:timestamp,:sg,:temperature) "
+		"RETURNING id,brewid,timestamp,sg,temperature");
+
 	reload();
       } // init
 
@@ -198,6 +239,9 @@ namespace aegir {
 	reload_fermenters();
 	reload_tilthydrometers();
 	reload_yeasts();
+	reload_brews();
+	reload_transfers();
+	reload_fermentationlog();
       }
 
       void Connection::reload_fermenter_types() {
@@ -245,6 +289,42 @@ namespace aegir {
 	  auto th = std::make_shared<yeast>();
 	  *th = r;
 	  cache_yeasts.emplace_back(th);
+	}
+      }
+
+      void Connection::reload_brews() {
+	std::unique_lock g(c_mtx_brews);
+
+	cache_brews.clear();
+	for ( auto r=c_statements.find("get_brews")->second.execute();
+	      r; ++r ) {
+	  auto th = std::make_shared<brew>();
+	  *th = r;
+	  cache_brews.emplace_back(th);
+	}
+      }
+
+      void Connection::reload_transfers() {
+	std::unique_lock g(c_mtx_transfers);
+
+	cache_transfers.clear();
+	for ( auto r=c_statements.find("get_transfers")->second.execute();
+	      r; ++r ) {
+	  auto th = std::make_shared<transfer>();
+	  *th = r;
+	  cache_transfers.emplace_back(th);
+	}
+      }
+
+      void Connection::reload_fermentationlog() {
+	std::unique_lock g(c_mtx_fermentationlogs);
+
+	cache_fermentationlogs.clear();
+	for ( auto r=c_statements.find("get_fermentationlog")->second.execute();
+	      r; ++r ) {
+	  auto th = std::make_shared<fermentationlog>();
+	  *th = r;
+	  cache_fermentationlogs.emplace_back(th);
 	}
       }
 
@@ -511,6 +591,147 @@ namespace aegir {
       }
 
       /*
+       * brew
+       */
+      brew_cdb Connection::getBrews() const {
+	std::shared_lock g(c_mtx_brews);
+	std::list<brew::cptr> ret;
+	for (auto it: cache_brews)
+	  ret.emplace_back(std::const_pointer_cast<const brew>(it));
+	return ret;
+      }
+
+      brew::cptr Connection::getBrewByID(int _id) const {
+	std::shared_lock g(c_mtx_brews);
+	for (auto it: cache_brews)
+	  if ( it->id == _id) return it;
+	return nullptr;
+      }
+
+      void Connection::updateBrew(const brew& _item) {
+	std::unique_lock g(c_mtx_brews);
+	auto& stmt(c_statements.find("update_brews")->second);
+	stmt.bind(":id", _item.id)
+	  .bind(":name", _item.name)
+	  .bind(":brewdate", _item.brewdate)
+	  .bind(":originalsg", _item.originalsg)
+	  .bind(":sgoffset", _item.sgoffset)
+	  .bind(":finished", _item.finished)
+	  .bind(":metadata", _item.metadata)
+	  .bind(":yeastid", _item.yeast->id);
+
+	auto r(stmt.execute());
+	int id = r.fetch<int>("id");
+	for (auto& data: cache_brews) {
+	  if ( data->id == id ) {
+	    *data = r;
+	    break;
+	  }
+	}
+      }
+
+      brew::cptr Connection::addBrew(const brew& _item) {
+	std::unique_lock g(c_mtx_brews);
+	auto r(getStatement("insert_brews")
+	       .bind(":name", _item.name)
+	       .bind(":brewdate", _item.brewdate)
+	       .bind(":originalsg", _item.originalsg)
+	       .bind(":sgoffset", _item.sgoffset)
+	       .bind(":finished", _item.finished)
+	       .bind(":metadata", _item.metadata)
+	       .bind(":yeastid", _item.yeast->id)
+	       .execute());
+
+	auto ret = std::make_shared<brew>();
+	*ret = r;
+	cache_brews.emplace_back(ret);
+	return ret;
+      }
+
+      void Connection::deleteBrew(int _id) {
+	std::unique_lock g(c_mtx_yeasts);
+	getStatement("delete_brews")
+	  .bind(":id", _id)
+	  .execute();
+
+	for (auto it = cache_brews.begin();
+	     it != cache_brews.end(); ++it) {
+	  if ( (*it)->id == _id ) {
+	    cache_brews.erase(it);
+	    break;
+	  }
+	}
+      }
+
+      /*
+       * transfer
+       */
+      transfer_cdb Connection::getTransfers() const {
+	std::shared_lock g(c_mtx_transfers);
+	std::list<transfer::cptr> ret;
+	for (auto it: cache_transfers)
+	  ret.emplace_back(std::const_pointer_cast<const transfer>(it));
+	return ret;
+      }
+
+      transfer::cptr Connection::getTransferByID(int _id) const {
+	std::shared_lock g(c_mtx_transfers);
+	for (auto it: cache_transfers)
+	  if ( it->id == _id) return it;
+	return nullptr;
+      }
+
+      transfer_cdb Connection::getTransfersByBrew(const brew& _brew) const {
+	std::shared_lock g(c_mtx_transfers);
+	std::list<transfer::cptr> ret;
+	for (auto it: cache_transfers)
+	  if ( it->brew->id == _brew.id)
+	    ret.emplace_back(std::const_pointer_cast<const transfer>(it));
+	return ret;
+      }
+
+      transfer::cptr Connection::addTransfer(const transfer& _item) {
+	std::unique_lock g(c_mtx_transfers);
+	auto r(getStatement("insert_transfers")
+	       .bind(":brewid", _item.brew->id)
+	       .bind(":fermenterid", _item.fermenter->id)
+	       .bind(":transferdate", _item.transferdate)
+	       .execute());
+
+	auto ret = std::make_shared<transfer>();
+	*ret = r;
+	cache_transfers.emplace_back(ret);
+	return ret;
+      }
+
+      /*
+       * fermentationlog
+       */
+      fermentationlog_cdb Connection::getFermentationlogsByBrew(const brew& _brew) const {
+	std::shared_lock g(c_mtx_fermentationlogs);
+	std::list<fermentationlog::cptr> ret;
+	for (auto it: cache_fermentationlogs)
+	  if ( it->brew->id == _brew.id)
+	    ret.emplace_back(std::const_pointer_cast<const fermentationlog>(it));
+	return ret;
+      }
+
+      fermentationlog::cptr Connection::addFermentationlog(const fermentationlog& _item) {
+	std::unique_lock g(c_mtx_fermentationlogs);
+	auto r(getStatement("insert_fermentationlog")
+	       .bind(":brewid", _item.brew->id)
+	       .bind(":timestamp", _item.timestamp)
+	       .bind(":sg", _item.sg)
+	       .bind(":temperature", _item.temperature)
+	       .execute());
+
+	auto ret = std::make_shared<fermentationlog>();
+	*ret = r;
+	cache_fermentationlogs.emplace_back(ret);
+	return ret;
+      }
+
+      /*
        * txn stuff
        */
 
@@ -533,6 +754,12 @@ namespace aegir {
 			     std::forward_as_tuple(c_db, _stmt, _temporary));
       } // prepare
 
+      Statement& Connection::getStatement(const std::string& _name) {
+	auto it = c_statements.find(_name);
+	if ( it == c_statements.end() )
+	  throw Exception("No such prepared statement %s", _name.c_str());
+	return it->second;
+      }
     } // ns DB
   } // ns fermd
 } // ns aegir

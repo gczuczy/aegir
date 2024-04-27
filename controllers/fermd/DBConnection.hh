@@ -53,6 +53,9 @@ namespace aegir {
 	void reload_fermenters();
 	void reload_tilthydrometers();
 	void reload_yeasts();
+	void reload_brews();
+	void reload_transfers();
+	void reload_fermentationlog();
 
 	// Tilt Hydrometers
       public:
@@ -89,6 +92,29 @@ namespace aegir {
 	yeast::cptr addYeast(const yeast& _item);
 	void deleteYeast(int _id);
 
+	// brew
+      public:
+	brew_cdb getBrews() const;
+	brew::cptr getBrewByID(int _id) const;
+      protected:
+	void updateBrew(const brew& _item);
+	brew::cptr addBrew(const brew& _item);
+	void deleteBrew(int _id);
+
+	// transfer
+      public:
+	transfer_cdb getTransfers() const;
+	transfer::cptr getTransferByID(int _id) const;
+	transfer_cdb getTransfersByBrew(const brew& _brew) const;
+      protected:
+	transfer::cptr addTransfer(const transfer& _item);
+
+	// fermentationlog
+      public:
+	fermentationlog_cdb getFermentationlogsByBrew(const brew& _brew) const;
+      protected:
+	fermentationlog::cptr addFermentationlog(const fermentationlog& _item);
+
       public:
 	inline Transaction txn() {
 	  return Transaction(this);
@@ -101,7 +127,7 @@ namespace aegir {
 	void prepare(const std::string& _name,
 		     const std::string& _stmt,
 		     bool _temporary=false);
-
+	Statement& getStatement(const std::string& _name);
 
       private:
 	std::string c_dbfile;
@@ -118,6 +144,12 @@ namespace aegir {
 	fermenter_db cache_fermenters;
 	mutable std::shared_mutex c_mtx_yeasts;
 	yeast_db cache_yeasts;
+	mutable std::shared_mutex c_mtx_brews;
+	brew_db cache_brews;
+	mutable std::shared_mutex c_mtx_transfers;
+	transfer_db cache_transfers;
+	mutable std::shared_mutex c_mtx_fermentationlogs;
+	fermentationlog_db cache_fermentationlogs;
       }; // class Connection
 
     } // ns DB

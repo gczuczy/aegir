@@ -10,6 +10,9 @@ target_sources(tests_fermd
   db_fermenters.cc
   db_tilts.cc
   db_yeasts.cc
+  db_brews.cc
+  db_transfers.cc
+  db_fermentationlog.cc
   prbase.cc
   prbase.hh
   pr_generic.cc

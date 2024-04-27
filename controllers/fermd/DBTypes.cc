@@ -18,6 +18,9 @@
 namespace aegir {
   namespace fermd {
     namespace DB {
+      /*
+	fermenter_types
+       */
       fermenter_types& fermenter_types::operator=(Result& r) {
 	if ( r.hasField("id") )
 	  id = r.fetch<int>("id");
@@ -47,19 +50,18 @@ namespace aegir {
       }
 
       ryml::ConstNodeRef& operator>>(ryml::ConstNodeRef& _node,
-				fermenter_types& _ft) {
-	if ( _node.has_child("id") )
-	  _node["id"] >> _ft.id;
-	if ( _node.has_child("capacity") )
-	  _node["capacity"] >> _ft.capacity;
-	if ( _node.has_child("name") )
-	  _node["name"] >> _ft.name;
-	if ( _node.has_child("imageurl") )
-	  _node["imageurl"] >> _ft.imageurl;
+				fermenter_types& _data) {
+	CONDEXTRACT(id);
+	CONDEXTRACT(capacity);
+	CONDEXTRACT(name);
+	CONDEXTRACT(imageurl);
 
 	return _node;
       }
 
+      /*
+	fermenter
+       */
       fermenter& fermenter::operator=(Result& r) {
 	if ( r.hasField("id") )
 	  id = r.fetch<int>("id");
@@ -86,22 +88,23 @@ namespace aegir {
       }
 
       ryml::ConstNodeRef& operator>>(ryml::ConstNodeRef& _node,
-				fermenter& _ft) {
-	if ( _node.has_child("id") )
-	  _node["id"] >> _ft.id;
-	if ( _node.has_child("name") )
-	  _node["name"] >> _ft.name;
+				fermenter& _data) {
+	CONDEXTRACT(id);
+	CONDEXTRACT(name);
 
 	if ( _node.has_child("type") && _node["type"].has_child("id") ) {
 	  int ftid;
 	  _node["type"]["id"] >> ftid;
-	  _ft.fermenter_type = ServiceManager::get<DB::Connection>()
+	  _data.fermenter_type = ServiceManager::get<DB::Connection>()
 	    ->getFermenterTypeByID(ftid);
 	}
 
 	return _node;
       }
 
+      /*
+	tilthydrometer
+       */
       tilthydrometer& tilthydrometer::operator=(Result& r) {
 	if ( r.hasField("id") )
 	  id = r.fetch<int>("id");
@@ -177,41 +180,36 @@ namespace aegir {
       }
 
       ryml::ConstNodeRef& operator>>(ryml::ConstNodeRef& _node,
-				tilthydrometer& _th) {
-	if ( _node.has_child("id") )
-	     _node["id"] >> _th.id;
-
-	if ( _node.has_child("color") )
-	  _node["color"] >> _th.color;
+				tilthydrometer& _data) {
+	CONDEXTRACT(id);
+	CONDEXTRACT(color);
+	CONDEXTRACT(enabled);
 
 	if ( _node.has_child("uuid") ) {
 	  std::string uuid;
 	  _node["uuid"] >> uuid;
-	  _th.uuid = g_uuidstrgen(uuid);
+	  _data.uuid = g_uuidstrgen(uuid);
 	}
-
-	if ( _node.has_child("enabled") )
-	  _node["enabled"] >> _th.enabled;
 
 	if ( _node.has_child("calibr_null") ) {
 	  if ( _node["calibr_null"].val_is_null() ) {
-	    _th.calibr_null = nullptr;
+	    _data.calibr_null = nullptr;
 	  } else {
-	    if ( !_th.calibr_null )
-	      _th.calibr_null = std::make_shared<tilthydrometer::calibration>();
-	    _node["calibr_null"] >> _th.calibr_null->sg;
+	    if ( !_data.calibr_null )
+	      _data.calibr_null = std::make_shared<tilthydrometer::calibration>();
+	    _node["calibr_null"] >> _data.calibr_null->sg;
 	  }
 	}
 
 	if ( _node.has_child("calibr_sg") &&  _node.has_child("calibr_at") ) {
 	  if ( _node["calibr_sg"].val_is_null() &&
 	       _node["calibr_at"].val_is_null() ) {
-	    _th.calibr_sg = nullptr;
+	    _data.calibr_sg = nullptr;
 	  } else {
-	    if ( !_th.calibr_sg )
-	      _th.calibr_sg = std::make_shared<tilthydrometer::calibration>();
-	    _node["calibr_at"] >> _th.calibr_sg->at;
-	    _node["calibr_sg"] >> _th.calibr_sg->sg;
+	    if ( !_data.calibr_sg )
+	      _data.calibr_sg = std::make_shared<tilthydrometer::calibration>();
+	    _node["calibr_at"] >> _data.calibr_sg->at;
+	    _node["calibr_sg"] >> _data.calibr_sg->sg;
 	  }
 	}
 
@@ -219,22 +217,25 @@ namespace aegir {
 	  ryml::ConstNodeRef f = _node["fermenter"];
 	  if ( f.has_val() ) {
 	    if ( f.val_is_null() ) {
-	      _th.fermenter = nullptr;
+	      _data.fermenter = nullptr;
 	    } else {
 	      throw Exception("fermenter is a scalar but not null");
 	    }
 	  } else if ( f.is_container() ) {
 	    int fid;
 	    _node["fermenter"]["id"] >> fid;
-	    _th.fermenter = ServiceManager::get<DB::Connection>()
+	    _data.fermenter = ServiceManager::get<DB::Connection>()
 	      ->getFermenterByID(fid);
-	    if ( !_th.fermenter )
+	    if ( !_data.fermenter )
 	      throw Exception("Fermenter with id %i not found", fid);
 	  }
 	}
 	return _node;
       }
 
+      /*
+	yeast
+       */
       yeast& yeast::operator=(Result& r) {
 	if ( r.hasField("id") )
 	  id = r.fetch<int>("id");
@@ -262,9 +263,7 @@ namespace aegir {
       }
 
       ryml::ConstNodeRef& operator>>(ryml::ConstNodeRef& _node, yeast& _data) {
-	if ( _node.has_child("id") )
-	  _node["id"] >> _data.id;
-
+	CONDEXTRACT(id);
 	CONDEXTRACT(name);
 	CONDEXTRACT(attenuation);
 	CONDEXTRACT(abv);
@@ -273,6 +272,235 @@ namespace aegir {
 
 	return _node;
       }
+
+      /*
+	brew
+       */
+      brew& brew::operator=(Result& r) {
+	if ( r.hasField("id") )
+	  id = r.fetch<int>("id");
+
+	name = r.fetch<std::string>("name");
+	brewdate = r.fetch<std::string>("brewdate");
+	if ( r.isNull("originalsg") ) {
+	  originalsg.reset();
+	} else {
+	  originalsg = r.fetch<float>("originalsg");
+	}
+	sgoffset = r.fetch<float>("sgoffset");
+	finished = r.fetch<bool>("finished");
+	if ( r.isNull("metadata") ) {
+	  metadata.reset();
+	} else {
+	  metadata = r.fetch<std::string>("metadata");
+	}
+
+	int yid = r.fetch<int>("yeastid");
+	yeast = ServiceManager::get<Connection>()
+	  ->getYeastByID(yid);
+
+	return *this;
+      }
+
+      ryml::NodeRef& operator<<(ryml::NodeRef& _node, const brew& _data) {
+
+	auto tree = _node.tree();
+	_node |= ryml::MAP;
+	_node["id"] << _data.id;
+	auto name = tree->to_arena(_data.name);
+	_node["name"] << name;
+	auto bd = tree->to_arena(_data.brewdate);
+	_node["brewdate"] << bd;
+
+	ryml::NodeRef yeast = _node["yeast"];
+	yeast << *(_data.yeast);
+
+	if ( _data.originalsg ) {
+	  _node["originalsg"] << _data.originalsg.value();
+	} else {
+	  _node["originalsg"] << nullptr;
+	}
+
+	return _node;
+      }
+
+      ryml::ConstNodeRef& operator>>(ryml::ConstNodeRef& _node, brew& _data) {
+	CONDEXTRACT(id);
+	CONDEXTRACT(name);
+	CONDEXTRACT(brewdate);
+	CONDEXTRACT(sgoffset);
+	CONDEXTRACT(finished);
+
+	// originalsg
+	if ( _node.has_child("originalsg") ) {
+	  ryml::ConstNodeRef osg = _node["originalsg"];
+	  if ( osg.has_val() && !osg.val_is_null() ) {
+	    float fosg;
+	    osg >> fosg;
+	    _data.originalsg = fosg;
+	  } else {
+	    _data.originalsg.reset();
+	  }
+	}
+
+	// metadata
+	if ( _node.has_child("metadata") ) {
+	  ryml::ConstNodeRef md = _node["metadata"];
+	  if ( md.has_val() && !md.val_is_null() ) {
+	    std::string mdata;
+	    md >> mdata;
+	    _data.metadata = mdata;
+	  } else {
+	    _data.metadata.reset();
+	  }
+	}
+
+	// yeast
+	if ( _node.has_child("yeast") ) {
+	  ryml::ConstNodeRef y = _node["yeast"];
+	  if ( y.has_val() )
+	    throw Exception("yeast is expected to be a non-scalar");
+	  if ( !y.is_container() )
+	    throw Exception("yeast is expected to be a container");
+
+	  int yid;
+	  _node["yeast"]["id"] >> yid;
+	  _data.yeast = ServiceManager::get<Connection>()
+	    ->getYeastByID(yid);
+	  if ( !_data.yeast )
+	    throw Exception("Yeast not found");
+	}
+	return _node;
+      }
+
+      /*
+	transfer
+       */
+      transfer& transfer::operator=(Result& r) {
+	if ( r.hasField("id") )
+	  id = r.fetch<int>("id");
+	transferdate = r.fetch<std::string>("transferdate");
+
+	auto dbc = ServiceManager::get<Connection>();
+	int bid = r.fetch<int>("brewid");
+	brew = dbc->getBrewByID(bid);
+	int fid = r.fetch<int>("fermenterid");
+	fermenter = dbc->getFermenterByID(fid);
+	return *this;
+      }
+
+      ryml::NodeRef& operator<<(ryml::NodeRef& _node, const transfer& _data) {
+	auto tree = _node.tree();
+	_node |= ryml::MAP;
+	_node["id"] << _data.id;
+
+	ryml::NodeRef brew = _node["brew"];
+	brew  << *(_data.brew);
+	ryml::NodeRef fermenter = _node["brew"];
+	fermenter << *(_data.fermenter);
+
+	auto td = tree->to_arena(_data.transferdate);
+	_node["transferdate"] = td;
+	return _node;
+      }
+
+      ryml::ConstNodeRef& operator>>(ryml::ConstNodeRef& _node, transfer& _data) {
+	CONDEXTRACT(id);
+	CONDEXTRACT(transferdate);
+
+	// brew
+	if ( _node.has_child("brew") ) {
+	  ryml::ConstNodeRef b = _node["brew"];
+	  if ( b.has_val() )
+	    throw Exception("brew is expected to be a non-scalar");
+	  if ( !b.is_container() )
+	    throw Exception("brew is expected to be a container");
+
+	  int bid;
+	  _node["brew"]["id"] >> bid;
+	  _data.brew = ServiceManager::get<Connection>()
+	    ->getBrewByID(bid);
+	  if ( !_data.brew )
+	    throw Exception("Brew not found");
+	}
+
+	// fermenter
+	if ( _node.has_child("fermenter") ) {
+	  ryml::ConstNodeRef f = _node["fermenter"];
+	  if ( f.has_val() )
+	    throw Exception("fermenter is expected to be a non-scalar");
+	  if ( !f.is_container() )
+	    throw Exception("fermenter is expected to be a container");
+
+	  int fid;
+	  _node["fermenter"]["id"] >> fid;
+	  _data.fermenter = ServiceManager::get<Connection>()
+	    ->getFermenterByID(fid);
+	  if ( !_data.fermenter )
+	    throw Exception("Fermenter not found");
+	}
+	return _node;
+      }
+
+      /*
+	fermentationlog
+       */
+      fermentationlog& fermentationlog::operator=(Result& r) {
+	if ( r.hasField("id") )
+	  id = r.fetch<int>("id");
+
+	timestamp = r.fetch<int>("timestamp");
+	sg = r.fetch<float>("sg");
+	temperature = r.fetch<float>("temperature");
+
+	int bid = r.fetch<int>("brewid");
+	brew = ServiceManager::get<Connection>()
+	  ->getBrewByID(bid);
+
+	return *this;
+      }
+
+      ryml::NodeRef& operator<<(ryml::NodeRef& _node,
+				const fermentationlog& _data) {
+	auto tree = _node.tree();
+	_node |= ryml::MAP;
+	_node["id"] << _data.id;
+	_node["timestamp"] << _data.timestamp;
+	_node["sg"] << ryml::fmt::real(_data.sg, 3);
+	_node["temperature"] << ryml::fmt::real(_data.temperature, 1);
+	ryml::NodeRef brew = _node["brew"];
+	brew  << *(_data.brew);
+
+	return _node;
+      }
+
+      ryml::ConstNodeRef& operator>>(ryml::ConstNodeRef& _node,
+				     fermentationlog& _data) {
+	CONDEXTRACT(id);
+	CONDEXTRACT(timestamp);
+	CONDEXTRACT(sg);
+	CONDEXTRACT(temperature);
+
+	if ( _node.has_child("brew") ) {
+	  ryml::ConstNodeRef x = _node["brew"];
+	  if ( x.has_val() ) {
+	    if ( x.val_is_null() ) {
+	      _data.brew = nullptr;
+	    } else {
+	      throw Exception("brew is a scalar but not null");
+	    }
+	  } else if ( x.is_container() ) {
+	    int bid;
+	    _node["brew"]["id"] >> bid;
+	    _data.brew = ServiceManager::get<DB::Connection>()
+	      ->getBrewByID(bid);
+	    if ( !_data.brew )
+	      throw Exception("Brew with id %i not found", bid);
+	  }
+	}
+	return _node;
+      }
+
     } // ns DB
   } // ns fermd
 } // ns aegir

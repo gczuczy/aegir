@@ -15,13 +15,10 @@ TEST_CASE_METHOD(DBFixture, "db_yeasts", "[fermd][db][yeasts]") {
   y.mintemp = mintemp;
   y.maxtemp = maxtemp;
   y.attenuation = attenuation;
-    printf("%s:%i\n", __FILE__, __LINE__);
   txn.updateYeast(y);
-    printf("%s:%i\n", __FILE__, __LINE__);
 
   // now verify
   auto y2 = txn->getYeastByID(y.id);
-    printf("%s:%i\n", __FILE__, __LINE__);
   REQUIRE_THAT(y2->abv, WithinRel(abv));
   REQUIRE_THAT(y2->mintemp, WithinRel(mintemp));
   REQUIRE_THAT(y2->maxtemp, WithinRel(maxtemp));
