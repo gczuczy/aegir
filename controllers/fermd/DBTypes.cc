@@ -316,10 +316,14 @@ namespace aegir {
 	yeast << *(_data.yeast);
 
 	if ( _data.originalsg ) {
-	  _node["originalsg"] << _data.originalsg.value();
+	  _node["originalsg"] << ryml::fmt::real(_data.sgoffset, 3)
+			      <<_data.originalsg.value();
 	} else {
 	  _node["originalsg"] << nullptr;
 	}
+
+	_node["sgoffset"] << ryml::fmt::real(_data.sgoffset, 3);
+	_node["finished"] << _data.finished;
 
 	return _node;
       }
@@ -465,11 +469,20 @@ namespace aegir {
 	auto tree = _node.tree();
 	_node |= ryml::MAP;
 	_node["id"] << _data.id;
-	_node["timestamp"] << _data.timestamp;
 	_node["sg"] << ryml::fmt::real(_data.sg, 3);
 	_node["temperature"] << ryml::fmt::real(_data.temperature, 1);
 	ryml::NodeRef brew = _node["brew"];
 	brew  << *(_data.brew);
+
+	// timestamp
+	std::tm tm{};
+	gmtime_r(&_data.timestamp, &tm);
+	char buffer[32];
+	if ( std::strftime(buffer, 31, "%Y-%m-%dT%H:%M:%SZ", &tm) == 0 )
+	  throw Exception("Unable to format timestamp: %s", strerror(errno));
+
+	auto ts = tree->to_arena(buffer);
+	_node["timestamp"] << ts;
 
 	return _node;
       }
@@ -477,9 +490,20 @@ namespace aegir {
       ryml::ConstNodeRef& operator>>(ryml::ConstNodeRef& _node,
 				     fermentationlog& _data) {
 	CONDEXTRACT(id);
-	CONDEXTRACT(timestamp);
 	CONDEXTRACT(sg);
 	CONDEXTRACT(temperature);
+
+	// timestamp
+	if ( _node.has_child("timestamp") ) {
+	  std::string ts;
+	  _node["timestamp"] >> ts;
+	  std::tm tm{};
+
+	  if ( strptime(ts.c_str(), "%Y-%m-%dT%H:%M:%S", &tm) == nullptr )
+	    throw Exception("Unable to parse timestamp %s", ts.c_str());
+
+	  _data.timestamp = std::mktime(&tm);
+	}
 
 	if ( _node.has_child("brew") ) {
 	  ryml::ConstNodeRef x = _node["brew"];

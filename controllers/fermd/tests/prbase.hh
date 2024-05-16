@@ -51,6 +51,7 @@ public:
 
 protected:
   aegir::RawMessage::ptr send(const std::string&);
+  aegir::RawMessage::ptr send(const char* _fmt, ...);
   bool isError(aegir::RawMessage::ptr&);
 
 private:

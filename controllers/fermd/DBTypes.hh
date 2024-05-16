@@ -2,6 +2,9 @@
 #ifndef AEGIR_FERMD_DB_TYPES
 #define AEGIR_FERMD_DB_TYPES
 
+#include <time.h>
+
+#include <ctime>
 #include <string>
 #include <memory>
 #include <optional>
@@ -131,7 +134,7 @@ namespace aegir {
 	fermentationlog& operator=(Result&);
 	int id;
 	brew::cptr brew;
-	int timestamp;
+	time_t timestamp;
 	float sg;
 	float temperature;
       };

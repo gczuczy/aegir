@@ -48,16 +48,31 @@ PRFixture::~PRFixture() {
 }
 
 aegir::RawMessage::ptr PRFixture::send(const std::string& _cmd) {
-  INFO("Request: " << _cmd);
+  UNSCOPED_INFO("Request: " << _cmd);
   c_sock->send(_cmd, true);
   auto msg = c_sock->recvRaw(true);
-  INFO("Response: " << ((char*)msg->data()));
+  UNSCOPED_INFO("Response: " << ((char*)msg->data()));
   return msg;
+}
+
+aegir::RawMessage::ptr PRFixture::send(const char* _fmt, ...) {
+  char buff[1024];
+  int len;
+
+  std::va_list args;
+  va_start(args, _fmt);
+  len = std::vsnprintf(buff, (std::size_t)sizeof(buff)-1, _fmt, args);
+  va_end(args);
+  return send(std::string(buff, len));
 }
 
 bool PRFixture::isError(aegir::RawMessage::ptr& _msg) {
   auto indata = c4::to_csubstr((char*)_msg->data());
   ryml::Tree tree = ryml::parse_in_arena(indata);
   ryml::NodeRef root = tree.rootref();
+  if ( root["status"] == "error" ) {
+    CAPTURE(root["message"]);
+    UNSCOPED_INFO(root["message"]);
+  }
   return root["status"] == "error";
 }

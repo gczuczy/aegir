@@ -3,6 +3,7 @@
 #define AEGIR_FERMD_DB_STATEMENT
 
 #include <string>
+#include <ctime>
 
 #include <sqlite3.h>
 #include <optional>
@@ -28,6 +29,9 @@ namespace aegir {
 	Statement& bind(const std::string& _field, int _value);
 	Statement& bind(const std::string& _field, float _value);
 	Statement& bind(const std::string& _field, const std::string& _value);
+	inline Statement& bind(const std::string& _field, time_t _value) {
+	  return bind(_field, (int)_value);
+	}
 	template<typename T>
 	Statement& bind(const std::string& _field, std::optional<T> _value) {
 	  if ( !_value.has_value() ) {

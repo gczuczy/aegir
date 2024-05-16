@@ -28,20 +28,33 @@ namespace aegir {
       c_proxy = ServiceManager::get<ZMQConfig>()->proxy("pr");
 
       REGCMD(hello);
+      // fermenter types
       REGCMD(getFermenterTypes);
       REGCMD(addFermenterTypes);
       REGCMD(updateFermenterTypes);
       REGCMD(deleteFermenterTypes);
+      // fermenters
       REGCMD(getFermenters);
       REGCMD(addFermenter);
       REGCMD(updateFermenter);
+      // hydrometers
       REGCMD(getTilthydrometers);
       REGCMD(updateTilthydrometer);
+      // sensors
       REGCMD(getSensorCache);
+      // yeasts
       REGCMD(getYeasts);
       REGCMD(addYeast);
       REGCMD(updateYeast);
       REGCMD(deleteYeast);
+      // brews
+      REGCMD(addBrew);
+      REGCMD(getBrews);
+      REGCMD(getBrew);
+      REGCMD(updateBrew);
+      REGCMD(deleteBrew);
+      // transfers
+      REGCMD(transferBrew);
     }
 
     PRThread::~PRThread() {
@@ -335,6 +348,8 @@ namespace aegir {
       _req["id"] >> id;
       auto db = ServiceManager::get<DB::Connection>();
       auto dby = db->getYeastByID(id);
+      if ( dby == nullptr )
+	throw Exception("Yeast not found by id %i", id);
       DB::yeast y = *dby;
       _req >> y;
       db->txn().updateYeast(y);
@@ -349,5 +364,121 @@ namespace aegir {
       _req["id"] >> id;
       db->txn().deleteYeast(id);
     }
+
+    // Brews
+    // brewdate is implicit now
+    PRCMD(addBrew) {
+      requireFields(_req, {"name", "yeast"});
+
+      DB::brew brew;
+      brew.sgoffset = 0.0f;
+      _req >> brew;
+      brew.finished = false;
+      std::tm tm;
+      time_t now = std::time(nullptr);
+      gmtime_r(&now, &tm);
+      char buff[32];
+      auto len = std::strftime(buff, 31, "%Y-%m-%d", &tm);
+      brew.brewdate = std::string(buff, len);
+
+      auto dbbrew = ServiceManager::get<DB::Connection>()->txn().addBrew(brew);
+      _rep << *dbbrew;
+    }
+
+    PRCMD(getBrews) {
+      _rep |= ryml::SEQ;
+      auto data = ServiceManager::get<DB::Connection>()->getBrews();
+      for (auto& it: data) {
+	ryml::NodeRef node = _rep.append_child();
+	node << *it;
+      }
+    }
+
+    PRCMD(getBrew) {
+      requireFields(_req, {"id"});
+      _rep |= ryml::MAP;
+
+      int brewid;
+      _req["id"] >> brewid;
+      auto db = ServiceManager::get<DB::Connection>();
+      auto brew = db->getBrewByID(brewid);
+      _rep << *brew;
+
+      // add transfers
+      ryml::NodeRef transfers = _rep["transfers"];
+      transfers |= ryml::SEQ;
+      auto tfs = db->getTransfersByBrew(*brew);
+      for (auto& it: tfs) {
+	ryml::NodeRef node = transfers.append_child();
+	node << *it;
+      }
+
+      // add fermentation log
+      ryml::NodeRef fermentationlog = _rep["fermentationlog"];
+      fermentationlog|= ryml::SEQ;
+      auto fls = db->getFermentationlogsByBrew(*brew);
+      for (auto& it: fls) {
+	ryml::NodeRef node = fermentationlog.append_child();
+	node << *it;
+      }
+    }
+
+    PRCMD(updateBrew) {
+      requireFields(_req, {"id"});
+
+      int brewid;
+      _req["id"] >> brewid;
+      auto db = ServiceManager::get<DB::Connection>();
+      auto dbbrew = db->getBrewByID(brewid);
+      if ( dbbrew == nullptr )
+	throw Exception("No brew found by id %i", brewid);
+
+      DB::brew brew = *dbbrew;
+      _req >> brew;
+      db->txn().updateBrew(brew);
+      _rep << *db->getBrewByID(brewid);
+    }
+
+    PRCMD(deleteBrew) {
+      requireFields(_req, {"id"});
+
+      int brewid;
+      _req["id"] >> brewid;
+      ServiceManager::get<DB::Connection>()->txn().deleteBrew(brewid);
+    }
+
+    PRCMD(transferBrew) {
+      requireFields(_req, {"brew", "fermenter"});
+      // transferdate is optional
+
+      DB::transfer t;
+      // set now as the transferdate
+      if ( _req.has_child("transferdate") ) {
+	ryml::ConstNodeRef td = _req["transferdate"];
+	if ( !td.has_val() )
+	  throw Exception("If transferdate is specified has to be a scalar");
+
+	// check the syntax
+	std::string ts;
+	td >> ts;
+	std::tm tm{};
+	if ( strptime(ts.c_str(), "%Y-%m-%dT%H:%M:%S", &tm) == nullptr )
+	  throw Exception("Unable to parse trsanferdate %s", ts.c_str());
+      } else {
+	std::tm tm{};
+	std::time_t ti(std::time(0));
+	gmtime_r(&ti, &tm);
+	char buffer[32];
+	if ( std::strftime(buffer, 31, "%Y-%m-%dT%H:%M:%SZ", &tm) == 0 )
+	  throw Exception("Unable to format timestamp: %s", strerror(errno));
+
+	t.transferdate = buffer;
+      }
+      _req >> t;
+      auto newt = ServiceManager::get<DB::Connection>()->txn().addTransfer(t);
+
+      _rep << *newt;
+    }
+
   }
 }
