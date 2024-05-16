@@ -6,7 +6,7 @@
   </div>
 </div>
 <div class="row row-cols-1 row-cols-md-3 g-4">
-  <!-- new fermenter -->
+  <!-- new fermentertypes -->
   <div class="col" *ngIf="showNew">
     <div class="card h-100">
       <div class="card-body">
@@ -54,7 +54,7 @@
       </div>
     </div>
   </div>
-  <!-- fermenters -->
+  <!-- fermentertypes listing -->
   <div class="col"
        *ngFor="let ft of fermentertypes">
     <div class="card h-100" *ngIf="ft.edit == false">
@@ -70,7 +70,7 @@
 	</p>
       </div>
     </div>
-    <!-- edit fermenter -->
+    <!-- edit fermentertype -->
     <div class="card h-100" *ngIf="ft.edit == true">
       <div class="card-body">
 	<h5 class="card-title">Edit fermenter</h5>

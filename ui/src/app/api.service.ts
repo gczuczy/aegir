@@ -413,6 +413,40 @@ export class ApiService {
       )
   }
 
+  addFermenter(fermdid: number,
+	       data: apiFermenter): Observable<apiFermenter> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post(`/api/fermds/${fermdid}/fermenters`,
+			  body, options)
+      .pipe(
+	map(res => <apiFermenter>((<apiResponse>res).data))
+      );
+  }
+
+  updateFermenter(fermdid: number,
+		  fid: number,
+		  data: apiFermenter): Observable<apiFermenter> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post(`/api/fermds/${fermdid}/fermenters/${fid}`,
+			  body, options)
+      .pipe(
+	map(res => <apiFermenter>((<apiResponse>res).data))
+      );
+  }
+
+  delFermenter(fermdid: number,
+	       fid: number): Observable<any> {
+    return this.http.delete(`/api/fermds/${fermdid}/fermenters/${fid}`)
+      .pipe(
+	map(res => <apiResponse>res)
+      );
+  }
+
+
   getSensorCache(fermdid: number): Observable<apiSensorCache> {
     return this.http.get(`/api/fermds/${fermdid}/sensorcache`)
       .pipe(
