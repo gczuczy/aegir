@@ -134,3 +134,21 @@ CREATE TABLE fermentationlog (
   CHECK (sg >= 0.950 AND sg <= 1.500),
   CHECK (temperature > -30 AND temperature < 50)
 );
+
+CREATE VIEW fermentingbrews AS
+WITH activebrews AS (
+SELECT b.id
+FROM brews b
+WHERE NOT b.finished
+), lastxfers AS (
+SELECT brewid, max(id) AS id
+FROM transfers t
+GROUP BY brewid
+)
+SELECT ab.id AS brewid,
+			 lx.id AS xferid,
+			 t.fermenterid
+FROM activebrews ab
+		 LEFT JOIN lastxfers lx ON ab.id = lx.brewid
+		 LEFT JOIN transfers t ON lx.id = t.id
+;

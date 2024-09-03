@@ -76,4 +76,13 @@ TEST_CASE_METHOD(DBFixture, "db_transfers", "[fermd][db][transfers]") {
       }
     }
   }
+
+  // verify the lastfermenter of the brew
+	/*
+  {
+    auto f = db()->getLastBrewFermenter(b.id);
+    REQUIRE( f );
+    REQUIRE( f->id == f2->id );
+  }
+	*/
 }

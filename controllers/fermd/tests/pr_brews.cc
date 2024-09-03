@@ -225,7 +225,7 @@ TEST_CASE_METHOD(PRBrewFixture, "pr_deleteBrew", "[fermd][pr][brews]") {
   REQUIRE( !isError(msg) );
 }
 
-TEST_CASE_METHOD(PRBrewFixture, "pr_transferBrew", "[fermd][pr][brews]") {
+TEST_CASE_METHOD(PRBrewFixture, "pr_transferBrew", "[fermd][pr][brews][transfers]") {
   std::string name{"test-1"}, currdate;
   int brewid;
   {
@@ -238,9 +238,8 @@ TEST_CASE_METHOD(PRBrewFixture, "pr_transferBrew", "[fermd][pr][brews]") {
     data["id"] >> brewid;
   }
 
-
-  auto fermenters = aegir::ServiceManager::get<aegir::fermd::DB::Connection>()
-    ->getFermenters();
+	auto dbc = aegir::ServiceManager::get<aegir::fermd::DB::Connection>();
+  auto fermenters = dbc->getFermenters();
   int fid1 = (*fermenters.begin())->id;
   // transfer it to a fermenter
   int tfid1, tfid2;
@@ -257,8 +256,7 @@ TEST_CASE_METHOD(PRBrewFixture, "pr_transferBrew", "[fermd][pr][brews]") {
   }
   // check we have this transfer
   {
-    auto tf = aegir::ServiceManager::get<aegir::fermd::DB::Connection>()
-      ->getTransferByID(tfid1);
+    auto tf = dbc->getTransferByID(tfid1);
     REQUIRE( tf );
     REQUIRE( tf->fermenter->id == fid1 );
     REQUIRE( tf->brew->id == brewid );
@@ -279,8 +277,7 @@ TEST_CASE_METHOD(PRBrewFixture, "pr_transferBrew", "[fermd][pr][brews]") {
   }
   // check we have this transfer
   {
-    auto tf = aegir::ServiceManager::get<aegir::fermd::DB::Connection>()
-      ->getTransferByID(tfid2);
+    auto tf = dbc->getTransferByID(tfid2);
     REQUIRE( tf );
     REQUIRE( tf->fermenter->id == fid2 );
     REQUIRE( tf->brew->id == brewid );
@@ -300,6 +297,60 @@ TEST_CASE_METHOD(PRBrewFixture, "pr_transferBrew", "[fermd][pr][brews]") {
       int id;
       node["id"] >> id;
       REQUIRE( (id == tfid1 || id == tfid2) );
+    }
+  }
+
+  // check the last fermenter in getbrews
+  {
+    auto msg = send("{\"command\": \"getBrews\"}");
+    REQUIRE( (msg && !isError(msg)) );
+    auto indata = c4::to_csubstr((char*)msg->data());
+    ryml::Tree tree = ryml::parse_in_arena(indata);
+    ryml::NodeRef data = tree.rootref()["data"];
+
+    // we should only have a single brew
+    for (ryml::ConstNodeRef node: data.children()) {
+      int bid;
+      node["id"] >> bid;
+      REQUIRE( bid == brewid );
+      REQUIRE( node.has_child("fermenter") );
+      int fid;
+      node["fermenter"]["id"] >> fid;
+      REQUIRE( fid == fid2 );
+    }
+  }
+
+	// check the transfer in the getFermenters
+  {
+    auto msg = send("{\"command\": \"getFermenters\"}");
+    REQUIRE( (msg && !isError(msg)) );
+    auto indata = c4::to_csubstr((char*)msg->data());
+    ryml::Tree tree = ryml::parse_in_arena(indata);
+    ryml::NodeRef data = tree.rootref()["data"];
+
+    // we should only have a single brew
+    for (ryml::ConstNodeRef node: data.children()) {
+			int fid;
+			node["id"] >> fid;
+			// it needs to be in fid2
+			ryml::ConstNodeRef b = node["brew"];
+			if ( fid == fid2 ) {
+				REQUIRE( b.is_container() );
+				REQUIRE( !b.has_val() );
+				int bid;
+				b["id"] >> bid;
+				REQUIRE( bid == brewid );
+			} else if ( fid == fid1 ) {
+				std::cout << tree << std::endl;
+				std::cout << "Transfers: " << std::endl;
+				for ( auto& it: dbc->getTransfers() )
+					printf(" - brewid:%i fid:%i date:%s\n",
+								 it->brew->id, it->fermenter->id,
+								 it->transferdate.c_str());
+				REQUIRE( !b.is_container() );
+				REQUIRE( b.has_val() );
+				REQUIRE( b == "null" );
+			}
     }
   }
 }
