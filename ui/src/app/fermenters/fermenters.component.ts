@@ -54,7 +54,7 @@ export class FermentersComponent {
   }
 
   updateFermenterTypes() {
-    console.log("updateFermenterTypes(), fermdid:", this.fermdid);
+    //console.log("updateFermenterTypes(), fermdid:", this.fermdid);
     if ( this.fermdid == null ) return;
     this.api.getFermenterTypes(this.fermdid!).subscribe(
       (data:apiFermenterType[]) => {
@@ -68,7 +68,7 @@ export class FermentersComponent {
   }
 
   updateFermenters() {
-    console.log("updateFermenterTypes(), fermdid:", this.fermdid);
+    //console.log("updateFermenterTypes(), fermdid:", this.fermdid);
     if ( this.fermdid == null ) return;
     this.api.getFermenters(this.fermdid!).subscribe(
       (data:apiFermenter[]) => {
@@ -123,7 +123,7 @@ export class FermentersComponent {
   }
 
   save(fid: number, model: FormGroup) {
-    console.log('savefermenter', fid, model);
+    //console.log('savefermenter', fid, model);
     let ft: apiFermenterType;
     let ftid = model.get('ftid')!.value;
     for (let it of this.fermentertypes) {

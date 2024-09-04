@@ -25,6 +25,7 @@ def init(app, api):
     api.add_resource(Yeast, '/api/fermds/<int:fermdid>/yeasts/<int:yeastid>')
     api.add_resource(Brews, '/api/fermds/<int:fermdid>/brews')
     api.add_resource(Brew, '/api/fermds/<int:fermdid>/brew/<int:brewid>')
+    api.add_resource(TransferBrew, '/api/fermds/<int:fermdid>/brew/<int:brewid>/transfer')
     pass
 
 class Fermds(flask_restful.Resource):
@@ -484,15 +485,15 @@ class Brew(flask_restful.Resource):
         '''
         Updates a brew
         '''
-        data = flask.request.get_json();
         db = aegir.db.Connection()
         try:
             fermd = db.getFermd(fermdid)
         except Exception as e:
             return {'status': 'error',
                     'message': 'No such fermd: {e}'.format(e=str(e))},400
+        data = flask.request.get_json();
 
-        data['id'] = yeastid
+        data['id'] = brewid
         try:
             zmq = aegir.zmq.ZMQReq(fermd.address)
             resp = zmq.prmessage('updateBrew', data)
@@ -513,7 +514,7 @@ class Brew(flask_restful.Resource):
             return {'status': 'error',
                     'message': 'No such fermd: {e}'.format(e=str(e))},400
 
-        data = {'id': yeastid}
+        data = {'id': brewid}
         try:
             zmq = aegir.zmq.ZMQReq(fermd.address)
             resp = zmq.prmessage('deleteBrew', data)
@@ -522,3 +523,33 @@ class Brew(flask_restful.Resource):
                     'message': str(e)},400
         return {'status': 'success'}
 
+class TransferBrew(flask_restful.Resource):
+    def post(self, fermdid, brewid):
+        '''
+        Transfer a brew
+        '''
+        data = flask.request.get_json();
+        # verify the input first
+        if 'brew' not in data or 'id' not in data['brew']:
+            return {'status': 'error',
+                    'message': 'brew.id missing'}, 400
+
+        if 'fermenter' not in data or 'id' not in data['fermenter']:
+            return {'status': 'error',
+                    'message': 'fermenter.id missing'}, 400
+
+        db = aegir.db.Connection()
+        try:
+            fermd = db.getFermd(fermdid)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': 'No such fermd: {e}'.format(e=str(e))},400
+
+        try:
+            zmq = aegir.zmq.ZMQReq(fermd.address)
+            resp = zmq.prmessage('transferBrew', data)
+        except Exception as e:
+            return {'status': 'error',
+                    'message': str(e)},400
+        return {'status': 'success',
+                'data': resp['data']}

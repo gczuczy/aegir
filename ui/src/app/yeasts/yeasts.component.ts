@@ -64,7 +64,7 @@ export class YeastsComponent {
   updateYeasts() {
     this.api.getYeasts(this.fermdid!).subscribe(
       (data:apiYeast[]) => {
-	console.log(data);
+	//console.log(data);
 	let ys: yeast[] = [];
 
 	for (let y of data) {
@@ -137,7 +137,7 @@ export class YeastsComponent {
   }
 
   del(yeastid: number) {
-    console.log("delete", yeastid);
+    //console.log("delete", yeastid);
     if (confirm("Kill the yeast?")) {
       this.api.deleteYeast(this.fermdid!, yeastid).subscribe(
 	(data:any) => {

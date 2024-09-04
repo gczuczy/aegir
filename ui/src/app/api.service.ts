@@ -13,7 +13,8 @@ import { apiResponse,
 	 apiBrewStateVolume, apiBrewStateVolumeData,
 	 apiBrewTempHistory, apiBrewLoadProgramRequest,
 	 apiFermd, apiTilthydrometer, apiFermenterType,
-	 apiFermenter, apiSensorCache, apiYeast
+	 apiFermenter, apiSensorCache, apiYeast, apiBrew,
+	 apiTransfer
        } from './api.types';
 
 @Injectable({
@@ -492,4 +493,33 @@ export class ApiService {
     return this.http.delete(`/api/fermds/${fermdid}/yeasts/${yeastid}`);
   }
 
+  getBrews(fermdid: number): Observable<apiBrew[]> {
+    return this.http.get(`/api/fermds/${fermdid}/brews`)
+      .pipe(
+	catchError(this.handleErrors),
+	map(res => <apiBrew[]>((<apiResponse>res).data))
+      )
+  }
+
+  addBrew(fermdid: number, data: apiBrew): Observable<any> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post(`/api/fermds/${fermdid}/brews`,
+			  body, options)
+      .pipe(
+	map(res => <apiBrew>((<apiResponse>res).data))
+      );
+  }
+
+  transferBrew(fermdid: number, data: apiTransfer): Observable<any> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post(`/api/fermds/${fermdid}/brew/${data.brew!.id}/transfer`,
+			  body, options)
+      .pipe(
+	map(res => <apiBrew>((<apiResponse>res).data))
+      );
+  }
 }

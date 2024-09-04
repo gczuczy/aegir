@@ -138,6 +138,7 @@ export interface apiFermenter {
   id?: number,
   name: string,
   type: apiFermenterType,
+  brew?: apiBrew,
 }
 
 export interface apiTilthydrometer {
@@ -170,3 +171,22 @@ export interface apiYeast {
   mintemp: number,
   maxtemp: number,
 };
+
+export interface apiBrew {
+  id?: number,
+  name: string,
+  yeast: apiYeast,
+  brewdate: string,
+  originalsg?: number,
+  sgoffset: number,
+  finished: boolean,
+  metadata?: string,
+  fermenter?: apiFermenter,
+}
+
+export interface apiTransfer {
+  id?: number
+  brew: apiBrew,
+  fermenter: apiFermenter,
+  transferdate?: string,
+}

@@ -1,0 +1,167 @@
+<div class="row">
+  <div class="col">
+    <button class="btn btn-default" (click)="showNew = true">
+      <fa-icon [icon]="faFileCirclePlus" size="3x" style="color: #63E6BE;"></fa-icon>
+    </button>
+  </div>
+</div>
+<div class="row row-cols-1 row-cols-md-3 g-4">
+  <!-- new brew -->
+  <div class="col" *ngIf="showNew">
+    <div class="card h-100">
+      <div class="card-body">
+	<h5 class="card-title">Add brew</h5>
+	<div class="card-text">
+	  <form [formGroup]="addBrewForm"
+		(ngSubmit)="add(addBrewForm)">
+	    <!-- name -->
+	    <div class="form-group">
+		<label for="name">Name</label>
+		<small [hidden]="addBrewForm.controls['name'].valid"
+		       class="text-danger">
+		  Must be at least 3 characters
+		</small>
+		<input class="form-control" formControlName="name" id="name">
+	    </div>
+	    <!-- yeast -->
+	    <div class="form-group">
+	      <label for="yeastid">Yeast</label>
+	      <small [hidden]="addBrewForm.controls['yeastid'].valid"
+		     class="text-danger">
+	      </small>
+	      <select class="form-select form-select-sm"
+		      formControlName="yeastid"
+		      aria-label="Select yeast">
+		<option *ngFor="let y of yeasts" value="{{y.id}}">
+		  {{y.name}}
+		</option>
+	      </select>
+	    </div>
+	    <!-- originalsg -->
+	    <div class="form-group">
+	      <label for="originalsg">
+		<mat-slide-toggle
+		  [checked]="addFormHasOriginalSG()"
+		  (change)="toggleAddFormHasOriginalSG()"
+		  >
+		  Original SG
+		</mat-slide-toggle>
+		</label>
+	      <small [hidden]="addBrewForm.controls['originalsg'].valid"
+		     class="text-danger">
+		2 &lt;= Brix &lt;= 20, 1.010 &lt;= SG &lt;= 1.100
+	      </small>
+	      <div class="input-group" [hidden]="!addFormHasOriginalSG()">
+		<input class="form-control" formControlName="originalsg"
+		       id="originalsg">
+		<select class="form-selectform-select-sm"
+			formControlName="originalsgunits"
+			aria-label="units">
+		  <option value="brix">B</option>
+		  <option value="sg">SG</option>
+		</select>
+	      </div>
+	    </div>
+	    <!-- sgoffset -->
+	    <div class="form-group">
+	      <label for="sgoffset">SG Offset</label>
+	      <small [hidden]="addBrewForm.controls['sgoffset'].valid"
+		     class="text-danger">
+		0 &lt;= Brix &lt;= 10, 1.000 &lt;= SG &lt;= 1.040
+	      </small>
+	      <div class="input-group">
+		<input class="form-control" formControlName="sgoffset"
+		       id="sgoffset">
+		<select class="form-selectform-select-sm"
+			formControlName="sgoffsetunits"
+			aria-label="units">
+		  <option value="brix">B</option>
+		  <option value="sg">SG</option>
+		</select>
+	      </div>
+	    </div>
+	    <!-- submit -->
+	    <div class="form-group">
+	      <button type="submit" class="btn btn-small btn-info"
+		      (click)="showNew = false">Cancel</button>
+	      <button type="submit" class="btn btn-small btn-primary float-end"
+		      [disabled]="!addBrewForm.valid">Add</button>
+	    </div>
+	  </form>
+	</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- brews -->
+  <!-- active -->
+  <accordion>
+    <accordion-group heading="Active" *ngIf="hasActiveBrews()"
+		     [isOpen]="isopen_active">
+      <div class="row row-cols-1 row-cols-md-3 g-4">
+	<!-- a tilt -->
+	<div class="col"
+	     *ngFor="let brew of activeBrews()">
+	  <div class="card h-100">
+	    <div class="card-body">
+	      <h5 class="card-title">{{brew.data.name}} / {{brew.data.brewdate}}</h5>
+	      <div class="card-text">
+		<table class="table table-sm">
+		  <tbody>
+		    <tr>
+		      <th>Yeast</th>
+		      <td>{{brew.data.yeast.name}}</td>
+		    </tr>
+		    <tr *ngIf="brew.data.originalsg">
+		      <th>OriginalSG</th>
+		      <td>{{brew.data.originalsg!}}</td>
+		    </tr>
+		    <tr>
+		      <th>SG offset</th>
+		      <td>{{brew.data.sgoffset}}</td>
+		    </tr>
+		    <tr *ngIf="brew.data.fermenter">
+		      <th>Fermenter:</th>
+		      <td>{{brew.data.fermenter!.name}}</td>
+		    </tr>
+		  </tbody>
+		</table>
+	      </div> <!-- card-text -->
+	      <div class="card-text" *ngIf="brew.transferMode">
+		<form [formGroup]="brew.transferForm"
+		      (ngSubmit)="transfer(brew)">
+		  <div class="form-group">
+		    <select class="form-select form-select-sm"
+			    formControlName="fermenterid"
+			    aria-label="Fermenter assignment">
+		      <option *ngFor="let f of getEmptyFermenters()" value="{{f.id}}">
+			{{f.name}} / {{f.type.name}} {{f.type.capacity}} L
+		      </option>
+		    </select>
+		  </div>
+		  <div class="form-group">
+		    <button type="submit" class="btn btn-small btn-info"
+			    (click)="brew.transferMode = false">Cancel</button>
+		    <button type="submit" class="btn btn-small btn-primary float-end"
+			    [disabled]="!brew.transferForm.valid">Transfer</button>
+		  </div>
+		</form>
+	      </div>
+	      <div class="card-text">
+		  <button type="submit" class="btn"
+			  *ngIf="!brew.transferMode"
+			  (click)="brew.transferMode=true">
+		    <fa-icon [icon]="faPaperPlane"></fa-icon>
+		  </button>
+	      </div>
+	    </div> <!-- body -->
+	  </div> <!-- card -->
+	</div> <!-- row -->
+      </div> <!-- row for group -->
+    </accordion-group>
+    <!-- finished -->
+    <accordion-group heading="Finished" *ngIf="hasFinishedBrews()"
+		     [isOpen]="isopen_finished">
+    </accordion-group>
+  </accordion>
