@@ -341,15 +341,10 @@ TEST_CASE_METHOD(PRBrewFixture, "pr_transferBrew", "[fermd][pr][brews][transfers
 				b["id"] >> bid;
 				REQUIRE( bid == brewid );
 			} else if ( fid == fid1 ) {
-				std::cout << tree << std::endl;
-				std::cout << "Transfers: " << std::endl;
 				for ( auto& it: dbc->getTransfers() )
-					printf(" - brewid:%i fid:%i date:%s\n",
-								 it->brew->id, it->fermenter->id,
-								 it->transferdate.c_str());
 				REQUIRE( !b.is_container() );
 				REQUIRE( b.has_val() );
-				REQUIRE( b == "null" );
+				REQUIRE( (b.val_is_null() || b == "") );
 			}
     }
   }
@@ -421,5 +416,41 @@ TEST_CASE_METHOD(PRBrewFixture, "pr_getBrew_fermlog", "[fermd][pr][brews]") {
       CHECK( found );
     }
     REQUIRE( dbflog.size() == entries);
+  }
+}
+
+/*
+	In this case we need a brew only, and query the getBrews endpoint.
+ */
+TEST_CASE_METHOD(PRBrewFixture, "pr_fermentingBrews", "[fermd][pr][brews]") {
+  std::string name{"test-1"}, currdate;
+  int brewid;
+  {
+    auto msg = addBrew(name);
+    REQUIRE( msg );
+    REQUIRE( !isError(msg) );
+    auto indata = c4::to_csubstr((char*)msg->data());
+    ryml::Tree tree = ryml::parse_in_arena(indata);
+    ryml::NodeRef data = tree.rootref()["data"];
+    data["id"] >> brewid;
+  }
+
+	// reload the db
+	auto dbc = aegir::ServiceManager::get<aegir::fermd::DB::Connection>();
+	dbc->reload();
+  // check the last fermenter in getbrews
+  {
+    auto msg = send("{\"command\": \"getBrews\"}");
+    REQUIRE( (msg && !isError(msg)) );
+    auto indata = c4::to_csubstr((char*)msg->data());
+    ryml::Tree tree = ryml::parse_in_arena(indata);
+    ryml::NodeRef data = tree.rootref()["data"];
+
+    // we should only have a single brew
+    for (ryml::ConstNodeRef node: data.children()) {
+      int bid;
+      node["id"] >> bid;
+      REQUIRE( bid == brewid );
+    }
   }
 }

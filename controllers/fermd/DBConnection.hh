@@ -46,7 +46,7 @@ namespace aegir {
 				void setConnectionFile(const std::string& _file);
 
 				// reloads
-      protected:
+      public:
 				void reload();
       private:
 				void reload_fermenter_types();
@@ -79,7 +79,6 @@ namespace aegir {
       public:
 				fermenter_cdb getFermenters() const;
 	      fermenter::cptr getFermenterByID(int _id) const;
-				brew::cptr getFermenterBrew(int _fid) const;
       protected:
 				void updateFermenter(const fermenter& _item);
 				fermenter::cptr addFermenter(const fermenter& _item);

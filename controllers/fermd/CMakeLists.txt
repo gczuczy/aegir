@@ -15,6 +15,7 @@ list(APPEND fermd_HEADERS
   PRThread.hh
   ServiceManager.hh
   SensorCache.hh
+  Collector.hh
 )
 
 #list(APPEND fermd_HEADERS
@@ -56,6 +57,7 @@ target_sources(fermd
   DBTypes.cc
   PRThread.cc
   SensorCache.cc
+  Collector.cc
   ${fermd_HADERS}
 )
 
@@ -78,6 +80,7 @@ target_sources(tests_fermd
   PRThread.cc
   ServiceManager.cc
   SensorCache.cc
+  Collector.cc
   ${brewd_HEADERS}
 )
 

@@ -21,10 +21,10 @@ namespace aegir {
       friend class aegir::ServiceManager;
     public:
       struct tiltreading {
-	uuid_t uuid;
-	time_t time;
-	float temp;
-	float sg;
+				uuid_t uuid;
+				time_t time;
+				float temp;
+				float sg;
       };
       typedef std::list<tiltreading> tiltreadings;
 

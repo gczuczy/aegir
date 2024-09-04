@@ -25,37 +25,37 @@ namespace aegir {
       message_type msg;
 
       while ( c_run ) {
-	if ( !(msg = c_sock->recv(true)) ) continue;
+				if ( !(msg = c_sock->recv(true)) ) continue;
 
-	if ( msg->group() == TiltReadingMessage::msg_group &&
-	     msg->type() == TiltReadingMessage::msg_type ) {
-	  auto tiltmsg = msg->as<TiltReadingMessage>();
+				if ( msg->group() == TiltReadingMessage::msg_group &&
+						 msg->type() == TiltReadingMessage::msg_type ) {
+					auto tiltmsg = msg->as<TiltReadingMessage>();
 #if 0
-	  printf("SensorCache UUID:%s %.2fC %.4fSG\n",
-		 boost::lexical_cast<std::string>(tiltmsg->uuid()).c_str(),
-		 tiltmsg->temp(), tiltmsg->sg());
+					printf("SensorCache UUID:%s %.2fC %.4fSG\n",
+								 boost::lexical_cast<std::string>(tiltmsg->uuid()).c_str(),
+								 tiltmsg->temp(), tiltmsg->sg());
 #endif
-	  std::unique_lock g(c_mtx);
-	  bool found=false;
+					std::unique_lock g(c_mtx);
+					bool found=false;
 
-	  for (auto& it: c_tiltreadings) {
-	    if ( it.uuid == tiltmsg->uuid() ) {
-	      it.time = tiltmsg->time();
-	      it.temp = tiltmsg->temp();
-	      it.sg   = tiltmsg->sg();
-	      found = true;
-	      break;
-	    }
-	  }
-	  if ( !found ) {
-	    tiltreading tr;
-	    tr.uuid = tiltmsg->uuid();
-	    tr.time = tiltmsg->time();
-	    tr.temp = tiltmsg->temp();
-	    tr.sg   = tiltmsg->sg();
-	    c_tiltreadings.push_back(tr);
-	  }
-	}
+					for (auto& it: c_tiltreadings) {
+						if ( it.uuid == tiltmsg->uuid() ) {
+							it.time = tiltmsg->time();
+							it.temp = tiltmsg->temp();
+							it.sg   = tiltmsg->sg();
+							found = true;
+							break;
+						}
+					}
+					if ( !found ) {
+						tiltreading tr;
+						tr.uuid = tiltmsg->uuid();
+						tr.time = tiltmsg->time();
+						tr.temp = tiltmsg->temp();
+						tr.sg   = tiltmsg->sg();
+						c_tiltreadings.push_back(tr);
+					}
+				}
       }
     }
 

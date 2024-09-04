@@ -236,9 +236,9 @@ namespace aegir {
 				ryml::NodeRef node = _rep.append_child();
 				node << *it;
 
-				// add the brew if it has any
-				if (auto brew = dbc->getFermenterBrew(it->id); brew ) {
+				if ( it->cache_brewid ) {
 					ryml::NodeRef b = node["brew"];
+					auto brew = dbc->getBrewByID(it->cache_brewid.value());
 					b << *brew;
 				} else {
 					node["brew"] = nullptr;
@@ -403,7 +403,7 @@ namespace aegir {
 				node << *it;
 
 				// add the last fermenter
-				if (it->cache_fermenterid) {
+				if ( it->cache_fermenterid ) {
 					auto f = dbc->getFermenterByID(it->cache_fermenterid.value());
 					ryml::NodeRef fn = node["fermenter"];
 					fn << *f;

@@ -10,6 +10,7 @@
 #include "ZMQConfig.hh"
 #include "Bluetooth.hh"
 #include "SensorCache.hh"
+#include "Collector.hh"
 
 namespace aegir {
   namespace fermd {
@@ -21,6 +22,7 @@ namespace aegir {
       add<PRThread>();
       add<Bluetooth>();
       add<SensorCache>();
+      add<Collector>();
       add<MainLoop>();
       add<DB::Connection>();
 

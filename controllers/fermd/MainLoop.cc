@@ -8,6 +8,7 @@
 #include "PRThread.hh"
 #include "common/ServiceManager.hh"
 #include "SensorCache.hh"
+#include "Collector.hh"
 
 namespace aegir {
   namespace fermd {
@@ -17,6 +18,7 @@ namespace aegir {
       registerHandler<SensorProxy>("sensorproxy");
       registerHandler<PRThread>("PR");
       registerHandler<SensorCache>("SensorCache");
+      registerHandler<Collector>("Collector");
 
       auto msf = aegir::ServiceManager::get<MessageFactory>();
 

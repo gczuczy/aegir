@@ -358,6 +358,8 @@ namespace aegir {
 				// now check what we have and emplace the new cache keys
 				for ( auto r=c_statements.find("get_fermentingbrews")->second.execute();
 							r; ++r ) {
+					if ( r.isNull("brewid") || r.isNull("fermenterid") )
+						continue;
 					int brewid = r.fetch<int>("brewid");
 					int fermid = r.fetch<int>("fermenterid");
 
@@ -530,22 +532,6 @@ namespace aegir {
 				std::shared_lock g(c_mtx_fermenters);
 				return f();
       }
-
-			brew::cptr Connection::getFermenterBrew(int _fid) const {
-				std::unique_lock g(c_mtx_transfers);
-				transfer::cptr last;
-
-				for (auto it: cache_transfers) {
-					if ( it->brew->finished || it->fermenter->id != _fid ) continue;
-					if ( last ) {
-						if ( it->transferdate > last->transferdate ) last = it;
-					} else {
-						last = it;
-					}
-				}
-				if ( last ) return last->brew;
-				return nullptr;
-			}
 
       void Connection::updateFermenter(const fermenter& _item) {
 				std::unique_lock g(c_mtx_fermenters);
