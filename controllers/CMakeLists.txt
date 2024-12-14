@@ -172,7 +172,9 @@ FetchContent_MakeAvailable(ryml)
 # as it is not a drop-in replacement
 # mmap
 check_symbol_exists(kqueue "sys/event.h" HAVE_KQUEUE)
-if(NOT HAVE_KQUEUE)
+if(HAVE_KQUEUE)
+  message(STATUS "kqueue found")
+else()
   message(FATAL_ERROR "kqueue is missing")
 endif()
 
@@ -181,7 +183,9 @@ find_library(HAVE_GPIO
   gpio
   REQUIRED
 )
-if(NOT HAVE_GPIO)
+if(HAVE_GPIO)
+  message(STATUS "GPIO found")
+else()
   message(FATAL_ERROR "GPIO is missing")
 endif()
 
@@ -190,6 +194,22 @@ find_library(HAVE_ZMQ
   zmq
   REQUIRED
 )
+if(HAVE_ZMQ)
+  message(STATUS "ZMQ found")
+else()
+  message(FATAL_ERROR "ZMQ is required")
+endif()
+
+# fftw3
+find_library(HAVE_FFTW3
+  fftw3
+  REQUIRED
+)
+if(HAVE_FFTW3)
+  message(STATUS "FFTW3 found")
+else()
+  message(FATAL_ERROR "FFTW3 is required")
+endif()
 
 # IPO/LTO check
 check_ipo_supported(RESULT LTO_supported OUTPUT error)
@@ -263,6 +283,7 @@ target_link_libraries(tests_fermd
   zmq
   jsoncpp
   ryml::ryml
+  fftw3
   bluetooth
   SQLite::SQLite3
 )
@@ -349,6 +370,7 @@ target_link_libraries(fermd
   gpio
   zmq
   ryml::ryml
+  fftw3
   bluetooth
   SQLite::SQLite3
 )

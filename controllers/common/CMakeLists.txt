@@ -31,6 +31,7 @@ list(APPEND fermd_FILES
   Message.hh
   Message.cc
   ryml.cc
+  NoiseFilter.hh
 )
 
 target_sources(brewd

@@ -21,8 +21,6 @@
 #define TIMER_OFFSET 1
 // id of the hourly regular timer
 #define TIMER_HOURLY 2
-// how long is an hour - for testing
-#define HOUR_SECONDS 3600
 
 // uncomment after data gathering
 #define STORE_DATA
@@ -49,7 +47,7 @@ namespace aegir {
 			memset((void*)readings, 0, sizeof(readings));
 		}
 
-		Collector::Collector(): aegir::Thread(), aegir::Service(),
+		Collector::Collector(): aegir::Thread(), aegir::Service(), c_nf(0.001),
 														LogChannel("Collector"), c_kq(-1), c_isactive(false) {
 		}
 
@@ -158,7 +156,10 @@ namespace aegir {
 		}
 
 		void Collector::aggregateData() {
-			time_t t = time(0)%HOUR_SECONDS;
+			struct DB::fermentationlog fl;
+			time_t now = time(0);
+			// TODO: might need adjustments, can indicate +1 hour
+			fl.timestamp = now - (now%HOUR_SECONDS);
 
 			for (auto& it: c_fermenters) {
 				std::shared_ptr<fermenter> f = it.second;
@@ -166,7 +167,7 @@ namespace aegir {
 #ifdef STORE_DATA
 				trace("Storing data for fermenter %i", f->id);
 				int fd;
-				std::string fpath = dataFileName(f->id, t);
+				std::string fpath = dataFileName(f->id, fl.timestamp);
 				if ( (fd = open(fpath.c_str(), O_WRONLY|O_TRUNC|O_CREAT,
 												S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) < 0 ){
 					error("Unable to dump data: open(): %i/%s", errno, strerror(errno));
@@ -175,13 +176,50 @@ namespace aegir {
 					if ( (len = write(fd, (void*)f.get(), sizeof(fermenter)))<0 ) {
 						error("Unable to dump data: write(): %i/%s", errno, strerror(errno));
 					} else {
-						trace("Dumped fermenter %i data at %li", f->id, t);
+						trace("Dumped fermenter %i data at %li", f->id, fl.timestamp);
 					}
 					close(fd);
 				}
 #endif
+				// SG noise filtering
+				NoiseFilter<HOUR_SECONDS>::input in;
+				bool hasdata = false;
+				for (int i=0; i<HOUR_SECONDS; ++i) {
+					in.points[i].present = f->readings[i].has_tilt;
+					hasdata |= in.points[i].present;
+					in.points[i].value = f->readings[i].sg;
+				}
+				fl.sg = hasdata ? c_nf.aggregate(in) : 0.0;
+
+				// temperature noise filtering
+				hasdata = false;
+				for (int i=0; i<HOUR_SECONDS; ++i) {
+					if ( f->readings[i].has_sensor || f->readings[i].has_tilt ) {
+						hasdata = true;
+						in.points[i].present = true;
+						double v(0.0);
+						int nsensors(0);
+						if ( f->readings[i].has_sensor ) {
+							++nsensors;
+							v += f->readings[i].temp_sensor;
+						}
+						if ( f->readings[i].has_tilt ) {
+							++nsensors;
+							v += f->readings[i].temp_tilt;
+						}
+						in.points[i].value = v/(1.0f*nsensors);
+					} else {
+						in.points[i].present = false;
+						in.points[i].value = 0.0f;
+					}
+				}
+				fl.temperature = hasdata ? c_nf.aggregate(in) : 0.0f;
+				auto dbc = aegir::ServiceManager::get<aegir::fermd::DB::Connection>();
+				fl.brew = dbc->getBrewByID(f->brewid);
+				dbc->txn().addFermentationlog(fl);
+				info("Added fermentation log for brew \"%s\"(%i): %.1fC %.4f SG",
+						 fl.brew->name.c_str(), fl.brew->id, fl.temperature, fl.sg);
 			}
-			info("aggregateData called");
 		}
 
 		void Collector::reloadFermenters() {
@@ -193,7 +231,11 @@ namespace aegir {
 					auto f = std::make_shared<fermenter>();
 					f->reset();
 					f->id = it->id;
-					f->active = !!it->cache_brewid;
+					f->active = false;
+					if ( it->cache_brewid ) {
+						f->active = true;
+						f->brewid = it->cache_brewid.value();
+					}
 					c_fermenters.emplace(it->id, f);
 					info("Added %s fermenter %s with id %i",
 							 it->cache_brewid ? "active" : "passive",
@@ -204,7 +246,7 @@ namespace aegir {
 			// now remove obsolete fermenters
 			for (auto it: c_fermenters) {
 				bool found(false);
-				bool active(false);
+				bool active(it.second->active);
 				for (auto it2: fermenters) {
 					if ( it2->id == it.second->id ) {
 						found = true;
@@ -218,6 +260,8 @@ namespace aegir {
 				} else {
 					it.second->reset(true);
 					it.second->active = active;
+					trace("Retained fermenter with id %i with status %s",
+								it.second->id, active?"active":"inactive");
 				}
 			}
 			info("Reloaded fermenters");
@@ -256,15 +300,16 @@ namespace aegir {
 				return;
 			}
 
-			// TODO: apply SG calibration first
 			// now we can store the result
 			int tidx = _msg->time()%HOUR_SECONDS;
 			fit->second->readings[tidx].temp_tilt = _msg->temp();
-			fit->second->readings[tidx].sg = _msg->sg();
+			fit->second->readings[tidx].sg = tilt->adjust(_msg->sg());
 			fit->second->readings[tidx].has_tilt = true;
-			trace("storeTiltReading: Hydrometer %s reading stored: T:%.2f SG:%.3f",
+#if 1
+			trace("storeTiltReading: Hydrometer %s reading stored: T:%.2f SG:%.4f -> %.4f",
 						boost::lexical_cast<std::string>(_msg->uuid()).c_str(),
-						_msg->temp(), _msg->sg());
+						_msg->temp(), _msg->sg(), fit->second->readings[tidx].sg);
+#endif
 		}
 	}
 }

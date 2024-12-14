@@ -6,4 +6,5 @@ target_sources(tests_fermd
   ThreadManager.cc
   Message.cc
   zmq.cc
+  units.cc
 )

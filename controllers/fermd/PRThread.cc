@@ -92,7 +92,6 @@ namespace aegir {
 				auto msg = zmqsock->recvRaw(true);
 
 				if ( msg == nullptr ) continue;
-				trace("Received message, size: %u", msg->size());
 
 				ryml::Tree resptree;
 				ryml::NodeRef resproot = resptree.rootref();

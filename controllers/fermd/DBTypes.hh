@@ -83,6 +83,12 @@ namespace aegir {
 					float at;
 					float sg;
 				};
+				/// Adjusts the value using the calibration
+				float adjust(float _sg) const;
+				/// Sets the zero-point calibration
+				tilthydrometer& setZero(float _sg);
+				/// Sets the high-point calibration
+				tilthydrometer& setHigh(float _at, float _sg);
 				tilthydrometer& operator=(Result&);
 				int id;
 				std::string color;

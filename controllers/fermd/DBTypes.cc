@@ -9,6 +9,7 @@
 #include "DBResult.hh"
 #include "DBConnection.hh"
 #include "common/ServiceManager.hh"
+#include "common/units.hh"
 
 #include <boost/core/demangle.hpp>
 
@@ -103,8 +104,64 @@ namespace aegir {
       }
 
       /*
-				tilthydrometer
+			 tilthydrometer
 			*/
+
+			/**
+			 * This call has 3 operating modes:
+			 *  - No calibration is given: no transformation is done
+			 *  - If either (but not both) the zero-point or highpoint is given, then
+			 *    the calibration is simply an offset
+			 *  - If both calibr_null and calibr_sg are given, then it's a+bx
+			 *
+			 * @param sg The specific gravity to adjust.
+			 * @return The adjusted value in SG.
+			 */
+			float tilthydrometer::adjust(float _sg) const {
+				float offset = 0.0f;
+				float scale = 1.0f;
+
+				if ( !this->calibr_null && !this->calibr_sg ) {
+					// if we have no calibration, then return it as-is
+					return _sg;
+
+				} else if ( this->calibr_null && !this->calibr_sg ) {
+					// if only the zero-point is specified
+					offset = -(this->calibr_null->sg - 1);
+
+				} else if ( !this->calibr_null && this->calibr_sg ) {
+					// if only the high point is specified
+					offset = -(this->calibr_sg->sg - this->calibr_sg->at);
+
+				} else if ( this->calibr_null && this->calibr_sg ) {
+					// when both are specified
+					offset = -(this->calibr_null->sg - 1);
+					float offat = (this->calibr_sg->at - 1) + offset;
+					float offsg = (this->calibr_sg->sg - 1) + offset;
+					scale = offsg/offat;
+				}
+
+				return 1+offset + scale*(_sg-1);
+			}
+
+			/// Sets the zero-point calibration
+			tilthydrometer& tilthydrometer::setZero(float _sg) {
+				auto c = std::make_shared<tilthydrometer::calibration>();
+				c->at = 0;
+				c->sg = _sg;
+				this->calibr_null = c;
+				return *this;
+			}
+
+			/// Sets the high-point calibration
+			tilthydrometer& tilthydrometer::setHigh(float _at, float _sg) {
+				auto c = std::make_shared<tilthydrometer::calibration>();
+				c->at = _at;
+				c->sg = _sg;
+				this->calibr_sg = c;
+				return *this;
+			}
+
       tilthydrometer& tilthydrometer::operator=(Result& r) {
 				if ( r.hasField("id") )
 					id = r.fetch<int>("id");

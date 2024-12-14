@@ -14,8 +14,12 @@
 #include "common/ServiceManager.hh"
 #include "common/ZMQ.hh"
 #include "common/LogChannel.hh"
+#include "common/NoiseFilter.hh"
 #include "uuid.hh"
 #include "Message.hh"
+
+// how long is an hour - for testing
+#define HOUR_SECONDS 3600
 
 namespace aegir {
 	namespace fermd {
@@ -35,6 +39,7 @@ namespace aegir {
 				};
 				void reset(bool _keepid=false);
 				int id;
+				int brewid;
 				bool active;
 				reading readings[3600];
 			};
@@ -61,6 +66,7 @@ namespace aegir {
 			void storeTiltReading(std::shared_ptr<TiltReadingMessage> _msg);
 
 		private:
+			NoiseFilter<HOUR_SECONDS> c_nf;
       aegir::zmqsocket_type c_sock;
 			int c_kq;
 			std::map<int, fermenter_ptr> c_fermenters;

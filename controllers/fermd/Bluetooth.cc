@@ -368,11 +368,11 @@ namespace aegir {
 					}
 					if ( auto msg = handleData(buffer, evlist[i].data) ) {
 						c_sensorbus->send(msg);
-#if 1
+#if 0
 						auto tl = msg->as<TiltReadingMessage>();
-						printf("UUID:%s %.2fC %.4fSG\n",
+						printf("UUID:%s %.2fC %.4f SG t:%li\n",
 									 boost::lexical_cast<std::string>(tl->uuid()).c_str(),
-									 tl->temp(), tl->sg());
+									 tl->temp(), tl->sg(), tl->time());
 #endif
 					}
 				}
