@@ -88,7 +88,7 @@ namespace aegir {
 				/// Sets the zero-point calibration
 				tilthydrometer& setZero(float _sg);
 				/// Sets the high-point calibration
-				tilthydrometer& setHigh(float _at, float _sg);
+				tilthydrometer& setHigh(float measured, float corrected);
 				tilthydrometer& operator=(Result&);
 				int id;
 				std::string color;

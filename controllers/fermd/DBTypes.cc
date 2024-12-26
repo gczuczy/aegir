@@ -131,20 +131,32 @@ namespace aegir {
 
 				} else if ( !this->calibr_null && this->calibr_sg ) {
 					// if only the high point is specified
-					offset = -(this->calibr_sg->sg - this->calibr_sg->at);
+					offset = -(this->calibr_sg->at - this->calibr_sg->sg);
 
 				} else if ( this->calibr_null && this->calibr_sg ) {
 					// when both are specified
-					offset = -(this->calibr_null->sg - 1);
-					float offat = (this->calibr_sg->at - 1) + offset;
-					float offsg = (this->calibr_sg->sg - 1) + offset;
-					scale = offsg/offat;
+					float x1 = this->calibr_null->sg;
+					float y1 = 1.000f;
+					float x2 = this->calibr_sg->at;
+					float y2 = this->calibr_sg->sg;
+
+					printf("x1:%.5f y1:%.5f\n", x1, y1);
+					printf("x2:%.5f y2:%.5f\n", x2, y2);
+
+					scale = (y2-y1)/(x2-x1);
+					offset = y1 - scale*x1;
 				}
 
-				return 1+offset + scale*(_sg-1);
+				printf("offset:%0.4f scale:%.4f\n", offset, scale);
+				return offset + scale*_sg;
 			}
 
-			/// Sets the zero-point calibration
+			/**
+			 * Sets the zeto-point calibration.
+			 *
+			 * @param sg The corrected value, in SG
+			 * @return Self
+			 */
 			tilthydrometer& tilthydrometer::setZero(float _sg) {
 				auto c = std::make_shared<tilthydrometer::calibration>();
 				c->at = 0;
@@ -153,11 +165,17 @@ namespace aegir {
 				return *this;
 			}
 
-			/// Sets the high-point calibration
-			tilthydrometer& tilthydrometer::setHigh(float _at, float _sg) {
+			/**
+			 * Sets the high-point calibration.
+			 *
+			 * @param measured The measured SG
+			 * @param corrected The corrected value, in SG
+			 * @return Self
+			 */
+			tilthydrometer& tilthydrometer::setHigh(float measured, float corrected) {
 				auto c = std::make_shared<tilthydrometer::calibration>();
-				c->at = _at;
-				c->sg = _sg;
+				c->at = measured;
+				c->sg = corrected;
 				this->calibr_sg = c;
 				return *this;
 			}
