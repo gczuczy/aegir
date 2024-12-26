@@ -5,7 +5,7 @@
 
 namespace aegir {
   Exception::Exception(const char *_fmt, ...) {
-    char buff[512];
+    char buff[1024];
     int len;
 
     std::va_list args;

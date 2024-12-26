@@ -1,0 +1,10 @@
+target_sources(tests_fermd
+  PRIVATE
+  common.hh
+  common.cc
+  catch2.cc
+  ThreadManager.cc
+  Message.cc
+  zmq.cc
+  units.cc
+)

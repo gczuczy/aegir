@@ -5,15 +5,18 @@
 #include "logging.hh"
 
 #include <map>
+#include <iostream>
 
 #define BOOST_LOG_USE_NATIVE_SYSLOG
 
+#include <boost/core/null_deleter.hpp>
 #include <boost/log/core.hpp>
 #include <boost/log/sources/logger.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/attributes/attribute.hpp>
 #include <boost/log/attributes/current_thread_id.hpp>
 #include <boost/log/sinks/syslog_backend.hpp>
+#include <boost/log/sinks/text_ostream_backend.hpp>
 #include <boost/log/sinks/sync_frontend.hpp>
 
 
@@ -25,7 +28,6 @@
 #error "BOOST_LOG_USE_NATIVE_SYSLOG is unset"
 #endif
 
-#include "Config.hh"
 #include "Exception.hh"
 
 namespace bl = ::boost::log;
@@ -41,8 +43,9 @@ namespace aegir {
     typedef bls::synchronous_sink<bls::syslog_backend> syslog_sink_t;
 
     static bool filter(const boost::log::attribute_value_set&);
+    std::function<blt::severity_level()> g_getloglevel;
 
-    void init() {
+    void init(bool _syslog) {
       auto blcore = bl::core::get();
       blcore->add_global_attribute("ThreadID",
 				   bla::current_thread_id()
@@ -50,12 +53,13 @@ namespace aegir {
       blcore->set_filter(&filter);
 
       // init syslog
-      {
-	boost::shared_ptr<bls::syslog_backend> backend(new bls::syslog_backend(
-									       blk::facility = bls::syslog::daemon,
-									       blk::use_impl = bls::syslog::native,
-									       blk::ident = "aegir"
-));
+      if ( _syslog ) {
+	auto slbe = new bls::syslog_backend(
+					    blk::facility = bls::syslog::daemon,
+					    blk::use_impl = bls::syslog::native,
+					    blk::ident = "aegir-fermd"
+					    );
+	boost::shared_ptr<bls::syslog_backend> backend(slbe);
 	backend->set_severity_mapper(bls::syslog::direct_severity_mapping<int>("Severity"));
 
 	auto frontend = boost::make_shared<syslog_sink_t>(backend);
@@ -70,6 +74,26 @@ namespace aegir {
 				);
 
 	blcore->add_sink(frontend);
+      } else {
+	// else we're using the text stream backend
+	boost::shared_ptr<bls::text_ostream_backend> backend =
+	  boost::make_shared<bls::text_ostream_backend>();
+
+	auto bestr = boost::shared_ptr<std::ostream>(&std::clog,
+						     boost::null_deleter());
+	backend->add_stream(bestr);
+	backend->auto_flush(true);
+	typedef bls::synchronous_sink<bls::text_ostream_backend> sink_t;
+	boost::shared_ptr<sink_t> sink(new sink_t(backend));
+	sink->set_formatter(
+			    ble::stream
+			    << ble::attr<std::string>("Channel")
+			    << ":"
+			    << ble::attr<blt::severity_level>("Severity")
+			    << " "
+			    << ble::smessage
+			    );
+	blcore->add_sink(sink);
       }
     }
 
@@ -90,8 +114,16 @@ namespace aegir {
       return it->second;
     }
 
+    void setGetLogLevel(std::function<blt::severity_level()> _getloglevel) {
+      g_getloglevel = _getloglevel;
+    }
+
     bool filter(const boost::log::attribute_value_set& attr_set) {
-      return attr_set["Severity"].extract<blt::severity_level>() >= Config::getInstance()->getLogLevel();
+      if ( g_getloglevel ) {
+	return attr_set["Severity"].extract<blt::severity_level>()
+	  >= g_getloglevel();
+      }
+      return true;
     }
   } // ns lggoging
 } // ns aegir

@@ -9,44 +9,114 @@ set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 
 project(brewd VERSION 0.1.0 LANGUAGES CXX)
 
+option(CMAKE_BUILD_TYPE "")
 if ( (NOT DEFINED CMAKE_BUILD_TYPE) OR CMAKE_BUILD_TYPE STREQUAL "")
   set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
+include(FetchContent)
+include(CTestCoverageCollectGCOV)
+
 add_executable(brewd)
+add_executable(fermd)
 
 find_package(Catch2 3 REQUIRED)
 add_executable(tests)
+add_executable(tests_fermd)
 include(CTest)
 include(Catch)
+set(CMAKE_CATCH_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
 catch_discover_tests(tests)
+catch_discover_tests(tests_fermd)
+
+# fermd_tests cleanup
+add_custom_command(TARGET tests_fermd POST_BUILD
+COMMAND find CMakeFiles/  -name '*.gcda' -delete
+COMMENT "Removing previous GCDA files"
+VERBATIM
+)
+
+# coverage
+FetchContent_Declare(cmake_modules
+  GIT_REPOSITORY https://github.com/bilke/cmake-modules.git
+  GIT_TAG "master"
+  GIT_SHALLOW FALSE
+)
+FetchContent_MakeAvailable(cmake_modules)
+list(APPEND CMAKE_MODULE_PATH ${cmake_modules_SOURCE_DIR})
+include(CodeCoverage)
+append_coverage_compiler_flags_to_target(tests_fermd)
+message("Project binary dir: ${PROJECT_BINARY_DIR}")
+
+# embed
+FetchContent_Declare(
+  battery-embed
+  GIT_REPOSITORY https://github.com/batterycenter/embed.git
+  GIT_TAG        v1.2.13
+)
+FetchContent_MakeAvailable(battery-embed)
+add_subdirectory(brewd)
+add_subdirectory(fermd)
+add_subdirectory(common)
+add_subdirectory(tests)
+
+add_compile_definitions(B_PRODUCTION_MODE=1)
+
+# embed calls, move these under fermd/ once the issues is fixed
+# https://github.com/batterycenter/embed/issues/5
+b_embed(fermd fermd/sql/v1.sql)
+b_embed(tests_fermd fermd/sql/v1.sql)
+
 
 set_target_properties(
   brewd
   PROPERTIES
   OUTPUT_NAME "aegir-brewd"
-  RUNTIME_OUTPUT_DIRECTORY ${brewd_SOURCE_DIR}/bin
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
 )
 
 set_target_properties(
   tests
   PROPERTIES
   OUTPUT_NAME "tests"
-  RUNTIME_OUTPUT_DIRECTORY ${brewd_SOURCE_DIR}/bin
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
 )
 
-configure_file(brewd/cmakeconfig.hh.in brewd/cmakeconfig.hh)
+set_target_properties(
+  tests_fermd
+  PROPERTIES
+  OUTPUT_NAME "tests-fermd"
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
+)
+
+configure_file(common/cmakeconfig.hh.in common/cmakeconfig.hh)
 
 target_include_directories(brewd
-  PRIVATE ${brewd_SOURCE_DIR}/brewd
-  SYSTEM /usr/local/include
-  SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+  SYSTEM PRIVATE /usr/local/include
+)
+target_include_directories(brewd
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/brewd
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
 target_include_directories(tests
-  PRIVATE ${brewd_SOURCE_DIR}/brewd
-  SYSTEM /usr/local/include
-  SYSTEM $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+  SYSTEM PRIVATE /usr/local/include
+)
+target_include_directories(tests
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/brewd
+  ${CMAKE_CURRENT_SOURCE_DIR}/fermd
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/common>
+)
+
+target_include_directories(tests_fermd
+  SYSTEM PRIVATE /usr/local/include
+)
+target_include_directories(tests_fermd
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/fermd/
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/>
 )
 
 include(CheckSymbolExists)
@@ -68,7 +138,9 @@ find_package(Boost
   CONFIG
   COMPONENTS program_options log
 )
-if(NOT Boost_FOUND)
+if(Boost_FOUND)
+  message(STATUS "Boost found")
+else()
   message(FATAL_ERROR "Boost program options is required")
 endif()
 
@@ -78,12 +150,31 @@ find_package(yaml-cpp
   REQUIRED
 )
 
+# SQLite3
+find_package(SQLite3 REQUIRED)
+
+# rapidyaml - fermd uses it instead of yaml-cpp and jsoncpp
+#find_package(ryml REQUIRED)
+#if(ryml_FOUND)
+#  message(STATUS "Rapid YAML found")
+#else()
+#  message(FATAL_ERROR "Rapid YAML is required but not found")
+#endif()
+FetchContent_Declare(ryml
+  GIT_REPOSITORY https://github.com/biojppm/rapidyaml.git
+  GIT_TAG "v0.5.0"
+  GIT_SHALLOW FALSE
+)
+FetchContent_MakeAvailable(ryml)
+
 # kqueue
 # non-bsd users can try https://github.com/mheily/libkqueue, however this requires code support as well,
 # as it is not a drop-in replacement
 # mmap
 check_symbol_exists(kqueue "sys/event.h" HAVE_KQUEUE)
-if(NOT HAVE_KQUEUE)
+if(HAVE_KQUEUE)
+  message(STATUS "kqueue found")
+else()
   message(FATAL_ERROR "kqueue is missing")
 endif()
 
@@ -92,7 +183,9 @@ find_library(HAVE_GPIO
   gpio
   REQUIRED
 )
-if(NOT HAVE_GPIO)
+if(HAVE_GPIO)
+  message(STATUS "GPIO found")
+else()
   message(FATAL_ERROR "GPIO is missing")
 endif()
 
@@ -101,6 +194,22 @@ find_library(HAVE_ZMQ
   zmq
   REQUIRED
 )
+if(HAVE_ZMQ)
+  message(STATUS "ZMQ found")
+else()
+  message(FATAL_ERROR "ZMQ is required")
+endif()
+
+# fftw3
+find_library(HAVE_FFTW3
+  fftw3
+  REQUIRED
+)
+if(HAVE_FFTW3)
+  message(STATUS "FFTW3 found")
+else()
+  message(FATAL_ERROR "FFTW3 is required")
+endif()
 
 # IPO/LTO check
 check_ipo_supported(RESULT LTO_supported OUTPUT error)
@@ -108,6 +217,7 @@ if(LTO_supported)
   message(STATUS "Enabling IPO/LTO")
   set_property(TARGET brewd PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
   set_property(TARGET tests PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+#  set_property(TARGET tests_fermd PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 else()
   message(STATUS "IPO/LTO not supported: <${error}>")
 endif()
@@ -149,25 +259,65 @@ target_link_libraries(tests
   yaml-cpp::yaml-cpp
   zmq
   jsoncpp
+  ryml::ryml
 )
 
-add_subdirectory(brewd)
-add_subdirectory(tests)
+target_compile_options(tests_fermd
+  PRIVATE
+  -fprofile-arcs -ftest-coverage
+)
+
+target_link_options(tests_fermd
+  PRIVATE
+  -L/usr/local/lib
+  -L${Boost_LIBRARY_DIRS}
+  Threads::Threads
+  --coverage
+)
+
+target_link_libraries(tests_fermd
+  PRIVATE
+  Catch2::Catch2
+  Boost::log
+  yaml-cpp::yaml-cpp
+  zmq
+  jsoncpp
+  ryml::ryml
+  fftw3
+  bluetooth
+  SQLite::SQLite3
+)
+
 
 set_property(TARGET brewd PROPERTY CXX_STANDARD 20)
 set_property(TARGET brewd PROPERTY CXX_STANDARD_REQUIRED True)
 set_property(TARGET brewd PROPERTY CXX_EXTENSIONS False)
-
 target_compile_features(brewd PRIVATE cxx_std_20)
 
 set_property(TARGET tests PROPERTY CXX_STANDARD 20)
 set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
 set_property(TARGET tests PROPERTY CXX_EXTENSIONS False)
-
 target_compile_features(tests PRIVATE cxx_std_20)
+
+set_property(TARGET tests_fermd PROPERTY CXX_STANDARD 20)
+set_property(TARGET tests_fermd PROPERTY CXX_STANDARD_REQUIRED True)
+set_property(TARGET tests_fermd PROPERTY CXX_EXTENSIONS False)
+target_compile_features(tests_fermd PRIVATE cxx_std_20)
 
 # and finally enable testing
 enable_testing()
+setup_target_for_coverage_lcov(
+  NAME fermd_coverage
+  EXECUTABLE bin/tests-fermd
+  DEPENDENCIES tests_fermd
+  EXCLUDE
+"/usr/include/*"
+"/usr/local/include/*"
+"${ryml_SOURCE_DIR}/*"
+"${CMAKE_CURRENT_SOURCE_DIR}/fermd/tests/*"
+"${CMAKE_CURRENT_SOURCE_DIR}/common/tests/*"
+)
+
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Generated with config types: ${CMAKE_CONFIGURATION_TYPES}")
@@ -191,3 +341,52 @@ install(TARGETS brewd
   CONFIGURATIONS Release
 )
 
+# Fermd
+target_include_directories(fermd
+  SYSTEM PRIVATE /usr/local/include
+)
+target_include_directories(fermd
+  PRIVATE ${fermd_SOURCE_DIR}/fermd
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+)
+
+target_compile_options(fermd
+  PRIVATE -Werror -pedantic -std=c++20 -Wno-c11-extensions -I${Boost_INCLUDE_DIRS}
+  $<$<CONFIG:Debug>:-O0 -glldb -ferror-limit=2>
+  $<$<CONFIG:Release>:-O2>
+)
+
+target_link_options(fermd
+  PRIVATE
+  -L/usr/local/lib
+  -L${Boost_LIBRARY_DIRS}
+  Threads::Threads
+)
+
+target_link_libraries(fermd
+  PRIVATE
+  Boost::program_options
+  Boost::log
+  gpio
+  zmq
+  ryml::ryml
+  fftw3
+  bluetooth
+  SQLite::SQLite3
+)
+
+install(TARGETS fermd
+  DESTINATION sbin
+  PERMISSIONS
+  OWNER_EXECUTE OWNER_WRITE OWNER_READ
+  GROUP_EXECUTE GROUP_READ
+  WORLD_EXECUTE WORLD_READ
+  CONFIGURATIONS Release
+)
+
+set_target_properties(
+  fermd
+  PROPERTIES
+  OUTPUT_NAME "aegir-fermd"
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin
+)

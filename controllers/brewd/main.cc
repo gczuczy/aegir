@@ -94,6 +94,8 @@ int main(int argc, char *argv[]) {
     printf("Initialized config file: %s\n", cfgfile.c_str());
     return 0;
   }
+  // set the loglevel callback
+  aegir::logging::setGetLogLevel([cfg]() {return cfg->getLogLevel();});
   // initcfg is done as well, normal operation from here
   log.log("Aegir starting up...");
 

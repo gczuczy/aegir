@@ -35,3 +35,5 @@
 "hecycletime": 3
 "cooltemp": 24
 "hedelay": 10
+"loglevel": "info"
+"maxcorrection": 1.13
