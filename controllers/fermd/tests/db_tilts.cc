@@ -43,16 +43,14 @@ TEST_CASE("TiltAdjustNone", "[fermd][db][tilts][adjust]") {
 
 TEST_CASE("TiltAdjustNull", "[fermd][db][tilts][adjust]") {
 	aegir::fermd::DB::tilthydrometer th;
-	float offset = GENERATE(take(5, random(0.000f, 0.020f)));
+	float offset = GENERATE(take(5, random(-0.005f, 0.010f)));
 	float measured = GENERATE(take(5, random(1.000f, 1.120f)));
-	float expected = measured + offset;
+	float expected = measured - offset;
 
 	th.setZero(1.000f+offset);
 	float adjusted = th.adjust(measured);
 
-	printf("measured:%.4f(%.4f) offset:%0.4f adjusted:%.4f\n", measured, adjusted,
-				 offset, adjusted);
 	REQUIRE_THAT(adjusted,
-							 WithinAbs(expected, 0.01f)
-							 || WithinRel(expected, 0.005f) );
+							 WithinAbs(expected, 0.0001f)
+							 || WithinRel(expected, 0.0005f) );
 }
