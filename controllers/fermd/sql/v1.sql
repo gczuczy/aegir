@@ -30,41 +30,39 @@ CREATE TABLE fermenters (
 );
 
 INSERT INTO fermenters (name, typeid) VALUEs
-('Chronical2.0 1', 2),
-('Chronical2.0 2', 2)
+('Fermenter 1', 2),
+('Fermenter 2', 2)
 ;
-
 
 CREATE TABLE yeasts (
   id integer PRIMARY KEY,
   name text NOT NULL UNIQUE,
   attenuation real NOT NULL,
+  abv real NOT NULL,
   mintemp real NOT NULL,
   maxtemp real NOT NULL,
   CHECK (mintemp < maxtemp ),
   CHECK (mintemp > 4 ),
-  CHECK (maxtemp < 25),
-  CHECK (attenuation > 10 AND attenuation < 100 )
+  CHECK (maxtemp < 30),
+  CHECK (attenuation > 10 AND attenuation <= 100 ),
+  CHECK (abv > 4 AND abv < 30 )
 );
 
-CREATE TABLE brews (
-  id integer PRIMARY KEY,
-  name text NOT NULL UNIQUE,
-  yeastid int NOT NULL,
-  brewdate text NOT NULL,
-  originalsg real NOT NULL,
-  FOREIGN KEY (yeastid) REFERENCES yeasts (id) ON DELETE RESTRICT,
-  CHECK (originalsg > 1.0 AND originalsg < 1.500)
-);
-
-CREATE TABLE fermentations (
-  id integer PRIMARY KEY,
-  brewid int NOT NULL,
-  fermenterid int NOT NULL,
-  transferdate text NOT NULL,
-  FOREIGN KEY (brewid) REFERENCES brews(id) ON DELETE RESTRICT,
-  FOREIGN KEY (fermenterid) REFERENCES fermenters(id) ON DELETE RESTRICT
-);
+INSERT INTO yeasts (name, attenuation, mintemp, maxtemp, abv) VALUES
+('YF-101 Queen of hearts', 75, 17, 22, 10),
+('YF-102 British Bulldog', 72, 18, 23, 10),
+('YF-103 Steampunk', 75, 18, 23, 10),
+('YF-104 Terrier', 71, 18, 22, 9),
+('YF-105 Haggis', 73, 13, 23, 12),
+('YF-106 Redshamrock', 75, 17, 22, 12),
+('YF-107 McGyver', 77, 15, 22, 11),
+('YF-109 Caskaway', 71, 18, 22, 9),
+('YF-111 Pacification', 70, 18, 20, 10),
+('YF-112 Vermonter', 82, 18, 22, 12),
+('YF-202 Priest Dvel', 77, 18, 24, 12),
+('YF-402 Herr Weizen', 77, 18, 24, 10),
+('YF-666 Yeastman', 100, 18, 20, 25)
+;
 
 CREATE TABLE tilthydrometers (
   id integer PRIMARY KEY,
@@ -101,3 +99,56 @@ INSERT INTO tilthydrometers (uuid, color)
 VALUES ('a495bb70-c5b1-4b44-b512-1370f02d74de', 'Yellow');
 INSERT INTO tilthydrometers (uuid, color)
 VALUES ('a495bb80-c5b1-4b44-b512-1370f02d74de', 'Pink');
+
+CREATE TABLE brews (
+  id integer PRIMARY KEY,
+  name text NOT NULL UNIQUE,
+  yeastid int NOT NULL,
+  brewdate text NOT NULL,
+  originalsg real,
+  sgoffset real NOT NULL DEFAULT 0.0,
+  finished int NOT NULL DEFAULT 0,
+  metadata text,
+  FOREIGN KEY (yeastid) REFERENCES yeasts (id) ON DELETE RESTRICT,
+  CHECK (originalsg IS NULL OR (originalsg > 1.0 AND originalsg < 1.500)),
+  CHECK (sgoffset IS NULL OR (sgoffset >= 0.0 AND sgoffset < 0.500)),
+  CHECK (finished == 0 OR finished == 1)
+);
+
+CREATE TABLE transfers (
+  id integer PRIMARY KEY,
+  brewid int NOT NULL,
+  fermenterid int NOT NULL,
+  transferdate text NOT NULL,
+  FOREIGN KEY (brewid) REFERENCES brews(id) ON DELETE RESTRICT,
+  FOREIGN KEY (fermenterid) REFERENCES fermenters(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE fermentationlog (
+  id integer PRIMARY KEY,
+  brewid int NOT NULL,
+  timestamp int NOT NULL,
+  sg real NOT NULL,
+  temperature real NOT NULL,
+  FOREIGN KEY (brewid) REFERENCES brews(id) ON DELETE RESTRICT,
+  CHECK (sg >= 0.950 AND sg <= 1.500),
+  CHECK (temperature > -30 AND temperature < 50)
+);
+
+CREATE VIEW fermentingbrews AS
+WITH activebrews AS (
+SELECT b.id
+FROM brews b
+WHERE NOT b.finished
+), lastxfers AS (
+SELECT brewid, max(id) AS id
+FROM transfers t
+GROUP BY brewid
+)
+SELECT ab.id AS brewid,
+			 lx.id AS xferid,
+			 t.fermenterid
+FROM activebrews ab
+		 LEFT JOIN lastxfers lx ON ab.id = lx.brewid
+		 LEFT JOIN transfers t ON lx.id = t.id
+;

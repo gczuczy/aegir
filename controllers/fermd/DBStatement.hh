@@ -3,8 +3,10 @@
 #define AEGIR_FERMD_DB_STATEMENT
 
 #include <string>
+#include <ctime>
 
 #include <sqlite3.h>
+#include <optional>
 
 #include "DBResult.hh"
 
@@ -23,10 +25,20 @@ namespace aegir {
 
 	Result execute();
 
-	void bind(const std::string& _field);
-	void bind(const std::string& _field, int _value);
-	void bind(const std::string& _field, float _value);
-	void bind(const std::string& _field, const std::string& _value);
+	Statement& bind(const std::string& _field);
+	Statement& bind(const std::string& _field, int _value);
+	Statement& bind(const std::string& _field, float _value);
+	Statement& bind(const std::string& _field, const std::string& _value);
+	inline Statement& bind(const std::string& _field, time_t _value) {
+	  return bind(_field, (int)_value);
+	}
+	template<typename T>
+	Statement& bind(const std::string& _field, std::optional<T> _value) {
+	  if ( !_value.has_value() ) {
+	    return bind(_field);
+	  }
+	  return bind(_field, _value.value());
+	}
 
       private:
 	sqlite3_stmt *c_statement;

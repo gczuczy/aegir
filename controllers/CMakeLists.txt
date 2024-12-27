@@ -9,6 +9,7 @@ set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 
 project(brewd VERSION 0.1.0 LANGUAGES CXX)
 
+option(CMAKE_BUILD_TYPE "")
 if ( (NOT DEFINED CMAKE_BUILD_TYPE) OR CMAKE_BUILD_TYPE STREQUAL "")
   set(CMAKE_BUILD_TYPE "Debug")
 endif()
@@ -24,13 +25,16 @@ add_executable(tests)
 add_executable(tests_fermd)
 include(CTest)
 include(Catch)
+set(CMAKE_CATCH_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
 catch_discover_tests(tests)
 catch_discover_tests(tests_fermd)
 
-add_subdirectory(brewd)
-add_subdirectory(fermd)
-add_subdirectory(common)
-add_subdirectory(tests)
+# fermd_tests cleanup
+add_custom_command(TARGET tests_fermd POST_BUILD
+COMMAND find CMakeFiles/  -name '*.gcda' -delete
+COMMENT "Removing previous GCDA files"
+VERBATIM
+)
 
 # coverage
 FetchContent_Declare(cmake_modules
@@ -43,6 +47,26 @@ list(APPEND CMAKE_MODULE_PATH ${cmake_modules_SOURCE_DIR})
 include(CodeCoverage)
 append_coverage_compiler_flags_to_target(tests_fermd)
 message("Project binary dir: ${PROJECT_BINARY_DIR}")
+
+# embed
+FetchContent_Declare(
+  battery-embed
+  GIT_REPOSITORY https://github.com/batterycenter/embed.git
+  GIT_TAG        v1.2.13
+)
+FetchContent_MakeAvailable(battery-embed)
+add_subdirectory(brewd)
+add_subdirectory(fermd)
+add_subdirectory(common)
+add_subdirectory(tests)
+
+add_compile_definitions(B_PRODUCTION_MODE=1)
+
+# embed calls, move these under fermd/ once the issues is fixed
+# https://github.com/batterycenter/embed/issues/5
+b_embed(fermd fermd/sql/v1.sql)
+b_embed(tests_fermd fermd/sql/v1.sql)
+
 
 set_target_properties(
   brewd
@@ -148,7 +172,9 @@ FetchContent_MakeAvailable(ryml)
 # as it is not a drop-in replacement
 # mmap
 check_symbol_exists(kqueue "sys/event.h" HAVE_KQUEUE)
-if(NOT HAVE_KQUEUE)
+if(HAVE_KQUEUE)
+  message(STATUS "kqueue found")
+else()
   message(FATAL_ERROR "kqueue is missing")
 endif()
 
@@ -157,7 +183,9 @@ find_library(HAVE_GPIO
   gpio
   REQUIRED
 )
-if(NOT HAVE_GPIO)
+if(HAVE_GPIO)
+  message(STATUS "GPIO found")
+else()
   message(FATAL_ERROR "GPIO is missing")
 endif()
 
@@ -166,6 +194,22 @@ find_library(HAVE_ZMQ
   zmq
   REQUIRED
 )
+if(HAVE_ZMQ)
+  message(STATUS "ZMQ found")
+else()
+  message(FATAL_ERROR "ZMQ is required")
+endif()
+
+# fftw3
+find_library(HAVE_FFTW3
+  fftw3
+  REQUIRED
+)
+if(HAVE_FFTW3)
+  message(STATUS "FFTW3 found")
+else()
+  message(FATAL_ERROR "FFTW3 is required")
+endif()
 
 # IPO/LTO check
 check_ipo_supported(RESULT LTO_supported OUTPUT error)
@@ -173,7 +217,7 @@ if(LTO_supported)
   message(STATUS "Enabling IPO/LTO")
   set_property(TARGET brewd PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
   set_property(TARGET tests PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-  set_property(TARGET tests_fermd PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+#  set_property(TARGET tests_fermd PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 else()
   message(STATUS "IPO/LTO not supported: <${error}>")
 endif()
@@ -233,12 +277,13 @@ target_link_options(tests_fermd
 
 target_link_libraries(tests_fermd
   PRIVATE
-  Catch2::Catch2WithMain
+  Catch2::Catch2
   Boost::log
   yaml-cpp::yaml-cpp
   zmq
   jsoncpp
   ryml::ryml
+  fftw3
   bluetooth
   SQLite::SQLite3
 )
@@ -325,6 +370,7 @@ target_link_libraries(fermd
   gpio
   zmq
   ryml::ryml
+  fftw3
   bluetooth
   SQLite::SQLite3
 )

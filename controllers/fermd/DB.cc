@@ -2,8 +2,6 @@
 
 #include <utility>
 
-#include "generated.hh"
-
 namespace aegir {
   namespace fermd {
     namespace DB {

@@ -45,14 +45,14 @@ namespace aegir {
     template<IsService T>
     void add() {
       c_services.emplace(std::piecewise_construct,
-			 std::forward_as_tuple(std::type_index(typeid(T))),
-			 std::forward_as_tuple(std::shared_ptr<T>{new T()}));
+												 std::forward_as_tuple(std::type_index(typeid(T))),
+												 std::forward_as_tuple(std::shared_ptr<T>{new T()}));
     };
 
     template<IsService T>
     static inline std::shared_ptr<T> get() {
       if ( c_instance == nullptr )
-	throw Exception("ServiceMonitor not yet instantiated");
+				throw Exception("ServiceMonitor not yet instantiated");
       return c_instance.load()->getService<T>();
     }
 
@@ -60,9 +60,9 @@ namespace aegir {
     std::shared_ptr<T> getService() {
       const auto& it = c_services.find(std::type_index(typeid(T)));
       if ( it == c_services.end() )
-	throw Exception("Type %s not registered in SeviceManager@%p",
-			boost::typeindex::type_id<T>().pretty_name().c_str(),
-			this);
+				throw Exception("Type %s not registered in SeviceManager@%p",
+												boost::typeindex::type_id<T>().pretty_name().c_str(),
+												this);
 
       return std::static_pointer_cast<T>(it->second);
     };

@@ -43,7 +43,7 @@ namespace aegir {
 
   /*
     ZMQctx
-   */
+	*/
 
   ZMQctx::ZMQctx(): c_ctx(0) {
     if ( (c_ctx = zmq_ctx_new()) == 0 )
@@ -56,9 +56,9 @@ namespace aegir {
 
   /*
     ZMQConfig
-   */
+	*/
   ZMQConfig::ZMQConfig(): ConfigNode(), c_specs(0), c_nspecs(0),
-			  c_proxies(0), c_nproxies(0) {
+													c_proxies(0), c_nproxies(0) {
     c_ctx = std::make_shared<ZMQctx>();
   }
 
@@ -76,11 +76,11 @@ namespace aegir {
 
     for ( uint32_t i=0; i < c_nspecs; ++i ) {
       if ( c_specs[i].proto == zmq_proto::TCP ) {
-	auto name = tree->to_arena(c_specs[i].name);
-	auto address = tree->to_arena(c_specs[i].address);
-	sockets[name] |= ryml::MAP;
-	sockets[name]["address"] << address;
-	sockets[name]["port"] << c_specs[i].port;
+				auto name = tree->to_arena(c_specs[i].name);
+				auto address = tree->to_arena(c_specs[i].address);
+				sockets[name] |= ryml::MAP;
+				sockets[name]["address"] << address;
+				sockets[name]["port"] << c_specs[i].port;
       }
       // else we don't serialize it
     }
@@ -93,9 +93,9 @@ namespace aegir {
 
     for ( uint32_t i=0; i<c_nproxies; ++i ) {
       if ( c_proxies[i].has_dbg ) {
-	auto name = tree->to_arena(c_proxies[i].name);
-	proxies[name] |= ryml::MAP;
-	proxies[name]["debug"] << c_proxies[i].debug;
+				auto name = tree->to_arena(c_proxies[i].name);
+				proxies[name] |= ryml::MAP;
+				proxies[name]["debug"] << c_proxies[i].debug;
       }
     }
   }
@@ -105,7 +105,7 @@ namespace aegir {
       throw Exception("zeromq node is not a map");
 
     if ( !_node.has_child("sockets") )
-	 throw Exception("zeromq.sockets missing");
+			throw Exception("zeromq.sockets missing");
 
     // sockets
     auto sockets = _node["sockets"];
@@ -118,30 +118,30 @@ namespace aegir {
       uint32_t idx = getSocketIndex(key);
 
       if ( node.has_child("address") ) {
-	auto addr = node["address"];
-	if ( !addr.has_val() )
-	  throw Exception("Address has no value");
+				auto addr = node["address"];
+				if ( !addr.has_val() )
+					throw Exception("Address has no value");
 
-	std::string address;
-	addr >> address;
-	if ( address.size() > 63 )
-	  throw Exception("Address(%s) longer than 63", address.c_str());
-	memset((void*)&c_specs[idx].address, 0, sizeof(c_specs[idx].address));
-	strncpy(c_specs[idx].address, address.c_str(), address.size());
+				std::string address;
+				addr >> address;
+				if ( address.size() > 63 )
+					throw Exception("Address(%s) longer than 63", address.c_str());
+				memset((void*)&c_specs[idx].address, 0, sizeof(c_specs[idx].address));
+				strncpy(c_specs[idx].address, address.c_str(), address.size());
       }
 
       if ( node.has_child("port") ) {
-	auto portnode = node["port"];
-	if ( !portnode.has_val() )
-	  throw Exception("Address has no value");
+				auto portnode = node["port"];
+				if ( !portnode.has_val() )
+					throw Exception("Address has no value");
 
-	portnode >> c_specs[idx].port;
+				portnode >> c_specs[idx].port;
       }
     }
 
     // proxies
     if ( !_node.has_child("proxies") )
-	 throw Exception("zeromq.proxies missing");
+			throw Exception("zeromq.proxies missing");
 
     auto proxies = _node["proxies"];
     if ( !proxies.is_map() )
@@ -154,7 +154,7 @@ namespace aegir {
 
       // options we're supporting
       if ( node.has_child("debug") ) {
-	node["debug"] >> c_proxies[idx].debug;
+				node["debug"] >> c_proxies[idx].debug;
       }
     }
   }
@@ -163,18 +163,18 @@ namespace aegir {
     auto idx = getSocketIndex(_conn);
 
     return std::shared_ptr<ZMQSocket>{new ZMQSocket(c_ctx,
-						    c_specs[idx].src_type,
-						    connString(c_specs[idx], true),
-						    c_specs[idx].src_binds)};
+																										c_specs[idx].src_type,
+																										connString(c_specs[idx], true),
+																										c_specs[idx].src_binds)};
   }
 
   zmqsocket_type ZMQConfig::dstSocket(const std::string& _conn) {
     auto idx = getSocketIndex(_conn);
 
     return std::shared_ptr<ZMQSocket>{new ZMQSocket(c_ctx,
-						    c_specs[idx].dst_type,
-						    connString(c_specs[idx]),
-						    !c_specs[idx].src_binds)};
+																										c_specs[idx].dst_type,
+																										connString(c_specs[idx]),
+																										!c_specs[idx].src_binds)};
   }
 
   zmqproxy_type ZMQConfig::proxy(const std::string& _name) {
@@ -192,17 +192,17 @@ namespace aegir {
     auto back = getSocket(c_specs[backidx].name, c_proxies[idx].back.source);
     return std::shared_ptr<ZMQProxy>{
       new ZMQProxy(c_ctx,
-		   front,
-		   back,
-		   dbg)};
+									 front,
+									 back,
+									 dbg)};
   }
 
   void ZMQConfig::addSpec(const std::string& _name,
-			  zmq_proto _proto,
-			  int _srctype, int _dsttype,
-			  const std::string& _address,
-			  const uint16_t _port,
-			  bool _srcbind) {
+													zmq_proto _proto,
+													int _srctype, int _dsttype,
+													const std::string& _address,
+													const uint16_t _port,
+													bool _srcbind) {
     if ( _name.size()>15 )
       throw Exception("ZMQ conn spec name longer than 15");
 
@@ -212,30 +212,30 @@ namespace aegir {
     // verify the working pairs - only what the stack is using
     if ( _srctype == ZMQ_PUB ) {
       if ( _dsttype != ZMQ_SUB && _dsttype != ZMQ_XSUB )
-	throw Exception("PUB needs SUB or XSUB");
+				throw Exception("PUB needs SUB or XSUB");
     } else if ( _srctype == ZMQ_SUB ) {
       if ( _dsttype != ZMQ_PUB && _dsttype != ZMQ_XPUB )
-	throw Exception("SUB needs PUB XPUB");
+				throw Exception("SUB needs PUB XPUB");
     } else if ( _srctype == ZMQ_XPUB ) {
       if ( _dsttype != ZMQ_SUB && _dsttype != ZMQ_XSUB )
-	throw Exception("XPUB needs SUB or XSUB");
+				throw Exception("XPUB needs SUB or XSUB");
     } else if ( _srctype == ZMQ_XSUB ) {
       if ( _dsttype != ZMQ_PUB && _dsttype != ZMQ_XPUB )
-	throw Exception("XSUB needs PUB or XPUB");
+				throw Exception("XSUB needs PUB or XPUB");
     } else if ( _srctype == ZMQ_REQ ) {
       if ( _dsttype != ZMQ_REP && _dsttype != ZMQ_ROUTER )
-	throw Exception("REQ needs REP or ROUTER");
+				throw Exception("REQ needs REP or ROUTER");
     } else if ( _srctype == ZMQ_REP ) {
       if ( _dsttype != ZMQ_REQ && _dsttype != ZMQ_DEALER )
-	throw Exception("REP needs REQ or DEALER");
+				throw Exception("REP needs REQ or DEALER");
     } else if ( _srctype == ZMQ_ROUTER ) {
       if ( _dsttype != ZMQ_DEALER && _dsttype != ZMQ_REQ
-	   && _dsttype != ZMQ_ROUTER )
-	throw Exception("ROUTER needs DEALER, REQ or ROUTER");
+					 && _dsttype != ZMQ_ROUTER )
+				throw Exception("ROUTER needs DEALER, REQ or ROUTER");
     } else if ( _srctype == ZMQ_DEALER ) {
       if ( _dsttype != ZMQ_DEALER && _dsttype != ZMQ_REP
-	   && _dsttype != ZMQ_ROUTER )
-	throw Exception("DEALER needs DEALER, REP or ROUTER");
+					 && _dsttype != ZMQ_ROUTER )
+				throw Exception("DEALER needs DEALER, REP or ROUTER");
     } else {
       throw Exception("Unknown src socket type");
     }
@@ -252,13 +252,13 @@ namespace aegir {
     // now allocate memory for the entry
     uint32_t n = c_nspecs++;
     c_specs = (conn_spec*)realloc((void*)c_specs,
-				  sizeof(conn_spec)*c_nspecs);
+																	sizeof(conn_spec)*c_nspecs);
     memset((void*)&c_specs[n], 0, sizeof(conn_spec));
 
     memcpy((void*)&c_specs[n].address,
-	   (void*)_address.data(), _address.size());
+					 (void*)_address.data(), _address.size());
     memcpy((void*)&c_specs[n].name,
-	   (void*)_name.data(), _name.size());
+					 (void*)_name.data(), _name.size());
     c_specs[n].src_type = _srctype;
     c_specs[n].dst_type = _dsttype;
     c_specs[n].port = _port;
@@ -267,9 +267,9 @@ namespace aegir {
   }
 
   void ZMQConfig::addProxy(const std::string& _name,
-			   const std::string& _front_name, bool _front_src,
-			   const std::string& _back_name, bool _back_src,
-			   const std::string& _dbg_name, bool _dbg_src) {
+													 const std::string& _front_name, bool _front_src,
+													 const std::string& _back_name, bool _back_src,
+													 const std::string& _dbg_name, bool _dbg_src) {
     std::uint32_t frontidx, backidx, dbgidx(0);
 
     bool has_dbg = _dbg_name!="";
@@ -283,11 +283,11 @@ namespace aegir {
 
     uint32_t n = c_nproxies++;
     c_proxies = (proxy_spec*)realloc((void*)c_proxies,
-				     sizeof(proxy_spec)*c_nproxies);
+																		 sizeof(proxy_spec)*c_nproxies);
     memset((void*)&c_proxies[n], 0, sizeof(proxy_spec));
 
     memcpy((void*)&c_proxies[n].name,
-	   (void*)_name.data(), _name.size());
+					 (void*)_name.data(), _name.size());
     c_proxies[n].front.idx = frontidx;
     c_proxies[n].front.source = _front_src;
     c_proxies[n].back.idx = backidx;
@@ -327,8 +327,8 @@ namespace aegir {
       else host = _spec.address;
 
       auto len = snprintf(buff, sizeof(buff)-1, "tcp://%s:%u",
-			  host.c_str(),
-			  _spec.port);
+													host.c_str(),
+													_spec.port);
       address = std::string(buff, len);
     } else if ( _spec.proto == zmq_proto::INPROC ) {
       address = "inproc://";
@@ -340,9 +340,9 @@ namespace aegir {
   }
   /*
     ZMQSocket
-   */
+	*/
   ZMQSocket::ZMQSocket(zmqctx_type& _ctx, int _type,
-		       const std::string& _address, bool _bind)
+											 const std::string& _address, bool _bind)
     : c_ctx(_ctx), c_address(_address), c_bind(_bind), c_type(_type) {
     void *ctx = _ctx->getCtx();
 
@@ -357,7 +357,7 @@ namespace aegir {
   void ZMQSocket::subscribe(const std::string& _str) {
     if ( c_type == ZMQ_SUB ) {
       zmq_setsockopt(c_sock, ZMQ_SUBSCRIBE,
-		     (const void*)_str.data(), _str.size());
+										 (const void*)_str.data(), _str.size());
     } else {
       throw Exception("subscribe only supported on ZMQ_SUB");
     }
@@ -366,7 +366,7 @@ namespace aegir {
   void ZMQSocket::unsubscribe(const std::string& _str) {
     if ( c_type == ZMQ_SUB ) {
       zmq_setsockopt(c_sock, ZMQ_UNSUBSCRIBE,
-		     (const void*)_str.data(), _str.size());
+										 (const void*)_str.data(), _str.size());
     } else {
       throw Exception("subscribe only supported on ZMQ_SUB");
     }
@@ -374,12 +374,12 @@ namespace aegir {
 
   void ZMQSocket::setRecvTimeout(int _to) {
     zmq_setsockopt(c_sock, ZMQ_RCVTIMEO,
-		   (const void*)&_to, sizeof(int));
+									 (const void*)&_to, sizeof(int));
   }
 
   void ZMQSocket::setSendTimeout(int _to) {
     zmq_setsockopt(c_sock, ZMQ_SNDTIMEO,
-		   (const void*)&_to, sizeof(int));
+									 (const void*)&_to, sizeof(int));
   }
 
   void ZMQSocket::setEnvelope(const std::string& _env) {
@@ -388,7 +388,7 @@ namespace aegir {
 
   void ZMQSocket::setLinger(int _msecs) {
     zmq_setsockopt(c_sock, ZMQ_LINGER,
-		   (const void*)&_msecs, sizeof(int));
+									 (const void*)&_msecs, sizeof(int));
   }
 
   message_type ZMQSocket::recv(bool _wait){
@@ -401,10 +401,10 @@ namespace aegir {
     // for sub we're reading the envelope first
     if ( c_type == ZMQ_SUB ) {
       if ( recvChunk(envelope, sizeof(envelope), flags) < 0 )
-	return nullptr;
+				return nullptr;
 
       if ( !hasMore() )
-	throw Exception("Second part of pubsub message missing");
+				throw Exception("Second part of pubsub message missing");
     }
 
     int len;
@@ -438,10 +438,10 @@ namespace aegir {
     // for sub we're reading the envelope first
     if ( c_type == ZMQ_SUB ) {
       if ( recvChunk(envelope, sizeof(envelope), flags) < 0 )
-	return false;
+				return false;
 
       if ( !hasMore() )
-	throw Exception("Second part of pubsub message missing");
+				throw Exception("Second part of pubsub message missing");
     }
 
     // read the real content
@@ -462,12 +462,12 @@ namespace aegir {
   void ZMQSocket::brrr() {
     if ( c_bind ) {
       if ( zmq_bind(c_sock, c_address.c_str()) != 0 )
-	throw Exception("ZMQ bind(%s) failed: %s", c_address.c_str(),
-			std::strerror(errno));
+				throw Exception("ZMQ bind(%s) failed: %s", c_address.c_str(),
+												std::strerror(errno));
     } else {
       if ( zmq_connect(c_sock, c_address.c_str()) != 0 )
-	throw Exception("ZMQ connect(%s) failed: %s", c_address.c_str(),
-			std::strerror(errno));
+				throw Exception("ZMQ connect(%s) failed: %s", c_address.c_str(),
+												std::strerror(errno));
     }
   }
 
@@ -477,7 +477,7 @@ namespace aegir {
       if ( zmq_send(c_sock, _buff, _len, _flags) >= 0 ) break;
       if ( errno == EAGAIN ) continue;
       throw Exception("zmq_send(%s): %s", zmqTypeToStr(c_type).c_str(),
-		      std::strerror(errno));
+											std::strerror(errno));
     } while (true);
   }
 
@@ -486,7 +486,7 @@ namespace aegir {
     if ( rc<0 ) {
       if ( errno == EAGAIN ) return -1;
       throw Exception("zmq_recv(%s): %s", zmqTypeToStr(c_type).c_str(),
-		      std::strerror(errno));
+											std::strerror(errno));
     }
     return rc;
   }
@@ -500,19 +500,19 @@ namespace aegir {
 
   /*
     ZMQProxy
-   */
+	*/
   std::atomic<std::uint32_t> ZMQProxy::c_control_index(0);
   ZMQProxy::ZMQProxy(zmqctx_type _ctx,
-		     zmqsocket_type _front,
-		     zmqsocket_type _back,
-		     zmqsocket_type _dbg)
+										 zmqsocket_type _front,
+										 zmqsocket_type _back,
+										 zmqsocket_type _dbg)
     : c_ctx(_ctx), c_front(_front), c_back(_back), c_dbg(_dbg) {
     uint32_t idx = c_control_index++;
     char buff[64];
     int len;
 
     len = snprintf(buff, sizeof(buff)-1,
-		   "inproc://global-proxy-control-%u", idx);
+									 "inproc://global-proxy-control-%u", idx);
 
     if ( (c_ctrl = zmq_socket(c_ctx->getCtx(), ZMQ_REP))==0 )
       throw Exception("zmq_socket(): %s", std::strerror(errno));
@@ -548,9 +548,9 @@ namespace aegir {
     void *front = c_front->nativeSocket();
     void *back = c_back->nativeSocket();
     if ( zmq_proxy_steerable(front,
-			     back,
-			     dbg,
-			     c_ctrl) != 0 )
+														 back,
+														 dbg,
+														 c_ctrl) != 0 )
       throw Exception("zmq_proxy_steerable(): %s", std::strerror(errno));
   }
 
