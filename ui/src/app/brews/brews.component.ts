@@ -5,7 +5,8 @@ import { Validators, FormGroup, FormArray, FormControl,
 	 FormBuilder, AbstractControl, ValidatorFn,
 	 ValidationErrors } from '@angular/forms';
 
-import { faFileCirclePlus, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { faFileCirclePlus, faPaperPlane,
+	 faFlagCheckered } from '@fortawesome/free-solid-svg-icons';
 
 import { ApiService } from '../api.service';
 import { apiBrew, apiYeast, apiFermenter, apiTransfer } from '../api.types';
@@ -27,6 +28,7 @@ interface brew {
 export class BrewsComponent {
   faFileCirclePlus = faFileCirclePlus;
   faPaperPlane = faPaperPlane;
+  faFlagCheckered = faFlagCheckered;
 
   private fermdid: number|null = null;
   public showNew: boolean = false;
@@ -241,6 +243,15 @@ export class BrewsComponent {
     };
     b.transferMode = false;
     this.api.transferBrew(this.fermdid!, transfer).subscribe(
+      (data: any) => {
+	this.updateBrews();
+      }
+    );
+  }
+
+  finish(b: brew) {
+    b.data.finished = true;
+    this.api.updateBrew(this.fermdid!, b.data).subscribe(
       (data: any) => {
 	this.updateBrews();
       }

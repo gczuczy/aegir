@@ -512,6 +512,17 @@ export class ApiService {
       );
   }
 
+  updateBrew(fermdid: number, data: apiBrew): Observable<any> {
+    let body = JSON.stringify(data);
+    let headers = new HttpHeaders({'Content-Type': 'application/json'});
+    let options = {'headers': headers};
+    return this.http.post(`/api/fermds/${fermdid}/brews/${data.id}`,
+			  body, options)
+      .pipe(
+	map(res => <apiBrew>((<apiResponse>res).data))
+      );
+  }
+
   transferBrew(fermdid: number, data: apiTransfer): Observable<any> {
     let body = JSON.stringify(data);
     let headers = new HttpHeaders({'Content-Type': 'application/json'});

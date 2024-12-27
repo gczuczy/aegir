@@ -100,7 +100,7 @@
     <accordion-group heading="Active" *ngIf="hasActiveBrews()"
 		     [isOpen]="isopen_active">
       <div class="row row-cols-1 row-cols-md-3 g-4">
-	<!-- a tilt -->
+	<!-- a brew -->
 	<div class="col"
 	     *ngFor="let brew of activeBrews()">
 	  <div class="card h-100">
@@ -148,11 +148,17 @@
 		  </div>
 		</form>
 	      </div>
+	      <!-- actions -->
 	      <div class="card-text">
+		<!-- transfer -->
 		  <button type="submit" class="btn"
 			  *ngIf="!brew.transferMode"
 			  (click)="brew.transferMode=true">
 		    <fa-icon [icon]="faPaperPlane"></fa-icon>
+		  </button>
+		<!-- finish -->
+		  <button type="submit" class="btn" (click)="finish(brew)">
+		    <fa-icon [icon]="faFlagCheckered"></fa-icon>
 		  </button>
 	      </div>
 	    </div> <!-- body -->
@@ -163,5 +169,39 @@
     <!-- finished -->
     <accordion-group heading="Finished" *ngIf="hasFinishedBrews()"
 		     [isOpen]="isopen_finished">
+      <div class="row row-cols-1 row-cols-md-3 g-4">
+	<!-- a brew -->
+	<div class="col"
+	     *ngFor="let brew of finishedBrews()">
+	  <div class="card h-100">
+	    <div class="card-body">
+	      <h5 class="card-title">{{brew.data.name}} / {{brew.data.brewdate}}</h5>
+	      <div class="card-text">
+		<table class="table table-sm">
+		  <tbody>
+		    <tr>
+		      <th>Yeast</th>
+		      <td>{{brew.data.yeast.name}}</td>
+		    </tr>
+		    <tr *ngIf="brew.data.originalsg">
+		      <th>OriginalSG</th>
+		      <td>{{brew.data.originalsg!}}</td>
+		    </tr>
+		    <tr>
+		      <th>SG offset</th>
+		      <td>{{brew.data.sgoffset}}</td>
+		    </tr>
+		    <tr *ngIf="brew.data.fermenter">
+		      <th>Fermenter:</th>
+		      <td>{{brew.data.fermenter!.name}}</td>
+		    </tr>
+		  </tbody>
+		</table>
+	      </div> <!-- card-text -->
+	      <!-- no buttons for now -->
+	    </div> <!-- body -->
+	  </div> <!-- card -->
+	</div> <!-- row -->
+      </div> <!-- row for group -->
     </accordion-group>
   </accordion>
