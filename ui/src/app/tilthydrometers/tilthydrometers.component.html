@@ -1,0 +1,193 @@
+<accordion>
+  <accordion-group heading="Assigned"
+		   [isOpen]="isopen_assigned">
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+      <!-- a tilt -->
+      <div class="col"
+	   *ngFor="let tilt of assignedTilts()">
+	<div class="card h-100">
+	  <span class="card-img-top" style="background-color: {{tilt.data.color}}">
+	    &nbsp;</span>
+	  <div class="card-body">
+	    <h5 class="card-title">{{tilt.data.color}}</h5>
+	    <div class="card-text">
+	      <div class="row">
+		<div class="col">
+		  <strong>{{tilt.data.uuid}}</strong>
+		</div>
+	      </div>
+	      <div class="row" *ngIf="tilt.data.fermenter != null">
+		<div class="col">
+		  {{$any(tilt.data.fermenter).name}} /
+		  {{$any(tilt.data.fermenter).type.name}}&nbsp;
+		  {{$any(tilt.data.fermenter).type.capacity}}&nbsp;L
+		</div>
+	      </div> <!-- row fermenter -->
+	      <div class="row">
+		<div class="col">
+		  <button class="btn btn-warning btn-sm"
+			  (click)="unassign(tilt.data.id!)">Unassign</button>
+		</div> <!-- col -->
+	      </div> <!-- row -->
+	    </div> <!-- card-text -->
+	  </div> <!-- body -->
+	</div> <!-- card -->
+      </div> <!-- row -->
+    </div> <!-- row for group -->
+  </accordion-group>
+  <!-- enabled but unassigned -->
+  <accordion-group heading="Enabled"
+		   [isOpen]="isopen_enabled">
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+      <!-- a tilt -->
+      <div class="col"
+	   *ngFor="let tilt of enabledTilts()">
+	<div class="card h-100">
+	  <span class="card-img-top" style="background-color: {{tilt.data.color}}">
+	    &nbsp;</span>
+	  <div class="card-body">
+	    <h5 class="card-title">{{tilt.data.color}}</h5>
+	    <div class="card-text">
+	      <div class="row">
+		<div class="col">
+		  <strong>{{tilt.data.uuid}}</strong>
+		</div>
+	      </div>
+	      <div class="row" *ngFor="let err of tilt.errors">
+		{{err}}
+	      </div>
+	      <!-- calibrate -->
+	      <div class="row"
+		   *ngIf="tilt.cardcontent == 'calibrate'">
+		<div class="col">
+		  <form [formGroup]="tilt.calibrateForm"
+			(ngSubmit)="calibrate(tilt.data.id!, tilt.calibrateForm)">
+		    <div class="form-check form-switch">
+		      <input class="form-check-input" type="checkbox" role="switch"
+			     id="nullcalibr" formControlName="nullcalibr">
+		      <label class="form-check-label" for="nullcalibr">
+			Null calibration
+		      </label>
+		    </div>
+		    <div class="form-group"
+			 *ngIf="tilt.calibrateForm.get('nullcalibr')!.value">
+		      <div class="mb-3">
+			<label class = "form-label" for="calibr_null">
+			  Zero point [SG]
+			</label>
+			<input type="number" class="form-control form-control-sm"
+			       placeholder="1.000" aria-label="Zero point value"
+			       formControlName="calibr_null">
+		      </div>
+		    </div>
+		    <div class="form-check form-switch">
+		      <input class="form-check-input" type="checkbox" role="switch"
+			     id="sgcalibr" formControlName="sgcalibr"
+			     [checked]="!isNull(tilt.data.calibr_at) && !isNull(tilt.data.calibr_sg)">
+		      <label class="form-check-label" for="sgcalibr">
+			High point
+		      </label>
+		    </div>
+		    <div class="form-group"
+			 *ngIf="tilt.calibrateForm.get('sgcalibr')!.value">
+		      <div class="mb-3">
+			<label class = "form-label" for="calibr_at">
+			  Calibration at [SG]
+			</label>
+			<input type="number" class="form-control form-control-sm"
+			       placeholder="1.040" aria-label="Calibration at"
+			       formControlName="calibr_at">
+			<div class="form-check">
+			  <input class="form-check-input" type="checkbox"
+				 id="autosg" formControlName="autosg"
+				 (change)="disableSpecSG(tilt.calibrateForm)">
+			  <label class="form-check-label" for="autosg">
+			    Adjust to current raw reading
+			  </label>
+			</div>
+		      </div>
+		      <div class="mb-3">
+			<label class = "form-label" for="calibr_null">
+			  To [SG]
+			</label>
+			<input type="number" class="form-control form-control-sm"
+			       placeholder="1.042" aria-label="To"
+			       formControlName="calibr_sg">
+		      </div>
+		    </div>
+		    <div class="form-group">
+		      <button type="submit" class="btn btn-sm btn-warning"
+			      (change)="tilt.cardcontent = null">
+			Cancel</button>
+		      <button type="submit" class="btn btn-sm btn-primary float-end"
+			      [disabled]="!isCalibrFromValid(tilt.calibrateForm)">
+			Calibrate</button>
+		    </div>
+		  </form>
+		</div>
+	      </div> <!-- row assignform -->
+	      <!-- assignform -->
+	      <div class="row"
+		   *ngIf="tilt.cardcontent == 'assign'">
+		<div class="col">
+		  <form [formGroup]="tilt.assignForm"
+			(ngSubmit)="assign(tilt.data.id!, tilt.assignForm)">
+		    <div class="form-group">
+		      <select class="form-select form-select-sm"
+			      formControlName="fermenterid"
+			      aria-label="Fermenter assignment">
+			<option *ngFor="let f of fermenters" value="{{f.id}}">
+			  {{f.name}} / {{f.type.name}} {{f.type.capacity}} L
+			</option>
+		      </select>
+		    </div>
+		    <div class="form-group">
+		      <button type="submit" class="btn btn-sm btn-warning"
+			      (click)="tilt.cardcontent = null">
+			Cancel</button>
+		      <button type="submit" class="btn btn-sm btn-primary float-end">
+			Assign</button>
+		    </div>
+		  </form>
+		</div>
+	      </div> <!-- row assignform -->
+	      <div class="row">
+		<div class="col">
+		  <button class="btn btn-danger btn-sm"
+			  (click)="disableTilt(tilt.data.id!)">Disable</button>
+		  <button class="btn btn-warning btn-sm"
+			  *ngIf="tilt.cardcontent != 'assign'"
+			  (click)="tilt.cardcontent='assign'">Assign</button>
+		  <button class="btn btn-warning btn-sm"
+			  *ngIf="tilt.cardcontent != 'calibrate'"
+			  (click)="tilt.cardcontent='calibrate'">Calibrate</button>
+		</div> <!-- col -->
+	      </div> <!-- row -->
+	    </div> <!-- card-text -->
+	  </div> <!-- body -->
+	</div> <!-- card -->
+      </div> <!-- row -->
+    </div> <!-- row for group -->
+  </accordion-group>
+  <!-- disbled tilts -->
+  <accordion-group heading="disabled">
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+      <!-- a tilt -->
+      <div class="col"
+	   *ngFor="let tilt of disabledTilts()">
+	<div class="card h-100">
+	  <span class="card-img-top" style="background-color: {{tilt.data.color}}">
+	    &nbsp;</span>
+	  <div class="card-body">
+	    <h5 class="card-title">{{tilt.data.color}}</h5>
+	    <div class="card-text">
+	      <strong>{{tilt.data.uuid}}</strong>
+	      <button class="btn btn-success btn-sm"
+		      (click)="enableTilt(tilt.data.id!)">Enable</button>
+	    </div>
+	  </div> <!-- body -->
+	</div> <!-- card -->
+      </div> <!-- row -->
+    </div> <!-- row for group -->
+  </accordion-group>
+</accordion>

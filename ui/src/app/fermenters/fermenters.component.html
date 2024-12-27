@@ -1,0 +1,108 @@
+<div class="row">
+  <div class="col">
+    <button class="btn btn-default" (click)="showNew = true">
+      <fa-icon [icon]="faFileCirclePlus" size="3x" style="color: #63E6BE;"></fa-icon>
+    </button>
+  </div>
+</div>
+<div class="row row-cols-1 row-cols-md-3 g-4">
+  <!-- new fermenter -->
+  <div class="col" *ngIf="showNew">
+    <div class="card h-100">
+      <div class="card-body">
+	<h5 class="card-title">Add fermenter type</h5>
+	<div class="card-text">
+	  <form [formGroup]="addFermenterForm"
+		(ngSubmit)="add(addFermenterForm)">
+	    <!-- name -->
+	    <div class="form-group">
+		<label for="name">Name</label>
+		<small [hidden]="addFermenterForm.controls['name'].valid"
+		       class="text-danger">
+		  Must be at least 3 characters
+		</small>
+		<input class="form-control" formControlName="name" id="name">
+	    </div>
+	    <!-- fermenter type -->
+	    <div class="form-group">
+	      <label for="capacity">Type</label>
+	      <small [hidden]="addFermenterForm.controls['ftid'].valid"
+		     class="text-danger">
+		Must be between 10 and 150
+	      </small>
+	      <select class="form-select form-select-sm"
+		      formControlName="ftid"
+		      aria-label="Fermenter type assignment">
+		<option *ngFor="let ft of fermentertypes" value="{{ft.id}}">
+		  {{ft.name}} ({{ft.capacity}} L)
+		</option>
+	      </select>
+	    </div>
+	    <div class="form-group">
+	      <button type="submit" class="btn btn-small btn-info"
+		      (click)="showNew = false">Cancel</button>
+	      <button type="submit" class="btn btn-small btn-primary float-end"
+		      [disabled]="!addFermenterForm.valid">Add</button>
+	    </div>
+	  </form>
+	</div>
+      </div>
+    </div>
+  </div>
+  <!-- fermenters -->
+  <div class="col"
+       *ngFor="let f of fermenters">
+    <div class="card h-100" *ngIf="f.edit == false">
+      <div class="card-body">
+	<h5 class="card-title">{{f.data.name}}</h5>
+	<p class="card-text">
+	  <button type="submit" class="btn btn-danger"
+		  (click)="del(f.data.id!)">Delete</button>
+	  <button type="submit" class="btn btn-warning float-end"
+		  (click)="f.edit = true">Edit</button>
+	</p>
+      </div>
+    </div>
+    <!-- edit fermenter -->
+    <div class="card h-100" *ngIf="f.edit == true">
+      <div class="card-body">
+	<h5 class="card-title">Edit fermenter</h5>
+	<div class="card-text">
+	  <form [formGroup]="f.editForm"
+		(ngSubmit)="save(f.data.id!, f.editForm)">
+	    <!-- name -->
+	    <div class="form-group">
+		<label for="name">Name</label>
+		<small [hidden]="f.editForm.controls['name'].valid"
+		       class="text-danger">
+		  Must be at least 3 characters
+		</small>
+		<input class="form-control" formControlName="name" id="name">
+	    </div>
+	    <!-- fermenter type -->
+	    <div class="form-group">
+	      <label for="capacity">Type</label>
+	      <small [hidden]="f.editForm.controls['ftid'].valid"
+		     class="text-danger">
+		Must be between 10 and 150
+	      </small>
+	      <select class="form-select form-select-sm"
+		      formControlName="ftid"
+		      aria-label="Fermenter type assignment">
+		<option *ngFor="let ft of fermentertypes" value="{{ft.id}}">
+		  {{ft.name}} ({{ft.capacity}} L)
+		</option>
+	      </select>
+	    </div>
+	    <div class="form-group">
+	      <button type="submit" class="btn btn-small btn-info"
+		      (click)="f.edit = false">Cancel</button>
+	      <button type="submit" class="btn btn-small btn-primary float-end"
+		      [disabled]="!f.editForm.valid">Save</button>
+	    </div>
+	  </form>
+	</div>
+      </div>
+    </div>
+  </div>
+</div>

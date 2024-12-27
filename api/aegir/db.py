@@ -40,6 +40,10 @@ class Connection():
         self._conn.row_factory = dict_factory
         dbconn = self
         #pprint(['db.Connection', threadid, self, self._conn])
+        self._conn.execute("PRAGMA foreign_keys = ON")
+        self._conn.execute("PRAGMA journal_mode = MEMORY")
+        self._conn.execute("PRAGMA temp_store = MEMORY")
+        self._conn.execute("PRAGMA trusted_schema = ON")
         pass
 
     def commit(self):
@@ -111,6 +115,31 @@ class Connection():
             pass
 
         return progid
+
+    def getFermds(self):
+        ret = list()
+        for data in self._conn.execute('SELECT * FROM fermds ORDER BY name'):
+            ret.append(Fermd(self, data=data))
+            pass
+        return ret
+
+    def addFermd(self, name, address):
+        curs = self._conn.cursor()
+        res = curs.execute('''
+        INSERT INTO fermds (name, address)
+        VALUES (:name, :address)
+        RETURNING id,name,address''',
+                     {'name': name,
+                      'address': address})
+        return Fermd(self, data=res.fetchone())
+
+    def getFermd(self, fermdid):
+        curs = self._conn.cursor()
+        res = curs.execute('''
+        SELECT * FROM fermds WHERE id = :id
+        ''', {'id': fermdid})
+        return Fermd(self, data=res.fetchone())
+
     pass
 
 class Program():
@@ -123,7 +152,7 @@ class Program():
             self._data = data
         elif _id is not None :
             res = curs.execute('SELECT id,name,starttemp,endtemp,boiltime,nomash,noboil FROM programs WHERE id=?', (_id,))
-            self._data = pres.fetchone()
+            self._data = res.fetchone()
             if self._data is None:
                 raise Exception('No program with ID {id}'.format(id = _id))
         else:
@@ -246,4 +275,43 @@ class Program():
         self._conn.execute('DELETE FROM programs WHERE id = ?', (self._progid,));
         pass
 
+    pass
+
+class Fermd():
+    def __init__(self, conn, _id=None, data=None):
+        self._conn = conn
+        curs = self._conn.cursor()
+        if data is not None:
+            self._data = data
+        elif _id is not None:
+            res = curs.execute('SELECT id,name,address FROM fermds WHERE id =?',
+                               (_id,))
+            self._data = res.fetchone()
+        else:
+            raise Exception('Either id or data is needed')
+            pass
+        pass
+
+    def __repr__(self):
+        return '<Fermd({i}, {name}, {address})>'.format(i = self._data['id'],
+                                                        name = self._data['name'],
+                                                        address = self._data['address'])
+
+    @property
+    def fermdid(self):
+        return self._data['id']
+
+    @property
+    def name(self):
+        return self._data['name']
+
+    @property
+    def address(self):
+        return self._data['address']
+
+    @property
+    def json(self):
+        return {'id': self._data['id'],
+                'name': self._data['name'],
+                'address': self._data['address']}
     pass

@@ -9,7 +9,7 @@ DISTDIR=dist
 .MAIN: devserver
 
 devserver: $(NG)
-	$(NG) serve --host 0.0.0.0 --disable-host-check
+	$(NG) serve --host 0.0.0.0 --disable-host-check --poll=2000
 
 build: $(NG)
 	$(NG) build -c production

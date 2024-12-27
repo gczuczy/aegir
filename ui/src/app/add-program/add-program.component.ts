@@ -4,7 +4,7 @@ import { Validators, FormGroup, FormArray, FormControl,
 import { Router } from '@angular/router';
 
 import { ApiService } from '../api.service';
-import { apiAddProgramData,
+import { apiAddProgram,
 	 apiProgram, apiProgramHopStep, apiProgramMashStep } from '../api.types';
 
 import { initMashStep, initHop, defineValidators,
@@ -148,7 +148,7 @@ export class AddProgramComponent implements OnInit, programForm {
     */
     let p  = toApiProgram(model);
     this.api.addProgram(p).subscribe(
-      (resp:apiAddProgramData) => {
+      (resp:apiAddProgram) => {
 	let progid = resp.progid;
 	this.errors = null;
 	this.api.announceUpdate();
